@@ -52,9 +52,9 @@ export default function RootLayout({
               </SidebarInset>
               <Sidebar
                 side="right"
-                variant="sidebar"
-                collapsible="offcanvas"
-                className="w-80 border-l"
+                variant="floating"
+                collapsible="icon"
+                className="w-80"
               >
                 <ScheduleSidebar />
               </Sidebar>
