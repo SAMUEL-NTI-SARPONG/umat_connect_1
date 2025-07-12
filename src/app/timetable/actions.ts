@@ -14,7 +14,7 @@ const departmentInitials = [
   "PE", "NG", "PG", "RP", "CH"
 ];
 
-// Main parser function
+// Main parser function based on the new algorithm
 function parseUniversitySchedule(fileBuffer: Buffer) {
   const workbook = XLSX.read(fileBuffer, { type: "buffer" });
   const validSchedules = [];
@@ -23,26 +23,31 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const sheet = workbook.Sheets[day];
     if (!sheet) continue;
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as string[][];
-    if (rows.length < 2) continue;
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as string[][];
+    // As per the new algorithm, data starts from row 5 (index 4), headers are before that.
+    if (rows.length < 5) continue; 
 
-    const timeSlots = rows[0].slice(1); // Skip the "Room" header
+    // Time slots are in row 4 (index 3)
+    const timeSlots = rows[3].slice(1);
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
+    // Data starts from row 5 (index 4)
+    const dataRows = rows.slice(4);
+
+    for (const row of dataRows) {
       const room = row[0]?.toString().trim();
       if (!room) continue;
 
-      for (let j = 1; j < timeSlots.length; j++) {
-        const cell = row[j];
-        const time = timeSlots[j - 1]?.toString().trim();
+      for (let j = 0; j < timeSlots.length; j++) {
+        const time = timeSlots[j]?.toString().trim();
+        const cell = row[j + 1]; // cell data is offset by 1 because of the room column
+        
         if (!cell || typeof cell !== 'string' || !time) continue;
 
         const lines = cell.split("\n").map(line => line.trim()).filter(Boolean);
         if (lines.length < 2) continue;
 
         const courseLine = lines[0];
-        const lecturerName = lines[lines.length - 1];
+        const lecturerName = lines[lines.length - 1]; // More robustly get lecturer name from last line
         
         // This regex is more flexible and handles various department code formats
         const match = courseLine.match(/^([\w\s,]+?)\s+(\d{3})$/);
@@ -79,6 +84,7 @@ export async function handleFileUpload(file: File) {
   try {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const parsedData = parseUniversitySchedule(fileBuffer);
+    
     if (!parsedData || parsedData.length === 0) {
       throw new Error("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
     }
