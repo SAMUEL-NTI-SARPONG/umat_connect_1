@@ -102,12 +102,14 @@ export const timetable = {
   ],
   lecturer: [
      {
+      day: 'Monday',
       course: 'COEN 457: Software Engineering',
       time: '10:00 AM - 12:00 PM',
       location: 'Room C15',
       status: 'confirmed',
     },
     {
+      day: 'Tuesday',
       course: 'COEN 363: Computer Architecture',
       time: '3:00 PM - 5:00 PM',
       location: 'Room C11',

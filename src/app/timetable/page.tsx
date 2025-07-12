@@ -39,74 +39,19 @@ interface TimetableEntry {
   lecturer: string;
 }
 
-function EventCard({
-  course,
-  time,
-  location,
-  status,
-  isLecturerView,
-  onStatusChange,
-}: {
-  course: string;
-  time: string;
-  location:string;
-  status: EventStatus;
-  isLecturerView: boolean;
-  onStatusChange: (newStatus: EventStatus) => void;
-}) {
-  const statusConfig = {
-    confirmed: {
-      color: 'border-l-green-500',
-      icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-      text: 'Confirmed'
-    },
-    canceled: {
-      color: 'border-l-red-500',
-      icon: <XCircle className="h-5 w-5 text-red-500" />,
-      text: 'Canceled'
-    },
-    undecided: {
-      color: 'border-l-yellow-500',
-      icon: <AlertCircle className="h-5 w-5 text-yellow-500" />,
-      text: 'Undecided'
-    },
-  };
-
-  const currentStatus = statusConfig[status];
-
-  return (
-    <Card className={cn('mb-4 border-l-4 rounded-xl shadow-sm', currentStatus.color)}>
-      <CardHeader>
-        <CardTitle className="font-semibold">{course}</CardTitle>
-        <CardDescription>{time} - {location}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm">
-          {currentStatus.icon}
-          <p className="font-semibold capitalize">{currentStatus.text}</p>
-        </div>
-        {isLecturerView && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => onStatusChange('confirmed')} disabled={status === 'confirmed'}>
-              <Check className="h-4 w-4 mr-1" /> Confirm
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onStatusChange('canceled')} disabled={status === 'canceled'}>
-              <Ban className="h-4 w-4 mr-1" /> Cancel
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+const statusConfig = {
+    confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
+    canceled: { color: 'bg-red-500', text: 'Canceled', border: 'border-l-red-500', icon: <XCircle className="h-5 w-5 text-red-500" /> },
+    undecided: { color: 'bg-yellow-500', text: 'Undecided', border: 'border-l-yellow-500', icon: <AlertCircle className="h-5 w-5 text-yellow-500" /> },
+};
+  
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 function StudentTimetableView() {
-  // Group schedule by day
   const dailySchedule = useMemo(() => {
     const schedule = timetable.student;
     return schedule.reduce((acc, event) => {
-      // For demo purposes, we'll assign days. In a real app this data would come from the backend.
-      const day = event.day || "Monday"; // Assign a default day if not present
+      const day = event.day || "Monday"; 
       if (!acc[day]) {
         acc[day] = [];
       }
@@ -114,19 +59,6 @@ function StudentTimetableView() {
       return acc;
     }, {} as Record<string, typeof schedule>);
   }, []);
-  
-  // Add day to student timetable for demo
-  timetable.student[0].day = "Monday";
-  timetable.student[1].day = "Monday";
-  timetable.student[2].day = "Wednesday";
-  
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
-  const statusConfig = {
-    confirmed: { color: 'bg-green-500', text: 'Confirmed' },
-    canceled: { color: 'bg-red-500', text: 'Canceled' },
-    undecided: { color: 'bg-yellow-500', text: 'Undecided' },
-  };
 
   return (
     <Tabs defaultValue="Monday" className="w-full">
@@ -193,29 +125,90 @@ function StudentTimetableView() {
 }
 
 function LecturerTimetableView() {
-  const [schedule, setSchedule] = React.useState(timetable.lecturer);
+  const [schedule, setSchedule] = useState(timetable.lecturer);
 
   const handleStatusChange = (index: number, newStatus: EventStatus) => {
     const updatedSchedule = [...schedule];
     updatedSchedule[index].status = newStatus;
     setSchedule(updatedSchedule);
   };
+  
+  const dailySchedule = useMemo(() => {
+    return schedule.reduce((acc, event, index) => {
+      const day = event.day || "Monday"; 
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push({ ...event, originalIndex: index });
+      return acc;
+    }, {} as Record<string, (typeof schedule[0] & { originalIndex: number })[]>);
+  }, [schedule]);
+
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Your Teaching Schedule</h2>
-      {schedule.map((event, index) => (
-        <EventCard
-          key={index}
-          course={event.course}
-          time={event.time}
-          location={event.location}
-          status={event.status as EventStatus}
-          isLecturerView={true}
-          onStatusChange={(newStatus) => handleStatusChange(index, newStatus)}
-        />
-      ))}
-    </div>
+    <Tabs defaultValue="Monday" className="w-full">
+       <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+        <TabsList className="grid w-full grid-cols-5 h-12">
+          {days.map(day => (
+            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
+       <div className="py-6">
+        {days.map(day => (
+          <TabsContent key={day} value={day}>
+            <div className="space-y-4">
+              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                dailySchedule[day].map((event) => {
+                  const status = statusConfig[event.status as EventStatus];
+
+                  return (
+                    <Card key={event.originalIndex} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
+                      <div className="flex">
+                        <div className={cn("w-2", status.color)}></div>
+                        <div className="flex-grow p-3 md:p-4">
+                           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
+                              <div>
+                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.course}</CardTitle>
+                                  <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
+                              </div>
+                              <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
+                                  <Clock className="w-3 h-3"/>
+                                  <span>{event.time}</span>
+                              </div>
+                          </div>
+                          <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
+                              <div className="flex items-center gap-2">
+                                  <MapPin className="w-3.5 h-3.5 text-primary/70"/>
+                                  <span>{event.location}</span>
+                              </div>
+                          </div>
+                           <div className="mt-4 flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.originalIndex, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                <Check className="h-4 w-4 mr-1" /> Confirm
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.originalIndex, 'canceled')} disabled={event.status === 'canceled'}>
+                                <Ban className="h-4 w-4 mr-1" /> Cancel
+                              </Button>
+                            </div>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })
+              ) : (
+                <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                   <CardContent className="text-center text-muted-foreground">
+                       <p className="font-medium">No classes scheduled for {day}.</p>
+                       <p className="text-sm">Enjoy your day off!</p>
+                   </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </div>
+    </Tabs>
   );
 }
 
@@ -397,5 +390,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    
