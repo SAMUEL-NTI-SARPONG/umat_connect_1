@@ -130,7 +130,7 @@ function StudentTimetableView() {
 
   return (
     <Tabs defaultValue="Monday" className="w-full">
-      <div className="sticky top-14 md:top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+      <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
         <TabsList className="grid w-full grid-cols-5 h-12">
           {days.map(day => (
             <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
@@ -140,35 +140,35 @@ function StudentTimetableView() {
       <div className="py-6">
         {days.map(day => (
           <TabsContent key={day} value={day}>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                 dailySchedule[day].map((event, index) => {
                   const lecturer = users.find(u => u.name.includes(event.course.split(" ")[0])) // simplified lookup
                   const status = statusConfig[event.status as EventStatus];
 
                   return (
-                    <Card key={index} className="overflow-hidden shadow-md transition-all hover:shadow-lg">
+                    <Card key={index} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
                       <div className="flex">
                         <div className={cn("w-2", status.color)}></div>
-                        <div className="flex-grow p-4 md:p-6">
+                        <div className="flex-grow p-4 md:p-5">
                           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                               <div>
-                                  <CardTitle className="text-lg md:text-xl font-bold">{event.course}</CardTitle>
-                                  <Badge variant="secondary" className="mt-1 capitalize">{status.text}</Badge>
+                                  <CardTitle className="text-base md:text-lg font-semibold tracking-tight">{event.course}</CardTitle>
+                                  <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
                               </div>
-                              <div className="text-sm sm:text-right font-semibold text-primary flex items-center gap-2">
-                                  <Clock className="w-4 h-4"/>
+                              <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
+                                  <Clock className="w-3 h-3"/>
                                   <span>{event.time}</span>
                               </div>
                           </div>
-                          <div className="mt-4 space-y-2 text-muted-foreground text-sm">
+                          <div className="mt-4 space-y-2 text-muted-foreground text-xs md:text-sm">
                               <div className="flex items-center gap-2">
-                                  <MapPin className="w-4 h-4 text-primary/80"/>
-                                  <span>Location: {event.location}</span>
+                                  <MapPin className="w-3.5 h-3.5 text-primary/70"/>
+                                  <span>{event.location}</span>
                               </div>
                               <div className="flex items-center gap-2">
-                                  <BookUser className="w-4 h-4 text-primary/80"/>
-                                  <span>Lecturer: {lecturer ? lecturer.name : 'TBA'}</span>
+                                  <BookUser className="w-3.5 h-3.5 text-primary/70"/>
+                                  <span>{lecturer ? lecturer.name : 'TBA'}</span>
                               </div>
                           </div>
                         </div>
@@ -177,10 +177,10 @@ function StudentTimetableView() {
                   )
                 })
               ) : (
-                <Card className="flex items-center justify-center p-12">
+                <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                    <CardContent className="text-center text-muted-foreground">
-                       <p className="text-lg font-semibold">No classes scheduled for {day}.</p>
-                       <p>Enjoy your day off!</p>
+                       <p className="font-medium">No classes scheduled for {day}.</p>
+                       <p className="text-sm">Enjoy your day off!</p>
                    </CardContent>
                 </Card>
               )}
@@ -392,8 +392,10 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="md:p-6 max-w-7xl mx-auto">
       {renderContent()}
     </div>
   );
 }
+
+    
