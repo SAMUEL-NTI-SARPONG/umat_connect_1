@@ -44,13 +44,13 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const courseLine = lines[0];
         const lecturerName = lines[lines.length - 1]; // Assume lecturer is the last line
 
-        const match = courseLine.match(/^([A-Z\s,]+)\s+(\d{3})$/);
+        const match = courseLine.match(/^([A-Z, ]+)\s+(\d{3})$/);
         if (!match) continue;
 
         const deptStr = match[1].trim();
         const courseNum = match[2].trim();
 
-        const departments = deptStr.split(/,?\s+/)
+        const departments = deptStr.split(/[, ]+/)
           .map(d => d.trim())
           .filter(dep => departmentInitials.includes(dep));
 
