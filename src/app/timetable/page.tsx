@@ -45,7 +45,7 @@ const statusConfig = {
     undecided: { color: 'bg-yellow-500', text: 'Undecided', border: 'border-l-yellow-500', icon: <AlertCircle className="h-5 w-5 text-yellow-500" /> },
 };
   
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function StudentTimetableView() {
   const dailySchedule = useMemo(() => {
@@ -63,9 +63,9 @@ function StudentTimetableView() {
   return (
     <Tabs defaultValue="Monday" className="w-full">
       <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+        <TabsList className="grid w-full grid-cols-7 h-12">
           {days.map(day => (
-            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
+            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
           ))}
         </TabsList>
       </div>
@@ -148,9 +148,9 @@ function LecturerTimetableView() {
   return (
     <Tabs defaultValue="Monday" className="w-full">
        <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+        <TabsList className="grid w-full grid-cols-7 h-12">
           {days.map(day => (
-            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
+            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
           ))}
         </TabsList>
       </div>
@@ -260,7 +260,7 @@ function AdminTimetableView() {
     }, {} as Record<string, TimetableEntry[]>);
   }, [parsedData]);
 
-  const days = Object.keys(groupedByDay);
+  const daysWithData = Object.keys(groupedByDay);
 
   return (
     <div className="space-y-6">
@@ -326,13 +326,13 @@ function AdminTimetableView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={days[0]} className="w-full">
+            <Tabs defaultValue={daysWithData[0]} className="w-full">
               <TabsList>
-                {days.map(day => (
+                {daysWithData.map(day => (
                   <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
                 ))}
               </TabsList>
-              {days.map(day => (
+              {daysWithData.map(day => (
                 <TabsContent key={day} value={day}>
                     <Table>
                       <TableHeader>
