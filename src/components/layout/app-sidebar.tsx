@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, Search, User } from 'lucide-react';
+import { Calendar, Home, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -67,17 +67,6 @@ export default function AppSidebar() {
               >
                 <Calendar />
                 <span>Timetable</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Link href="/explore" passHref>
-              <SidebarMenuButton
-                tooltip="Explore"
-                isActive={pathname === '/explore'}
-              >
-                <Search />
-                <span>Explore</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
