@@ -159,7 +159,7 @@ function PostCard({
 
 export default function Home() {
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+    <div className="py-4 md:py-6 max-w-2xl mx-auto">
       <PostCard
         author="Dr. Yaw Mensah"
         department="Computer Science"
