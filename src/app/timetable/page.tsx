@@ -8,7 +8,12 @@ import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, Trash2, FilePen
 import { useUser } from '../providers/user-provider';
 import { timetable } from '@/lib/data';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
 
@@ -123,20 +128,43 @@ function LecturerTimetableView() {
 function AdminTimetableView() {
   return (
      <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Upload className="h-4 w-4 mr-2" />
-            Upload New
-          </Button>
-          <Button variant="outline" className="w-full sm:w-auto">
-            <FilePenLine className="h-4 w-4 mr-2" />
-            Edit Current
-          </Button>
-          <Button variant="destructive" className="w-full sm:w-auto">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+      <TooltipProvider>
+        <div className="flex gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Upload className="h-4 w-4" />
+                  <span className="sr-only">Upload New</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload New</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <FilePenLine className="h-4 w-4" />
+                  <span className="sr-only">Edit Current</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit Current</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete</p>
+              </TooltipContent>
+            </Tooltip>
         </div>
+      </TooltipProvider>
     </div>
   );
 }
