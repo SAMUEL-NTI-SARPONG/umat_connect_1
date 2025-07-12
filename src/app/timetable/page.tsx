@@ -4,9 +4,9 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
-import { timetable } from '@/lib/data';
+import { timetable, users } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -25,6 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { handleFileUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
 
@@ -100,22 +101,94 @@ function EventCard({
 }
 
 function StudentTimetableView() {
-  const studentSchedule = timetable.student;
+  // Group schedule by day
+  const dailySchedule = useMemo(() => {
+    const schedule = timetable.student;
+    return schedule.reduce((acc, event) => {
+      // For demo purposes, we'll assign days. In a real app this data would come from the backend.
+      const day = event.day || "Monday"; // Assign a default day if not present
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(event);
+      return acc;
+    }, {} as Record<string, typeof schedule>);
+  }, []);
+  
+  // Add day to student timetable for demo
+  timetable.student[0].day = "Monday";
+  timetable.student[1].day = "Monday";
+  timetable.student[2].day = "Wednesday";
+  
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+  const statusConfig = {
+    confirmed: { color: 'bg-green-500', text: 'Confirmed' },
+    canceled: { color: 'bg-red-500', text: 'Canceled' },
+    undecided: { color: 'bg-yellow-500', text: 'Undecided' },
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Today's Schedule</h2>
-      {studentSchedule.map((event, index) => (
-        <EventCard
-          key={index}
-          course={event.course}
-          time={event.time}
-          location={event.location}
-          status={event.status as EventStatus}
-          isLecturerView={false}
-          onStatusChange={() => {}}
-        />
-      ))}
-    </div>
+    <Tabs defaultValue="Monday" className="w-full">
+      <div className="sticky top-14 md:top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+        <TabsList className="grid w-full grid-cols-5 h-12">
+          {days.map(day => (
+            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
+      <div className="py-6">
+        {days.map(day => (
+          <TabsContent key={day} value={day}>
+            <div className="space-y-6">
+              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                dailySchedule[day].map((event, index) => {
+                  const lecturer = users.find(u => u.name.includes(event.course.split(" ")[0])) // simplified lookup
+                  const status = statusConfig[event.status as EventStatus];
+
+                  return (
+                    <Card key={index} className="overflow-hidden shadow-md transition-all hover:shadow-lg">
+                      <div className="flex">
+                        <div className={cn("w-2", status.color)}></div>
+                        <div className="flex-grow p-4 md:p-6">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
+                              <div>
+                                  <CardTitle className="text-lg md:text-xl font-bold">{event.course}</CardTitle>
+                                  <Badge variant="secondary" className="mt-1 capitalize">{status.text}</Badge>
+                              </div>
+                              <div className="text-sm sm:text-right font-semibold text-primary flex items-center gap-2">
+                                  <Clock className="w-4 h-4"/>
+                                  <span>{event.time}</span>
+                              </div>
+                          </div>
+                          <div className="mt-4 space-y-2 text-muted-foreground text-sm">
+                              <div className="flex items-center gap-2">
+                                  <MapPin className="w-4 h-4 text-primary/80"/>
+                                  <span>Location: {event.location}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                  <BookUser className="w-4 h-4 text-primary/80"/>
+                                  <span>Lecturer: {lecturer ? lecturer.name : 'TBA'}</span>
+                              </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })
+              ) : (
+                <Card className="flex items-center justify-center p-12">
+                   <CardContent className="text-center text-muted-foreground">
+                       <p className="text-lg font-semibold">No classes scheduled for {day}.</p>
+                       <p>Enjoy your day off!</p>
+                   </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </div>
+    </Tabs>
   );
 }
 

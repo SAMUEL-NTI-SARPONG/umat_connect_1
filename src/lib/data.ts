@@ -79,18 +79,21 @@ export const posts = [
 export const timetable = {
   student: [
     {
+      day: 'Monday',
       course: 'COEN 457: Software Engineering',
       time: '10:00 AM - 12:00 PM',
       location: 'Room C15',
       status: 'confirmed',
     },
     {
+      day: 'Monday',
       course: 'MATH 251: Calculus II',
       time: '1:00 PM - 3:00 PM',
       location: 'Auditorium A',
       status: 'undecided',
     },
     {
+      day: 'Wednesday',
       course: 'PHYS 164: Electromagnetism',
       time: '3:00 PM - 5:00 PM',
       location: 'Lab 3B',
