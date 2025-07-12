@@ -102,11 +102,11 @@ function PostCard({
           <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center gap-2">
             <Input
               placeholder="Add a comment..."
-              className="rounded-full"
+              className="rounded-full bg-muted border-none"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
-            <Button type="submit" size="icon" disabled={!newComment.trim()}>
+            <Button type="submit" size="icon" disabled={!newComment.trim()} variant="ghost">
               <Send className="h-4 w-4" />
               <span className="sr-only">Post comment</span>
             </Button>
@@ -119,9 +119,9 @@ function PostCard({
                 <AvatarImage src={`https://placehold.co/24x24.png`} data-ai-hint="profile picture" />
                 <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
               </Avatar>
-              <div className="bg-muted rounded-lg p-2 text-sm">
+              <div className="bg-muted rounded-lg p-2 text-sm w-full">
                 <p className="font-semibold">{comment.author}</p>
-                <p>{comment.text}</p>
+                <p className="text-muted-foreground">{comment.text}</p>
               </div>
             </div>
           ))}
@@ -133,7 +133,7 @@ function PostCard({
 
 export default function Home() {
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <PostCard
         author="Dr. Yaw Mensah"
         department="Computer Science"
