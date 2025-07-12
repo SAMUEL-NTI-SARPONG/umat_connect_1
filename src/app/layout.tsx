@@ -9,6 +9,7 @@ import {
 import AppSidebar from '@/components/layout/app-sidebar';
 import { UserProvider } from './providers/user-provider';
 import ScheduleSidebar from '@/components/layout/schedule-sidebar';
+import AppHeader from '@/components/layout/app-header';
 
 export const metadata: Metadata = {
   title: 'UMaT Connect',
@@ -41,14 +42,11 @@ export default function RootLayout({
               <Sidebar variant="floating" collapsible="icon">
                 <AppSidebar />
               </Sidebar>
-              <SidebarInset className="flex-1">
-                <div className="p-4 flex items-center gap-2">
-                  <SidebarTrigger className="md:hidden" />
-                  <h1 className="text-2xl font-bold text-primary">
-                    UMaT Connect
-                  </h1>
-                </div>
-                {children}
+              <SidebarInset className="flex-1 flex flex-col">
+                <AppHeader />
+                <main className="flex-1">
+                 {children}
+                </main>
               </SidebarInset>
               <Sidebar
                 side="right"

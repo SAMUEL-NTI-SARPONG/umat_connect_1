@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -134,39 +133,29 @@ function PostCard({
 
 export default function Home() {
   return (
-    <main className="p-4 md:p-6">
-      <Tabs defaultValue="current">
-        <TabsList>
-          <TabsTrigger value="current">Current Posts</TabsTrigger>
-          <TabsTrigger value="past">Past Posts</TabsTrigger>
-        </TabsList>
-        <TabsContent value="current">
-          <PostCard
-            author="Dr. Yaw Mensah"
-            department="Computer Science"
-            timestamp="2 hours ago"
-            content="Reminder: The assignment deadline for COEN 457 is this Friday. No extensions will be granted. Please submit via the university portal."
-            imageUrl="https://placehold.co/600x400.png"
-            initialComments={[
-              { author: 'Alice', text: 'Thank you for the reminder, Dr. Mensah!' }
-            ]}
-          />
-          <PostCard
-            author="Admin Office"
-            department="Examinations Unit"
-            timestamp="8 hours ago"
-            content="The final examination timetable for the second semester has been released. Please check your student dashboards for your personal schedule."
-          />
-        </TabsContent>
-        <TabsContent value="past">
-          <PostCard
-            author="Dr. Adwoa Ansa"
-            department="Geomatic Engineering"
-            timestamp="Yesterday"
-            content="Guest lecture on 'Modern GIS Applications' will be held tomorrow at the main auditorium. All Geomatic Engineering students are encouraged to attend."
-          />
-        </TabsContent>
-      </Tabs>
-    </main>
+    <div className="p-4 md:p-6">
+      <PostCard
+        author="Dr. Yaw Mensah"
+        department="Computer Science"
+        timestamp="2 hours ago"
+        content="Reminder: The assignment deadline for COEN 457 is this Friday. No extensions will be granted. Please submit via the university portal."
+        imageUrl="https://placehold.co/600x400.png"
+        initialComments={[
+          { author: 'Alice', text: 'Thank you for the reminder, Dr. Mensah!' }
+        ]}
+      />
+      <PostCard
+        author="Admin Office"
+        department="Examinations Unit"
+        timestamp="8 hours ago"
+        content="The final examination timetable for the second semester has been released. Please check your student dashboards for your personal schedule."
+      />
+       <PostCard
+        author="Dr. Adwoa Ansa"
+        department="Geomatic Engineering"
+        timestamp="Yesterday"
+        content="Guest lecture on 'Modern GIS Applications' will be held tomorrow at the main auditorium. All Geomatic Engineering students are encouraged to attend."
+      />
+    </div>
   );
 }
