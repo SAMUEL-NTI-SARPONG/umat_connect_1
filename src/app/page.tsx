@@ -16,6 +16,12 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { MessageCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useState } from 'react';
+
+type Comment = {
+  author: string;
+  text: string;
+};
 
 function PostCard({
   author,
@@ -23,13 +29,29 @@ function PostCard({
   timestamp,
   content,
   imageUrl,
+  initialComments = [],
 }: {
   author: string;
   department: string;
   timestamp: string;
   content: string;
   imageUrl?: string;
+  initialComments?: Comment[];
 }) {
+  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [newComment, setNewComment] = useState('');
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim()) {
+      setComments([
+        ...comments,
+        { author: 'Student User', text: newComment },
+      ]);
+      setNewComment('');
+    }
+  };
+
   return (
     <Card className="mb-4">
       <CardHeader>
@@ -71,7 +93,29 @@ function PostCard({
             <AvatarImage src={`https://placehold.co/32x32.png`} data-ai-hint="profile picture" />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
-          <Input placeholder="Add a comment..." className="rounded-full" />
+          <form onSubmit={handleCommentSubmit} className="flex-grow flex items-center gap-2">
+            <Input
+              placeholder="Add a comment..."
+              className="rounded-full"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+            <Button type="submit" size="sm" disabled={!newComment.trim()}>Post</Button>
+          </form>
+        </div>
+        <div className="w-full pl-10 space-y-2">
+          {comments.map((comment, index) => (
+            <div key={index} className="flex items-start gap-2">
+               <Avatar className="w-6 h-6">
+                <AvatarImage src={`https://placehold.co/24x24.png`} data-ai-hint="profile picture" />
+                <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="bg-muted rounded-lg p-2 text-sm">
+                <p className="font-semibold">{comment.author}</p>
+                <p>{comment.text}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </CardFooter>
     </Card>
@@ -93,6 +137,9 @@ export default function Home() {
             timestamp="2 hours ago"
             content="Reminder: The assignment deadline for COEN 457 is this Friday. No extensions will be granted. Please submit via the university portal."
             imageUrl="https://placehold.co/600x400.png"
+            initialComments={[
+              { author: 'Alice', text: 'Thank you for the reminder, Dr. Mensah!' }
+            ]}
           />
           <PostCard
             author="Admin Office"
