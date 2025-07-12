@@ -13,9 +13,11 @@ import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
+import { users } from '@/lib/data';
 
 export default function ProfilePage() {
   const { 
+    role,
     name, setName, 
     profileImage, setProfileImage,
     department, setDepartment,
@@ -24,17 +26,34 @@ export default function ProfilePage() {
   
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { theme, setTheme, systemTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [fontSize, setFontSize] = useState(16);
 
-  const [formData, setFormData] = useState({ name, department, phone });
-  const [localProfileImage, setLocalProfileImage] = useState(profileImage);
+  const currentUserData = users.find(u => u.role === role);
 
-  // Sync local state when global state changes (e.g., from another component or on initial load)
+  const [formData, setFormData] = useState({ 
+    name: currentUserData?.name || name, 
+    department: currentUserData?.department || department, 
+    phone: currentUserData?.phone || phone
+  });
+  const [localProfileImage, setLocalProfileImage] = useState(currentUserData?.profileImage || profileImage);
+
+  // Sync with global context or mock data when role changes
   useEffect(() => {
-    setFormData({ name, department, phone });
-    setLocalProfileImage(profileImage);
-  }, [name, department, phone, profileImage]);
+    const userData = users.find(u => u.role === role);
+    if (userData) {
+      setName(userData.name);
+      setDepartment(userData.department);
+      setPhone(userData.phone);
+      setProfileImage(userData.profileImage);
+      setFormData({
+        name: userData.name,
+        department: userData.department,
+        phone: userData.phone
+      });
+      setLocalProfileImage(userData.profileImage);
+    }
+  }, [role, setName, setDepartment, setPhone, setProfileImage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -54,10 +73,8 @@ export default function ProfilePage() {
   
   const handleEditToggle = () => {
     if (isEditing) {
-      // If was editing, cancel changes
       handleCancel();
     } else {
-      // If not editing, start editing
       setFormData({ name, department, phone });
       setLocalProfileImage(profileImage);
       setIsEditing(true);
@@ -65,7 +82,6 @@ export default function ProfilePage() {
   };
 
   const handleSaveChanges = () => {
-    // Commit local changes to global state
     setName(formData.name);
     setDepartment(formData.department);
     setPhone(formData.phone);
@@ -76,13 +92,12 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
-    // Reset local state from global state
     setFormData({ name, department, phone });
     setLocalProfileImage(profileImage);
     setIsEditing(false);
   };
 
-  const currentTheme = theme === 'system' ? systemTheme : theme;
+  const currentTheme = theme;
   const displayImage = isEditing ? localProfileImage : profileImage;
   const displayName = isEditing ? formData.name : name;
 
@@ -133,7 +148,7 @@ export default function ProfilePage() {
                     <span className="sr-only">{isEditing ? 'Cancel Editing' : 'Edit Profile'}</span>
                   </Button>
               </div>
-              <p className="text-muted-foreground">Student</p>
+              <p className="text-muted-foreground capitalize">{role}</p>
             </div>
           </div>
         </CardHeader>
@@ -152,7 +167,7 @@ export default function ProfilePage() {
             <Input
               id="email"
               type="email"
-              defaultValue="user.name@st.umat.edu.gh"
+              defaultValue={currentUserData?.email}
               disabled
             />
           </div>

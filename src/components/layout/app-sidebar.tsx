@@ -28,28 +28,22 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const { role, setRole, name, profileImage } = useUser();
 
-  const userDetails = {
-    student: { roleText: 'Student' },
-    lecturer: { roleText: 'Lecturer' },
-    administrator: { roleText: 'Administrator' },
-  };
-
-  const currentUser = userDetails[role];
-
   return (
     <>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
-         <ProfileAvatar
-            src={profileImage}
-            fallback={name.charAt(0).toUpperCase()}
-            alt="Current user's profile picture"
-            className="w-16 h-16 text-2xl"
-            imageHint="profile picture"
-          />
+        <Link href="/profile">
+          <ProfileAvatar
+              src={profileImage}
+              fallback={name.charAt(0).toUpperCase()}
+              alt="Current user's profile picture"
+              className="w-16 h-16 text-2xl"
+              imageHint="profile picture"
+            />
+        </Link>
         <div>
           <p className="font-semibold">{name}</p>
           <p className="text-sm capitalize text-sidebar-foreground/80">
-            {currentUser.roleText}
+            {role}
           </p>
         </div>
       </div>
