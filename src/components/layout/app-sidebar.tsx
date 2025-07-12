@@ -103,7 +103,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Switch Role</SidebarGroupLabel>
           <Select
             value={role}
-            onValue-change={(value) => setRole(value as any)}
+            onValueChange={(value) => setRole(value as any)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Role" />
