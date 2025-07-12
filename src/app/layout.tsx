@@ -54,7 +54,6 @@ export default function RootLayout({
                 side="right"
                 variant="floating"
                 collapsible="icon"
-                className="w-80"
               >
                 <ScheduleSidebar />
               </Sidebar>
