@@ -1,9 +1,11 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
+import { timetable } from '@/lib/data';
 
 function ScheduleItem({
   title,
@@ -31,20 +33,8 @@ function ScheduleItem({
 export default function ScheduleSidebar() {
   const { role } = useUser();
 
-  if (role !== 'student') {
-    return (
-      <div className="hidden md:flex flex-col h-full">
-        <SidebarHeader>
-          <CardTitle className="text-lg font-semibold">Today's Schedule</CardTitle>
-        </SidebarHeader>
-        <SidebarContent className="p-4">
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Only students have a schedule.</p>
-          </div>
-        </SidebarContent>
-      </div>
-    );
-  }
+  const scheduleData = timetable[role] || [];
+  const hasSchedule = scheduleData.length > 0;
 
   return (
     <div className="hidden md:flex flex-col h-full">
@@ -52,21 +42,20 @@ export default function ScheduleSidebar() {
         <CardTitle className="text-lg font-semibold">Today's Schedule</CardTitle>
       </SidebarHeader>
       <SidebarContent className="p-4 space-y-4">
-        <ScheduleItem
-          title="COEN 457: Software Engineering"
-          time="10:00 - 12:00"
-          status="confirmed"
-        />
-        <ScheduleItem
-          title="MATH 251: Calculus II"
-          time="13:00 - 15:00"
-          status="undecided"
-        />
-        <ScheduleItem
-          title="PHYS 164: Electromagnetism"
-          time="15:00 - 17:00"
-          status="canceled"
-        />
+        {hasSchedule ? (
+          scheduleData.map((event, index) => (
+            <ScheduleItem
+              key={index}
+              title={event.course.split(':')[0]} // Show only course code for brevity
+              time={event.time.replace(/ AM| PM/g, '')} // Make time more compact
+              status={event.status as 'confirmed' | 'canceled' | 'undecided'}
+            />
+          ))
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <p>No schedule for today.</p>
+          </div>
+        )}
       </SidebarContent>
     </div>
   );
