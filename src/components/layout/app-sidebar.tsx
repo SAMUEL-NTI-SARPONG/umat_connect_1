@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User } from 'lucide-react';
+import { Album, Calendar, Home, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -38,14 +38,26 @@ export default function AppSidebar() {
 
   return (
     <>
+      <div className="flex flex-col items-center gap-4 p-4 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center gap-2">
+          <Album className="w-8 h-8 text-primary" />
+          <h2 className="text-xl font-bold">UMaT Connect</h2>
+        </div>
+      </div>
+      <SidebarSeparator />
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
         <Avatar className="w-16 h-16">
-          <AvatarImage src="https://placehold.co/64x64.png" data-ai-hint="profile picture" />
+          <AvatarImage
+            src="https://placehold.co/64x64.png"
+            data-ai-hint="profile picture"
+          />
           <AvatarFallback>{currentUser.avatar}</AvatarFallback>
         </Avatar>
         <div>
           <p className="font-semibold">{currentUser.name}</p>
-          <p className="text-sm capitalize text-sidebar-foreground/80">{role}</p>
+          <p className="text-sm capitalize text-sidebar-foreground/80">
+            {role}
+          </p>
         </div>
       </div>
       <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
@@ -87,7 +99,10 @@ export default function AppSidebar() {
       <SidebarFooter>
         <SidebarGroup>
           <SidebarGroupLabel>Switch Role</SidebarGroupLabel>
-          <Select value={role} onValueChange={(value) => setRole(value as any)}>
+          <Select
+            value={role}
+            onValueChange={(value) => setRole(value as any)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select Role" />
             </SelectTrigger>
