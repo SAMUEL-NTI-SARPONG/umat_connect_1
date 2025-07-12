@@ -33,7 +33,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
       const room = row[0]?.toString().trim();
       if (!room) continue;
 
-      for (let j = 1; j <= timeSlots.length; j++) {
+      for (let j = 1; j < timeSlots.length; j++) {
         const cell = row[j];
         const time = timeSlots[j - 1]?.toString().trim();
         if (!cell || typeof cell !== 'string' || !time) continue;
@@ -45,7 +45,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const lecturerName = lines[lines.length - 1];
         
         // This regex is more flexible and handles various department code formats
-        const match = courseLine.match(/^([\w\s,]+)\s+(\d{3})$/);
+        const match = courseLine.match(/^([\w\s,]+?)\s+(\d{3})$/);
         if (!match) continue;
 
         const deptStr = match[1].trim();
