@@ -61,7 +61,7 @@ export default function CreatePostCard() {
     setIsDialogOpen(false);
   };
 
-  if (role !== 'administrator') {
+  if (role === 'student') {
     return null;
   }
 
