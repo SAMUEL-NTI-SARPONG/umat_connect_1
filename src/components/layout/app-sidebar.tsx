@@ -40,11 +40,10 @@ export default function AppSidebar() {
     <>
       <div className="flex flex-col items-center gap-4 p-4 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-2">
-          <GraduationCap className="w-8 h-8 text-primary" />
+          <GraduationCap className="w-8 h-8 text-foreground" />
           <h2 className="text-xl font-bold">UMaT Connect</h2>
         </div>
       </div>
-      <SidebarSeparator />
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
         <Avatar className="w-16 h-16">
           <AvatarImage

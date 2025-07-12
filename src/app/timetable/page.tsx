@@ -34,15 +34,15 @@ function EventCard({
   const currentStatus = statusConfig[status];
 
   return (
-    <Card className={cn('mb-4 border-l-4', currentStatus.color)}>
+    <Card className={cn('mb-4 border-l-4 rounded-xl shadow-sm', currentStatus.color)}>
       <CardHeader>
-        <CardTitle>{course}</CardTitle>
+        <CardTitle className="font-semibold">{course}</CardTitle>
         <CardDescription>{time} - {location}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-sm">
           {currentStatus.icon}
-          <p className="font-bold capitalize">{currentStatus.text}</p>
+          <p className="font-semibold capitalize">{currentStatus.text}</p>
         </div>
       </CardContent>
     </Card>

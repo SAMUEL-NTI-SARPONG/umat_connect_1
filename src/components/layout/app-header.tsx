@@ -15,7 +15,7 @@ export default function AppHeader() {
   const title = pageTitles[pathname] || 'UMaT Connect';
 
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-2 p-4 border-b bg-card">
+    <header className="sticky top-0 z-10 flex items-center gap-2 p-4 border-b bg-background/80 backdrop-blur-sm">
       <SidebarTrigger className="md:hidden" />
       <h1 className="text-xl font-bold text-foreground">{title}</h1>
     </header>

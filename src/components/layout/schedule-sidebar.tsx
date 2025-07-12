@@ -15,18 +15,16 @@ function ScheduleItem({
   status: 'confirmed' | 'canceled' | 'undecided';
 }) {
   const statusClasses = {
-    confirmed: 'border-l-4 border-green-500',
-    canceled: 'border-l-4 border-red-500',
-    undecided: 'border-l-4 border-yellow-500',
+    confirmed: 'border-l-green-500',
+    canceled: 'border-l-red-500',
+    undecided: 'border-l-yellow-500',
   };
 
   return (
-    <Card className={cn('mb-2', statusClasses[status])}>
-      <CardContent className="p-3">
-        <p className="font-semibold">{title}</p>
-        <p className="text-sm text-muted-foreground">{time}</p>
-      </CardContent>
-    </Card>
+    <div className={cn('mb-3 pl-3 border-l-4', statusClasses[status])}>
+       <p className="font-semibold text-sm">{title}</p>
+        <p className="text-xs text-muted-foreground">{time}</p>
+    </div>
   );
 }
 
@@ -53,7 +51,7 @@ export default function ScheduleSidebar() {
       <SidebarHeader>
         <CardTitle>Today's Schedule</CardTitle>
       </SidebarHeader>
-      <SidebarContent className="p-4">
+      <SidebarContent className="p-4 space-y-4">
         <ScheduleItem
           title="COEN 457: Software Engineering"
           time="10:00 - 12:00"

@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 export default function ProfilePage() {
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
-      <Card>
+      <Card className="rounded-xl shadow-sm">
         <CardHeader className="p-6">
           <div className="flex items-center gap-6">
             <Avatar className="w-24 h-24 text-3xl">
@@ -16,7 +16,7 @@ export default function ProfilePage() {
               <AvatarFallback>UM</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-3xl">User Name</CardTitle>
+              <CardTitle className="text-3xl font-bold">User Name</CardTitle>
               <p className="text-muted-foreground text-lg">Student</p>
             </div>
           </div>
@@ -39,7 +39,7 @@ export default function ProfilePage() {
             <Label htmlFor="phone">Primary Phone</Label>
             <Input id="phone" type="tel" defaultValue="+233 12 345 6789" />
           </div>
-          <Button className="w-full">Save Changes</Button>
+          <Button className="w-full font-semibold">Save Changes</Button>
         </CardContent>
       </Card>
     </div>

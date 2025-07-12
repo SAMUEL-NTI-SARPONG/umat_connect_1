@@ -54,7 +54,7 @@ function PostCard({
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-4 rounded-xl shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-4">
           <Avatar>
@@ -95,6 +95,7 @@ function PostCard({
             size="sm"
             onClick={() => setIsCommentSectionOpen(!isCommentSectionOpen)}
             aria-expanded={isCommentSectionOpen}
+            className="text-muted-foreground"
           >
             <MessageCircle className="mr-2 h-4 w-4" />
             <span>Comment</span>
@@ -103,7 +104,6 @@ function PostCard({
 
         {isCommentSectionOpen && (
           <>
-            <Separator />
             <div className="w-full flex items-center gap-2">
               <Avatar className="w-8 h-8">
                 <AvatarImage
@@ -127,6 +127,7 @@ function PostCard({
                   size="icon"
                   disabled={!newComment.trim()}
                   variant="ghost"
+                  className='rounded-full'
                 >
                   <Send className="h-4 w-4" />
                   <span className="sr-only">Post comment</span>
