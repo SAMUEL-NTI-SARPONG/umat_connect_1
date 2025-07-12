@@ -9,7 +9,6 @@ import { useUser } from '../providers/user-provider';
 import { timetable } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
 
@@ -124,12 +123,6 @@ function LecturerTimetableView() {
 function AdminTimetableView() {
   return (
      <div className="space-y-6">
-        <div>
-            <h2 className="text-2xl font-bold">Manage Timetable</h2>
-            <p className="text-muted-foreground">
-                Upload, edit, or delete the university's official timetable.
-            </p>
-        </div>
       <div className="flex flex-col sm:flex-row gap-4">
           <Button variant="outline" className="w-full sm:w-auto">
             <Upload className="h-4 w-4 mr-2" />
