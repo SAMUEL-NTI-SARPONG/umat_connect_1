@@ -43,9 +43,9 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 
         const courseLine = lines[0];
         const lecturerName = lines[lines.length - 1];
-
-        // This regex is more flexible for multiple departments like "SP, NG"
-        const match = courseLine.match(/^([A-Z, ]+)\s+(\d{3})$/);
+        
+        // This regex is more flexible and handles various department code formats
+        const match = courseLine.match(/^([\w\s,]+)\s+(\d{3})$/);
         if (!match) continue;
 
         const deptStr = match[1].trim();
@@ -79,9 +79,15 @@ export async function handleFileUpload(file: File) {
   try {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const parsedData = parseUniversitySchedule(fileBuffer);
+    if (!parsedData || parsedData.length === 0) {
+      throw new Error("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+    }
     return parsedData;
   } catch (error) {
     console.error("Parsing failed:", error);
+    if (error instanceof Error && error.message.includes("contains no valid schedule data")) {
+        throw error;
+    }
     throw new Error("Failed to parse the Excel file. Please ensure it is in the correct format.");
   }
 }
