@@ -10,6 +10,7 @@ const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
   '/timetable': 'Timetable',
   '/profile': 'My Profile',
+  '/explore': 'Explore',
 };
 
 export default function AppHeader() {
