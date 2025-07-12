@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useUser } from '@/app/providers/user-provider';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProfileAvatar } from '../ui/profile-avatar';
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -45,13 +46,13 @@ export default function AppSidebar() {
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
-        <Avatar className="w-16 h-16">
-          <AvatarImage
+         <ProfileAvatar
             src="https://placehold.co/64x64.png"
-            data-ai-hint="profile picture"
+            fallback={currentUser.avatar}
+            alt="Current user's profile picture"
+            className="w-16 h-16"
+            imageHint="profile picture"
           />
-          <AvatarFallback>{currentUser.avatar}</AvatarFallback>
-        </Avatar>
         <div>
           <p className="font-semibold">{currentUser.name}</p>
           <p className="text-sm capitalize text-sidebar-foreground/80">

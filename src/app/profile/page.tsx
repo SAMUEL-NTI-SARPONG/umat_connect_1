@@ -1,8 +1,9 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { Separator } from '@/components/ui/separator';
 
 export default function ProfilePage() {
@@ -11,17 +12,20 @@ export default function ProfilePage() {
       <Card className="rounded-xl shadow-sm">
         <CardHeader className="p-6">
           <div className="flex items-center gap-6">
-            <Avatar className="w-24 h-24 text-3xl">
-              <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="profile picture" />
-              <AvatarFallback>UM</AvatarFallback>
-            </Avatar>
+             <ProfileAvatar
+              src="https://placehold.co/100x100.png"
+              fallback="UM"
+              alt="User's profile picture"
+              className="w-24 h-24 text-3xl"
+              imageHint="profile picture"
+            />
             <div>
               <CardTitle className="text-3xl font-bold">User Name</CardTitle>
               <p className="text-muted-foreground text-lg">Student</p>
             </div>
           </div>
         </CardHeader>
-        <Separator/>
+        <Separator />
         <CardContent className="p-6 space-y-6">
           <div className="grid gap-2">
             <Label htmlFor="name">Full Name</Label>
@@ -29,7 +33,12 @@ export default function ProfilePage() {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" defaultValue="user.name@st.umat.edu.gh" disabled />
+            <Input
+              id="email"
+              type="email"
+              defaultValue="user.name@st.umat.edu.gh"
+              disabled
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="department">Department</Label>

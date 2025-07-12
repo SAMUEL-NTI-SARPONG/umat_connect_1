@@ -17,6 +17,7 @@ import { MessageCircle, Send } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ProfileAvatar } from '@/components/ui/profile-avatar';
 
 type Comment = {
   author: string;
@@ -57,13 +58,12 @@ function PostCard({
     <Card className="mb-4 rounded-xl shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-4">
-          <Avatar>
-            <AvatarImage
-              src={`https://placehold.co/40x40.png`}
-              data-ai-hint="profile picture"
-            />
-            <AvatarFallback>{author.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <ProfileAvatar
+            src={`https://placehold.co/40x40.png`}
+            fallback={author.charAt(0)}
+            alt={`${author}'s profile picture`}
+            imageHint="profile picture"
+          />
           <div>
             <CardTitle className="text-base font-semibold">{author}</CardTitle>
             <CardDescription>
@@ -105,13 +105,13 @@ function PostCard({
         {isCommentSectionOpen && (
           <>
             <div className="w-full flex items-center gap-2">
-              <Avatar className="w-8 h-8">
-                <AvatarImage
+               <ProfileAvatar
                   src={`https://placehold.co/32x32.png`}
-                  data-ai-hint="profile picture"
+                  fallback="U"
+                  alt="Current user's profile picture"
+                  className="w-8 h-8"
+                  imageHint="profile picture"
                 />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
               <form
                 onSubmit={handleCommentSubmit}
                 className="flex-grow flex items-center gap-2"
@@ -127,7 +127,7 @@ function PostCard({
                   size="icon"
                   disabled={!newComment.trim()}
                   variant="ghost"
-                  className='rounded-full'
+                  className="rounded-full"
                 >
                   <Send className="h-4 w-4" />
                   <span className="sr-only">Post comment</span>
@@ -137,13 +137,13 @@ function PostCard({
             <div className="w-full pl-10 space-y-2">
               {comments.map((comment, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage
+                   <ProfileAvatar
                       src={`https://placehold.co/24x24.png`}
-                      data-ai-hint="profile picture"
+                      fallback={comment.author.charAt(0)}
+                      alt={`${comment.author}'s profile picture`}
+                      className="w-6 h-6"
+                      imageHint="profile picture"
                     />
-                    <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
-                  </Avatar>
                   <div className="bg-muted rounded-lg p-2 text-sm w-full">
                     <p className="font-semibold">{comment.author}</p>
                     <p className="text-muted-foreground">{comment.text}</p>
