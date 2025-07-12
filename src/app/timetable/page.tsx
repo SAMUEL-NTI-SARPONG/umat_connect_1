@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, Trash2, FilePenLine } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -123,31 +123,44 @@ function LecturerTimetableView() {
 
 function AdminTimetableView() {
   return (
-    <Card className="rounded-xl shadow-sm">
-      <CardHeader>
-        <CardTitle>Manage Timetables</CardTitle>
-        <CardDescription>Upload or update the university's official timetable.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">
-            Upload Timetable File
-          </label>
-          <div className="flex items-center gap-2">
-            <Input id="file-upload" type="file" className="flex-grow" />
-            <Button>
-              <Upload className="h-4 w-4 mr-2" /> Upload
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Upload a CSV or Excel file with the timetable data.</p>
-        </div>
-        <Separator />
-        <div>
-          <h3 className="text-lg font-semibold">Current Timetable Status</h3>
-          <p className="text-sm text-muted-foreground">Second Semester 2023/2024 - Published</p>
-        </div>
-      </CardContent>
-    </Card>
+     <div className="space-y-6">
+      <Card className="rounded-xl shadow-sm">
+        <CardHeader>
+          <CardTitle>Manage Timetables</CardTitle>
+          <CardDescription>
+            Upload, edit, or delete the university's official timetable.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col sm:flex-row gap-4">
+          <Button variant="outline" className="w-full sm:w-auto">
+            <Upload className="h-4 w-4 mr-2" />
+            Upload New
+          </Button>
+          <Button variant="outline" className="w-full sm:w-auto">
+            <FilePenLine className="h-4 w-4 mr-2" />
+            Edit Current
+          </Button>
+          <Button variant="destructive" className="w-full sm:w-auto">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl shadow-sm">
+        <CardHeader>
+          <CardTitle>Current Timetable</CardTitle>
+          <CardDescription>
+            Second Semester 2023/2024 - Published
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Timetable details will be displayed here.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
