@@ -10,6 +10,7 @@ import AppSidebar from '@/components/layout/app-sidebar';
 import { UserProvider } from './providers/user-provider';
 import ScheduleSidebar from '@/components/layout/schedule-sidebar';
 import AppHeader from '@/components/layout/app-header';
+import BottomNavbar from '@/components/layout/bottom-navbar';
 
 export const metadata: Metadata = {
   title: 'UMaT Connect',
@@ -45,7 +46,7 @@ export default function RootLayout({
                 </Sidebar>
                 <SidebarInset className="flex-1 flex flex-col">
                   <AppHeader />
-                  <main className="flex-1 overflow-y-auto px-4 md:px-6">
+                  <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-20 md:pb-0">
                     {children}
                   </main>
                 </SidebarInset>
@@ -53,6 +54,7 @@ export default function RootLayout({
                   <ScheduleSidebar />
                 </Sidebar>
               </div>
+              <BottomNavbar />
             </div>
           </SidebarProvider>
         </UserProvider>

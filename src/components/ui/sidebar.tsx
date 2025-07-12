@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -264,8 +265,20 @@ Sidebar.displayName = "Sidebar"
 const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
->(({ className, onClick, ...props }, ref) => {
+>(({ className, onClick, children, ...props }, ref) => {
   const { toggleSidebar } = useSidebar()
+
+  if(children) {
+    return (
+       <div
+        onClick={(event) => {
+          toggleSidebar()
+        }}
+       >
+         {children}
+       </div>
+    )
+  }
 
   return (
     <Button

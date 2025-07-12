@@ -62,7 +62,7 @@ export default function AppSidebar() {
       </div>
       <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
       <SidebarContent>
-        <SidebarMenu>
+        <SidebarMenu className="hidden md:flex">
           <SidebarMenuItem>
             <Link href="/" passHref>
               <SidebarMenuButton tooltip="Home" isActive={pathname === '/'}>
@@ -94,6 +94,9 @@ export default function AppSidebar() {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
+         <div className='md:hidden p-4 text-center text-muted-foreground'>
+            <p>Main navigation is in the bottom bar.</p>
+        </div>
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter>

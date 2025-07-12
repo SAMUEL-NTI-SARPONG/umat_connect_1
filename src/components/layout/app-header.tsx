@@ -16,7 +16,7 @@ export default function AppHeader() {
 
   return (
     <header className="sticky top-0 z-10 flex items-center gap-2 p-4 border-b bg-background/80 backdrop-blur-sm">
-      <SidebarTrigger className="md:hidden" />
+      {/* SidebarTrigger is now in the bottom navbar for mobile */}
       <h1 className="text-xl font-bold text-foreground">{title}</h1>
     </header>
   );
