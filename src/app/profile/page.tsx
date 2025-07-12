@@ -7,13 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { Separator } from '@/components/ui/separator';
-import { Camera, Settings } from 'lucide-react';
+import { Camera, Settings, Moon, Sun, Monitor } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { useTheme } from 'next-themes';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState('https://placehold.co/100x100.png');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { theme, setTheme, systemTheme } = useTheme();
+  const [fontSize, setFontSize] = useState(16);
 
   const [formData, setFormData] = useState({
     name: 'User Name',
@@ -45,6 +50,7 @@ export default function ProfilePage() {
     setIsEditing(false);
     // Here you would typically handle the form submission,
     // like sending the data to a server.
+    document.documentElement.style.fontSize = `${fontSize}px`;
   };
 
   const handleCancel = () => {
@@ -52,8 +58,10 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
+  const currentTheme = theme === 'system' ? systemTheme : theme;
+
   return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
       <Card className="rounded-xl shadow-sm">
         <CardHeader className="p-6">
           <div className="flex items-center gap-6">
@@ -88,7 +96,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-grow">
               <div className="flex items-center gap-2">
-                 <CardTitle className="text-2xl font-semibold">{formData.name}</CardTitle>
+                 <h1 className="text-xl font-semibold">{formData.name}</h1>
                  <Button
                     variant="ghost"
                     size="icon"
@@ -99,7 +107,7 @@ export default function ProfilePage() {
                     <span className="sr-only">Edit Profile</span>
                   </Button>
               </div>
-              <p className="text-muted-foreground text-lg">Student</p>
+              <p className="text-muted-foreground">Student</p>
             </div>
           </div>
         </CardHeader>
@@ -150,6 +158,43 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
+      {isEditing && (
+        <Card className="rounded-xl shadow-sm">
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>Theme</Label>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="dark-mode"
+                  checked={currentTheme === 'dark'}
+                  onCheckedChange={(checked) =>
+                    setTheme(checked ? 'dark' : 'light')
+                  }
+                />
+                <Label htmlFor="dark-mode">Dark Mode</Label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Font Size</Label>
+              <div className="flex items-center space-x-4">
+                <Slider
+                  defaultValue={[fontSize]}
+                  max={20}
+                  min={12}
+                  step={1}
+                  onValueChange={(value) => setFontSize(value[0])}
+                />
+                <span className="text-sm text-muted-foreground w-8 text-right">
+                  {fontSize}px
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

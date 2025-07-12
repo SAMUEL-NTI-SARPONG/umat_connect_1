@@ -12,6 +12,7 @@ import ScheduleSidebar from '@/components/layout/schedule-sidebar';
 import AppHeader from '@/components/layout/app-header';
 import BottomNavbar from '@/components/layout/bottom-navbar';
 import TopScheduleBar from '@/components/layout/top-schedule-bar';
+import { ThemeProvider } from './providers/theme-provider';
 
 export const metadata: Metadata = {
   title: 'UMaT Connect',
@@ -38,28 +39,35 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
-        <UserProvider>
-          <SidebarProvider>
-            <div className="relative mx-auto max-w-7xl">
-              <div className="flex">
-                <Sidebar variant="floating" collapsible="icon">
-                  <AppSidebar />
-                </Sidebar>
-                <SidebarInset className="flex h-screen flex-col">
-                  <AppHeader />
-                  <TopScheduleBar />
-                  <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-20 pt-2 md:pt-0 md:pb-0">
-                    {children}
-                  </main>
-                </SidebarInset>
-                <Sidebar side="right" variant="floating" collapsible="icon">
-                  <ScheduleSidebar />
-                </Sidebar>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <UserProvider>
+            <SidebarProvider>
+              <div className="relative mx-auto max-w-7xl">
+                <div className="flex">
+                  <Sidebar variant="floating" collapsible="icon">
+                    <AppSidebar />
+                  </Sidebar>
+                  <SidebarInset className="flex h-screen flex-col">
+                    <AppHeader />
+                    <TopScheduleBar />
+                    <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-20 pt-2 md:pt-0 md:pb-0">
+                      {children}
+                    </main>
+                  </SidebarInset>
+                  <Sidebar side="right" variant="floating" collapsible="icon">
+                    <ScheduleSidebar />
+                  </Sidebar>
+                </div>
+                <BottomNavbar />
               </div>
-              <BottomNavbar />
-            </div>
-          </SidebarProvider>
-        </UserProvider>
+            </SidebarProvider>
+          </UserProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
