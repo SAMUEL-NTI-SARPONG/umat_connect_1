@@ -38,23 +38,21 @@ export default function RootLayout({
       <body className="font-body antialiased" suppressHydrationWarning>
         <UserProvider>
           <SidebarProvider>
-            <div className="flex">
-              <Sidebar variant="floating" collapsible="icon">
-                <AppSidebar />
-              </Sidebar>
-              <SidebarInset className="flex-1 flex flex-col">
-                <AppHeader />
-                <main className="flex-1 overflow-y-auto px-4 md:px-6">
-                 {children}
-                </main>
-              </SidebarInset>
-              <Sidebar
-                side="right"
-                variant="floating"
-                collapsible="icon"
-              >
-                <ScheduleSidebar />
-              </Sidebar>
+            <div className="relative mx-auto max-w-7xl">
+              <div className="flex">
+                <Sidebar variant="floating" collapsible="icon">
+                  <AppSidebar />
+                </Sidebar>
+                <SidebarInset className="flex-1 flex flex-col">
+                  <AppHeader />
+                  <main className="flex-1 overflow-y-auto px-4 md:px-6">
+                    {children}
+                  </main>
+                </SidebarInset>
+                <Sidebar side="right" variant="floating" collapsible="icon">
+                  <ScheduleSidebar />
+                </Sidebar>
+              </div>
             </div>
           </SidebarProvider>
         </UserProvider>
