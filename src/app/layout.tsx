@@ -7,6 +7,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/layout/app-sidebar';
+import { UserProvider } from './providers/user-provider';
 
 export const metadata: Metadata = {
   title: 'UMaT Connect',
@@ -33,18 +34,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
-        <SidebarProvider>
-          <Sidebar>
-            <AppSidebar />
-          </Sidebar>
-          <SidebarInset>
-            <div className="p-4 flex items-center gap-2">
-               <SidebarTrigger className="md:hidden" />
-               <h1 className="text-2xl font-bold text-primary">UMaT Connect</h1>
-            </div>
-            {children}
+        <UserProvider>
+          <SidebarProvider>
+            <Sidebar>
+              <AppSidebar />
+            </Sidebar>
+            <SidebarInset>
+              <div className="p-4 flex items-center gap-2">
+                <SidebarTrigger className="md:hidden" />
+                <h1 className="text-2xl font-bold text-primary">UMaT Connect</h1>
+              </div>
+              {children}
             </SidebarInset>
-        </SidebarProvider>
+          </SidebarProvider>
+        </UserProvider>
       </body>
     </html>
   );
