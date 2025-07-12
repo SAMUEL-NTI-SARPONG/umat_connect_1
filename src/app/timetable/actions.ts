@@ -42,14 +42,16 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         if (lines.length < 2) continue;
 
         const courseLine = lines[0];
-        const lecturerName = lines[lines.length - 1]; // Assume lecturer is the last line
+        const lecturerName = lines[lines.length - 1];
 
+        // This regex is more flexible for multiple departments like "SP, NG"
         const match = courseLine.match(/^([A-Z, ]+)\s+(\d{3})$/);
         if (!match) continue;
 
         const deptStr = match[1].trim();
         const courseNum = match[2].trim();
 
+        // This logic correctly splits by comma or space and filters against the valid list.
         const departments = deptStr.split(/[, ]+/)
           .map(d => d.trim())
           .filter(dep => departmentInitials.includes(dep));
