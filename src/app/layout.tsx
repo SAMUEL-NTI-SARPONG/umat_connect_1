@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import {
@@ -47,15 +48,15 @@ export default function RootLayout({
         >
           <UserProvider>
             <SidebarProvider>
-              <div className="relative mx-auto max-w-7xl">
-                <div className="flex">
+              <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
+                <AppHeader />
+                <div className="flex flex-1">
                   <Sidebar variant="floating" collapsible="icon">
                     <AppSidebar />
                   </Sidebar>
-                  <SidebarInset className="flex h-screen flex-col">
-                    <AppHeader />
+                  <SidebarInset className="flex flex-1 flex-col">
                     <TopScheduleBar />
-                    <main className="flex-1 overflow-y-auto px-4 md:px-6 pb-20 pt-2 md:pt-0 md:pb-0">
+                    <main className="flex-1 overflow-y-auto px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
                       {children}
                     </main>
                   </SidebarInset>
