@@ -36,7 +36,7 @@ export default function RootLayout({
       <body className="font-body antialiased" suppressHydrationWarning>
         <UserProvider>
           <SidebarProvider>
-            <Sidebar>
+            <Sidebar variant="floating" collapsible="icon">
               <AppSidebar />
             </Sidebar>
             <SidebarInset>
