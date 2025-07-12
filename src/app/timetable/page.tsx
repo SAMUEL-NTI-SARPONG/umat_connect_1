@@ -150,18 +150,18 @@ function StudentTimetableView() {
                     <Card key={index} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
                       <div className="flex">
                         <div className={cn("w-2", status.color)}></div>
-                        <div className="flex-grow p-4 md:p-5">
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
+                        <div className="flex-grow p-3 md:p-4">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
                               <div>
-                                  <CardTitle className="text-base md:text-lg font-semibold tracking-tight">{event.course}</CardTitle>
-                                  <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
+                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.course}</CardTitle>
+                                  <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
                               </div>
                               <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
                                   <Clock className="w-3 h-3"/>
                                   <span>{event.time}</span>
                               </div>
                           </div>
-                          <div className="mt-4 space-y-2 text-muted-foreground text-xs md:text-sm">
+                          <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
                               <div className="flex items-center gap-2">
                                   <MapPin className="w-3.5 h-3.5 text-primary/70"/>
                                   <span>{event.location}</span>
