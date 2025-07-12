@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { GraduationCap, Calendar, Home, User } from 'lucide-react';
+import { GraduationCap, Calendar, Home, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -91,6 +91,16 @@ export default function AppSidebar() {
                 <span>Profile</span>
               </SidebarMenuButton>
             </Link>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+             <Link href="/" passHref>
+              <SidebarMenuButton
+                tooltip="Logout"
+              >
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
          <div className='md:hidden p-4 text-center text-muted-foreground'>
