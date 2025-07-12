@@ -42,12 +42,6 @@ export function ProfileAvatar({
       <DialogContent
         className={cn('p-0 w-auto bg-transparent border-none', dialogClassName)}
       >
-        <DialogHeader className="sr-only">
-          <DialogTitle>Profile Picture</DialogTitle>
-          <DialogDescription>
-            A larger view of the user's profile picture.
-          </DialogDescription>
-        </DialogHeader>
         <Image
           src={src}
           alt={alt}

@@ -8,23 +8,33 @@ import { Label } from '@/components/ui/label';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { Separator } from '@/components/ui/separator';
 import { Camera, Settings, Moon, Sun, Monitor } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { useUser } from '../providers/user-provider';
 
 export default function ProfilePage() {
+  const { 
+    name, setName, 
+    profileImage, setProfileImage,
+    department, setDepartment,
+    phone, setPhone
+  } = useUser();
+  
   const [isEditing, setIsEditing] = useState(false);
-  const [profileImage, setProfileImage] = useState('https://placehold.co/100x100.png');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme, systemTheme } = useTheme();
   const [fontSize, setFontSize] = useState(16);
 
-  const [formData, setFormData] = useState({
-    name: 'User Name',
-    department: 'Computer Science',
-    phone: '+233 12 345 6789',
-  });
+  const [formData, setFormData] = useState({ name, department, phone });
+  const [localProfileImage, setLocalProfileImage] = useState(profileImage);
+
+  // Sync local state when global state changes (e.g., from another component or on initial load)
+  useEffect(() => {
+    setFormData({ name, department, phone });
+    setLocalProfileImage(profileImage);
+  }, [name, department, phone, profileImage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -36,29 +46,45 @@ export default function ProfilePage() {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+        setLocalProfileImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
   
   const handleEditToggle = () => {
-    setIsEditing(!isEditing);
+    if (isEditing) {
+      // If was editing, cancel changes
+      handleCancel();
+    } else {
+      // If not editing, start editing
+      setFormData({ name, department, phone });
+      setLocalProfileImage(profileImage);
+      setIsEditing(true);
+    }
   };
 
   const handleSaveChanges = () => {
+    // Commit local changes to global state
+    setName(formData.name);
+    setDepartment(formData.department);
+    setPhone(formData.phone);
+    setProfileImage(localProfileImage);
+    
     setIsEditing(false);
-    // Here you would typically handle the form submission,
-    // like sending the data to a server.
     document.documentElement.style.fontSize = `${fontSize}px`;
   };
 
   const handleCancel = () => {
-    // Reset form data to initial state if needed
+    // Reset local state from global state
+    setFormData({ name, department, phone });
+    setLocalProfileImage(profileImage);
     setIsEditing(false);
   };
 
   const currentTheme = theme === 'system' ? systemTheme : theme;
+  const displayImage = isEditing ? localProfileImage : profileImage;
+  const displayName = isEditing ? formData.name : name;
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
@@ -67,8 +93,8 @@ export default function ProfilePage() {
           <div className="flex items-center gap-6">
             <div className="relative">
               <ProfileAvatar
-                src={profileImage}
-                fallback="UM"
+                src={displayImage}
+                fallback={name.charAt(0).toUpperCase()}
                 alt="User's profile picture"
                 className="w-24 h-24 text-3xl"
                 imageHint="profile picture"
@@ -96,7 +122,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex-grow">
               <div className="flex items-center gap-2">
-                 <h1 className="text-xl font-semibold">{formData.name}</h1>
+                 <h1 className="text-xl font-semibold">{displayName}</h1>
                  <Button
                     variant="ghost"
                     size="icon"
@@ -104,7 +130,7 @@ export default function ProfilePage() {
                     className="text-muted-foreground"
                   >
                     <Settings className="w-5 h-5" />
-                    <span className="sr-only">Edit Profile</span>
+                    <span className="sr-only">{isEditing ? 'Cancel Editing' : 'Edit Profile'}</span>
                   </Button>
               </div>
               <p className="text-muted-foreground">Student</p>
@@ -118,7 +144,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="name" value={formData.name} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{formData.name}</p>
+              <p className="text-muted-foreground">{name}</p>
             )}
           </div>
           <div className="grid gap-2">
@@ -135,7 +161,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="department" value={formData.department} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{formData.department}</p>
+              <p className="text-muted-foreground">{department}</p>
             )}
           </div>
           <div className="grid gap-2">
@@ -143,7 +169,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="phone" type="tel" value={formData.phone} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{formData.phone}</p>
+              <p className="text-muted-foreground">{phone}</p>
             )}
           </div>
           {isEditing && (

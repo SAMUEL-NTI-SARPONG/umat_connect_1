@@ -22,17 +22,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useUser } from '@/app/providers/user-provider';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileAvatar } from '../ui/profile-avatar';
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { role, setRole } = useUser();
+  const { role, setRole, name, profileImage } = useUser();
 
   const userDetails = {
-    student: { name: 'Student User', avatar: 'S' },
-    lecturer: { name: 'Lecturer User', avatar: 'L' },
-    administrator: { name: 'Admin User', avatar: 'A' },
+    student: { roleText: 'Student' },
+    lecturer: { roleText: 'Lecturer' },
+    administrator: { roleText: 'Administrator' },
   };
 
   const currentUser = userDetails[role];
@@ -47,16 +46,16 @@ export default function AppSidebar() {
       </div>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
          <ProfileAvatar
-            src="https://placehold.co/64x64.png"
-            fallback={currentUser.avatar}
+            src={profileImage}
+            fallback={name.charAt(0).toUpperCase()}
             alt="Current user's profile picture"
-            className="w-16 h-16"
+            className="w-16 h-16 text-2xl"
             imageHint="profile picture"
           />
         <div>
-          <p className="font-semibold">{currentUser.name}</p>
+          <p className="font-semibold">{name}</p>
           <p className="text-sm capitalize text-sidebar-foreground/80">
-            {role}
+            {currentUser.roleText}
           </p>
         </div>
       </div>
@@ -104,7 +103,7 @@ export default function AppSidebar() {
           <SidebarGroupLabel>Switch Role</SidebarGroupLabel>
           <Select
             value={role}
-            onValueChange={(value) => setRole(value as any)}
+            onValue-change={(value) => setRole(value as any)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Role" />
