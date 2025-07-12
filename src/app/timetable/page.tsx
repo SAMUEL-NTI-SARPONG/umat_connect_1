@@ -1,10 +1,10 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, Trash2, FilePenLine } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2 } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { handleFileUpload } from './actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
+
+interface TimetableEntry {
+  day: string;
+  time: string;
+  room: string;
+  departments: string[];
+  level: number;
+  courseCode: string;
+  lecturer: string;
+}
 
 function EventCard({
   course,
@@ -27,7 +47,7 @@ function EventCard({
 }: {
   course: string;
   time: string;
-  location: string;
+  location:string;
   status: EventStatus;
   isLecturerView: boolean;
   onStatusChange: (newStatus: EventStatus) => void;
@@ -126,45 +146,134 @@ function LecturerTimetableView() {
 }
 
 function AdminTimetableView() {
+  const [parsedData, setParsedData] = useState<TimetableEntry[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    setError(null);
+    setParsedData(null);
+
+    try {
+      const data = await handleFileUpload(file);
+      if (data.length === 0) {
+        setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+      } else {
+        setParsedData(data);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
+    } finally {
+      setIsLoading(false);
+      // Reset file input to allow re-uploading the same file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
-     <div className="space-y-6">
+    <div className="space-y-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFileChange}
+        className="hidden"
+        accept=".xlsx, .xls"
+      />
       <TooltipProvider>
         <div className="flex gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Upload className="h-4 w-4" />
-                  <span className="sr-only">Upload New</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Upload New</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <FilePenLine className="h-4 w-4" />
-                  <span className="sr-only">Edit Current</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit Current</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" size="icon">
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Delete</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete</p>
-              </TooltipContent>
-            </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <span className="sr-only">Upload New</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Upload New Timetable</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" disabled>
+                <FilePenLine className="h-4 w-4" />
+                <span className="sr-only">Edit Current</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Edit Current</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="destructive" size="icon" disabled>
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Delete</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Delete</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </TooltipProvider>
+
+      {error && (
+         <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+         </Alert>
+      )}
+
+      {parsedData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Parsed Timetable Preview</CardTitle>
+            <CardDescription>
+              Review the parsed schedule below before saving.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Day</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Room</TableHead>
+                  <TableHead>Course</TableHead>
+                  <TableHead>Lecturer</TableHead>
+                  <TableHead>Departments</TableHead>
+                  <TableHead>Level</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parsedData.map((entry, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{entry.day}</TableCell>
+                    <TableCell>{entry.time}</TableCell>
+                    <TableCell>{entry.room}</TableCell>
+                    <TableCell>{entry.courseCode}</TableCell>
+                    <TableCell>{entry.lecturer}</TableCell>
+                    <TableCell>{entry.departments.join(', ')}</TableCell>
+                    <TableCell>{entry.level}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -186,7 +295,7 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {renderContent()}
     </div>
   );
