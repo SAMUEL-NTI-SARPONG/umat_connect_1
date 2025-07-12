@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2 } from 'lucide-react';
@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { handleFileUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -181,6 +182,20 @@ function AdminTimetableView() {
     fileInputRef.current?.click();
   };
 
+  const groupedByDay = useMemo(() => {
+    if (!parsedData) return {};
+    return parsedData.reduce((acc, entry) => {
+      const day = entry.day;
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(entry);
+      return acc;
+    }, {} as Record<string, TimetableEntry[]>);
+  }, [parsedData]);
+
+  const days = Object.keys(groupedByDay);
+
   return (
     <div className="space-y-6">
       <input
@@ -245,32 +260,41 @@ function AdminTimetableView() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Day</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Lecturer</TableHead>
-                  <TableHead>Departments</TableHead>
-                  <TableHead>Level</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {parsedData.map((entry, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{entry.day}</TableCell>
-                    <TableCell>{entry.time}</TableCell>
-                    <TableCell>{entry.room}</TableCell>
-                    <TableCell>{entry.courseCode}</TableCell>
-                    <TableCell>{entry.lecturer}</TableCell>
-                    <TableCell>{entry.departments.join(', ')}</TableCell>
-                    <TableCell>{entry.level}</TableCell>
-                  </TableRow>
+            <Tabs defaultValue={days[0]} className="w-full">
+              <TabsList>
+                {days.map(day => (
+                  <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
                 ))}
-              </TableBody>
-            </Table>
+              </TabsList>
+              {days.map(day => (
+                <TabsContent key={day} value={day}>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Lecturer</TableHead>
+                          <TableHead>Departments</TableHead>
+                          <TableHead>Level</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {groupedByDay[day].map((entry, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{entry.time}</TableCell>
+                            <TableCell>{entry.room}</TableCell>
+                            <TableCell>{entry.courseCode}</TableCell>
+                            <TableCell>{entry.lecturer}</TableCell>
+                            <TableCell>{entry.departments.join(', ')}</TableCell>
+                            <TableCell>{entry.level}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                </TabsContent>
+              ))}
+            </Tabs>
           </CardContent>
         </Card>
       )}
