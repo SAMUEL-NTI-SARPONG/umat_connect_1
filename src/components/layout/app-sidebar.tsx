@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Album, Calendar, Home, User } from 'lucide-react';
+import { GraduationCap, Calendar, Home, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -40,7 +40,7 @@ export default function AppSidebar() {
     <>
       <div className="flex flex-col items-center gap-4 p-4 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-2">
-          <Album className="w-8 h-8 text-primary" />
+          <GraduationCap className="w-8 h-8 text-primary" />
           <h2 className="text-xl font-bold">UMaT Connect</h2>
         </div>
       </div>
