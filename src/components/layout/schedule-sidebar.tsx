@@ -33,7 +33,7 @@ export default function ScheduleSidebar() {
 
   if (role !== 'student') {
     return (
-      <div className="flex flex-col h-full">
+      <div className="hidden md:flex flex-col h-full">
         <SidebarHeader>
           <CardTitle>Today's Schedule</CardTitle>
         </SidebarHeader>
@@ -47,7 +47,7 @@ export default function ScheduleSidebar() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="hidden md:flex flex-col h-full">
       <SidebarHeader>
         <CardTitle>Today's Schedule</CardTitle>
       </SidebarHeader>
