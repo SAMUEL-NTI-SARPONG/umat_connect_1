@@ -124,14 +124,13 @@ function LecturerTimetableView() {
 function AdminTimetableView() {
   return (
      <div className="space-y-6">
-      <Card className="rounded-xl shadow-sm">
-        <CardHeader>
-          <CardTitle>Manage Timetables</CardTitle>
-          <CardDescription>
-            Upload, edit, or delete the university's official timetable.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col sm:flex-row gap-4">
+        <div>
+            <h2 className="text-2xl font-bold">Manage Timetables</h2>
+            <p className="text-muted-foreground">
+                Upload, edit, or delete the university's official timetable.
+            </p>
+        </div>
+      <div className="flex flex-col sm:flex-row gap-4">
           <Button variant="outline" className="w-full sm:w-auto">
             <Upload className="h-4 w-4 mr-2" />
             Upload New
@@ -144,22 +143,7 @@ function AdminTimetableView() {
             <Trash2 className="h-4 w-4 mr-2" />
             Delete
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-xl shadow-sm">
-        <CardHeader>
-          <CardTitle>Current Timetable</CardTitle>
-          <CardDescription>
-            Second Semester 2023/2024 - Published
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            Timetable details will be displayed here.
-          </p>
-        </CardContent>
-      </Card>
+        </div>
     </div>
   );
 }
