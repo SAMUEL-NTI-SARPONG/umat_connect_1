@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Send } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 
@@ -88,6 +88,13 @@ function PostCard({
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4">
         <Separator />
+        <div className="w-full flex items-center gap-2 text-muted-foreground">
+          <Button variant="ghost" size="sm">
+             <MessageCircle className="mr-2 h-4 w-4" />
+            <span>Comment</span>
+          </Button>
+        </div>
+        <Separator />
         <div className="w-full flex items-center gap-2">
           <Avatar className="w-8 h-8">
             <AvatarImage src={`https://placehold.co/32x32.png`} data-ai-hint="profile picture" />
@@ -100,7 +107,10 @@ function PostCard({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
-            <Button type="submit" size="sm" disabled={!newComment.trim()}>Post</Button>
+            <Button type="submit" size="icon" disabled={!newComment.trim()}>
+              <Send className="h-4 w-4" />
+              <span className="sr-only">Post comment</span>
+            </Button>
           </form>
         </div>
         <div className="w-full pl-10 space-y-2">
