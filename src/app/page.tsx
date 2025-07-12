@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { ThumbsUp, MessageCircle, Repeat, Send } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 function PostCard({
@@ -66,20 +66,6 @@ function PostCard({
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4">
         <Separator />
-        <div className="flex justify-around w-full">
-           <Button variant="ghost" className="text-muted-foreground font-medium">
-             <ThumbsUp className="mr-2" /> Like
-           </Button>
-           <Button variant="ghost" className="text-muted-foreground font-medium">
-             <MessageCircle className="mr-2" /> Comment
-           </Button>
-           <Button variant="ghost" className="text-muted-foreground font-medium">
-             <Repeat className="mr-2" /> Repost
-           </Button>
-           <Button variant="ghost" className="text-muted-foreground font-medium">
-             <Send className="mr-2" /> Send
-           </Button>
-        </div>
         <div className="w-full flex items-center gap-2">
           <Avatar className="w-8 h-8">
             <AvatarImage src={`https://placehold.co/32x32.png`} data-ai-hint="profile picture" />
