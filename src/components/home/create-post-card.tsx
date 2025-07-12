@@ -26,7 +26,7 @@ export default function CreatePostCard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentUser = users.find((u) => u.name === name);
+  const currentUser = users.find((u) => u.role === role && u.name === name);
 
   const handlePost = () => {
     // Logic to create a new post with content and image would go here
@@ -68,7 +68,7 @@ export default function CreatePostCard() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <div className="p-4 mb-4 bg-card rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer hover:bg-muted" onClick={() => setIsDialogOpen(true)}>
+        <div className="p-3 mb-4 bg-card rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer hover:bg-muted" onClick={() => setIsDialogOpen(true)}>
             {currentUser && (
                 <ProfileAvatar
                     src={currentUser.profileImage}
