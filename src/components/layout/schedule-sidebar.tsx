@@ -35,7 +35,7 @@ export default function ScheduleSidebar() {
     return (
       <div className="hidden md:flex flex-col h-full">
         <SidebarHeader>
-          <CardTitle>Today's Schedule</CardTitle>
+          <CardTitle className="text-lg font-semibold">Today's Schedule</CardTitle>
         </SidebarHeader>
         <SidebarContent className="p-4">
           <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -49,7 +49,7 @@ export default function ScheduleSidebar() {
   return (
     <div className="hidden md:flex flex-col h-full">
       <SidebarHeader>
-        <CardTitle>Today's Schedule</CardTitle>
+        <CardTitle className="text-lg font-semibold">Today's Schedule</CardTitle>
       </SidebarHeader>
       <SidebarContent className="p-4 space-y-4">
         <ScheduleItem

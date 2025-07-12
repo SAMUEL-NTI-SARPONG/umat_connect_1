@@ -42,7 +42,7 @@ export default function AppSidebar() {
       <div className="flex flex-col items-center gap-4 p-4 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-2">
           <GraduationCap className="w-8 h-8 text-foreground" />
-          <h2 className="text-xl font-bold">UMaT Connect</h2>
+          <h2 className="text-lg font-semibold">UMaT Connect</h2>
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">

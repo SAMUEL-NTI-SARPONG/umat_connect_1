@@ -56,50 +56,51 @@ export default function ProfilePage() {
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <Card className="rounded-xl shadow-sm">
         <CardHeader className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-6">
-              <div className="relative">
-                <ProfileAvatar
-                  src={profileImage}
-                  fallback="UM"
-                  alt="User's profile picture"
-                  className="w-24 h-24 text-3xl"
-                  imageHint="profile picture"
-                />
-                {isEditing && (
-                  <>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      className="hidden"
-                      accept="image/*"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="absolute bottom-0 right-0 rounded-full w-8 h-8"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span className="sr-only">Change profile picture</span>
-                    </Button>
-                  </>
-                )}
-              </div>
-              <div>
-                <CardTitle className="text-3xl font-bold">{formData.name}</CardTitle>
-                <p className="text-muted-foreground text-lg">Student</p>
-              </div>
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <ProfileAvatar
+                src={profileImage}
+                fallback="UM"
+                alt="User's profile picture"
+                className="w-24 h-24 text-3xl"
+                imageHint="profile picture"
+              />
+              {isEditing && (
+                <>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute bottom-0 right-0 rounded-full w-8 h-8"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span className="sr-only">Change profile picture</span>
+                  </Button>
+                </>
+              )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleEditToggle}
-            >
-              <Settings className="w-5 h-5" />
-              <span className="sr-only">Edit Profile</span>
-            </Button>
+            <div className="flex-grow">
+              <div className="flex items-center gap-2">
+                 <CardTitle className="text-2xl font-semibold">{formData.name}</CardTitle>
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleEditToggle}
+                    className="text-muted-foreground"
+                  >
+                    <Settings className="w-5 h-5" />
+                    <span className="sr-only">Edit Profile</span>
+                  </Button>
+              </div>
+              <p className="text-muted-foreground text-lg">Student</p>
+            </div>
           </div>
         </CardHeader>
         <Separator />
