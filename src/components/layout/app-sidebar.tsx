@@ -28,6 +28,8 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const { role, setRole, name, profileImage } = useUser();
 
+  const timetableLabel = role === 'administrator' ? 'Manage Timetable' : 'Timetable';
+
   return (
     <>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
@@ -61,11 +63,11 @@ export default function AppSidebar() {
           <SidebarMenuItem>
             <Link href="/timetable" passHref>
               <SidebarMenuButton
-                tooltip="Timetable"
+                tooltip={timetableLabel}
                 isActive={pathname === '/timetable'}
               >
                 <Calendar />
-                <span>Timetable</span>
+                <span>{timetableLabel}</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

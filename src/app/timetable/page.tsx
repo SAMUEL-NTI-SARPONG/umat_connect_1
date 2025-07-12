@@ -125,7 +125,7 @@ function AdminTimetableView() {
   return (
      <div className="space-y-6">
         <div>
-            <h2 className="text-2xl font-bold">Manage Timetables</h2>
+            <h2 className="text-2xl font-bold">Manage Timetable</h2>
             <p className="text-muted-foreground">
                 Upload, edit, or delete the university's official timetable.
             </p>

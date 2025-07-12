@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@/app/providers/user-provider';
 
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
@@ -15,7 +16,16 @@ const pageTitles: { [key: string]: string } = {
 
 export default function AppHeader() {
   const pathname = usePathname();
-  const title = pageTitles[pathname] || 'UMaT Connect';
+  const { role } = useUser();
+
+  const getTitle = () => {
+    if (pathname === '/timetable' && role === 'administrator') {
+      return 'Manage Timetable';
+    }
+    return pageTitles[pathname] || 'UMaT Connect';
+  };
+
+  const title = getTitle();
 
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-4 p-4 border-b bg-background/80 backdrop-blur-sm">
