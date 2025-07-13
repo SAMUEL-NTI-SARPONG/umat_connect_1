@@ -51,6 +51,7 @@ interface TimetableEntry {
   level: number;
   courseCode: string;
   lecturer: string;
+  id: number;
 }
 
 const statusConfig = {
@@ -258,7 +259,8 @@ function AdminTimetableView() {
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
       } else {
-        setParsedData(data);
+        const dataWithIds = data.map((item, index) => ({ ...item, id: index }));
+        setParsedData(dataWithIds);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
@@ -281,6 +283,11 @@ function AdminTimetableView() {
     setSearchTerm('');
     setShowInvalid(false);
   };
+  
+  const handleDeleteRow = (id: number) => {
+    if (!editedData) return;
+    setEditedData(editedData.filter(item => item.id !== id));
+  };
 
   const handleSave = () => {
     setParsedData(editedData);
@@ -292,21 +299,16 @@ function AdminTimetableView() {
     setEditedData(null);
   };
   
-  const handleEditInputChange = (originalIndex: number, field: keyof TimetableEntry, value: string | number) => {
+  const handleEditInputChange = (id: number, field: keyof TimetableEntry, value: string | number | string[]) => {
     if (!editedData) return;
-    const dataToUpdate = [...editedData];
-    const targetEntry = dataToUpdate[originalIndex];
-
-    if (targetEntry) {
-        if (field === 'departments') {
-            (targetEntry[field] as any) = (value as string).split(',').map(s => s.trim());
-        } else if (field === 'level') {
-            (targetEntry[field] as any) = Number(value);
-        } else {
-            (targetEntry[field] as any) = value;
+    setEditedData(
+      editedData.map((item) => {
+        if (item.id === id) {
+          return { ...item, [field]: value };
         }
-        setEditedData(dataToUpdate);
-    }
+        return item;
+      })
+    );
   };
 
   const currentData = isEditing ? editedData : parsedData;
@@ -333,16 +335,15 @@ function AdminTimetableView() {
 
   const groupedByDay = useMemo(() => {
     if (!filteredData) return {};
-    return filteredData.reduce((acc, entry, index) => {
+    return filteredData.reduce((acc, entry) => {
       const day = entry.day;
       if (!acc[day]) {
         acc[day] = [];
       }
-      const originalIndex = parsedData?.findIndex(p => p === entry) ?? -1;
-      acc[day].push({ ...entry, originalIndex });
+      acc[day].push(entry);
       return acc;
-    }, {} as Record<string, (TimetableEntry & { originalIndex: number })[]>);
-  }, [filteredData, parsedData]);
+    }, {} as Record<string, TimetableEntry[]>);
+  }, [filteredData]);
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -506,31 +507,32 @@ function AdminTimetableView() {
                               <TableHead>Lecturer</TableHead>
                               <TableHead>Departments</TableHead>
                               <TableHead>Level</TableHead>
+                              {isEditing && <TableHead>Actions</TableHead>}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {groupedByDay[day]?.map((entry, index) => (
-                              <TableRow key={index}>
+                            {groupedByDay[day]?.map((entry) => (
+                              <TableRow key={entry.id}>
                                 <TableCell className="min-w-[120px]">
-                                  {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(entry.originalIndex, 'time', e.target.value)} /> : entry.time}
+                                  {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(entry.id, 'time', e.target.value)} /> : entry.time}
                                 </TableCell>
                                 <TableCell className="min-w-[100px]">
-                                  {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(entry.originalIndex, 'room', e.target.value)}/> : entry.room}
+                                  {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(entry.id, 'room', e.target.value)}/> : entry.room}
                                 </TableCell>
                                 <TableCell className="min-w-[150px]">
-                                   {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(entry.originalIndex, 'courseCode', e.target.value)}/> : entry.courseCode}
+                                   {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(entry.id, 'courseCode', e.target.value)}/> : entry.courseCode}
                                 </TableCell>
                                 <TableCell className="min-w-[150px]">
-                                   {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(entry.originalIndex, 'lecturer', e.target.value)}/> : entry.lecturer}
+                                   {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(entry.id, 'lecturer', e.target.value)}/> : entry.lecturer}
                                 </TableCell>
                                 <TableCell className="min-w-[200px]">
-                                   {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(entry.originalIndex, 'departments', e.target.value)}/> : entry.departments.join(', ')}
+                                   {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(entry.id, 'departments', (e.target.value).split(',').map(s => s.trim()))}/> : entry.departments.join(', ')}
                                 </TableCell>
                                  <TableCell className="min-w-[100px]">
                                    {isEditing ? (
                                         <Select
-                                            value={String(entry.level)}
-                                            onValueChange={(value) => handleEditInputChange(entry.originalIndex, 'level', value)}
+                                            defaultValue={String(entry.level)}
+                                            onValueChange={(value) => handleEditInputChange(entry.id, 'level', Number(value))}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select level" />
@@ -544,6 +546,18 @@ function AdminTimetableView() {
                                         </Select>
                                    ) : entry.level}
                                 </TableCell>
+                                {isEditing && (
+                                    <TableCell>
+                                        <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            onClick={() => handleDeleteRow(entry.id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Delete row</span>
+                                        </Button>
+                                    </TableCell>
+                                )}
                               </TableRow>
                             ))}
                           </TableBody>
