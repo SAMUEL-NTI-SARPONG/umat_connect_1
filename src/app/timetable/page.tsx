@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload } from './actions';
+import { handleFileUpload, findEmptyClassrooms } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,12 @@ interface TimetableEntry {
   courseCode: string;
   lecturer: string;
   id: number;
+}
+
+interface EmptySlot {
+  day: string;
+  location: string;
+  time: string;
 }
 
 const statusConfig = {
@@ -240,6 +246,7 @@ function LecturerTimetableView() {
 
 function AdminTimetableView() {
   const [parsedData, setParsedData] = useState<TimetableEntry[] | null>(null);
+  const [emptySlots, setEmptySlots] = useState<EmptySlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -260,14 +267,21 @@ function AdminTimetableView() {
     setIsLoading(true);
     setError(null);
     setParsedData(null);
+    setEmptySlots([]);
 
     try {
-      const data = await handleFileUpload(file);
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      const [data, slots] = await Promise.all([
+        handleFileUpload(file),
+        findEmptyClassrooms(fileBuffer)
+      ]);
+      
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
       } else {
         const dataWithIds = data.map((item, index) => ({ ...item, id: index }));
         setParsedData(dataWithIds);
+        setEmptySlots(slots);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
@@ -291,6 +305,7 @@ function AdminTimetableView() {
 
   const handleDeleteAll = () => {
     setParsedData(null);
+    setEmptySlots([]);
     setError(null);
     setSearchTerm('');
     setShowInvalid(false);
@@ -310,7 +325,15 @@ function AdminTimetableView() {
 
   const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
     if (!editedFormData) return;
-    setEditedFormData({ ...editedFormData, [field]: value });
+    
+    const updatedData = { ...editedFormData, [field]: value };
+
+    // If room is changed, reset time
+    if (field === 'room') {
+      updatedData.time = '';
+    }
+    
+    setEditedFormData(updatedData);
   };
   
   const closeAllModals = () => {
@@ -352,6 +375,20 @@ function AdminTimetableView() {
       return acc;
     }, {} as Record<string, TimetableEntry[]>);
   }, [filteredData]);
+
+  const availableRoomsForDay = useMemo(() => {
+    if (!editedFormData) return [];
+    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    return [...new Set(daySlots.map(slot => slot.location))];
+  }, [emptySlots, editedFormData]);
+  
+  const availableTimesForRoom = useMemo(() => {
+    if (!editedFormData || !editedFormData.room) return [];
+    return emptySlots
+      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
+      .map(slot => slot.time);
+  }, [emptySlots, editedFormData]);
+
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -482,12 +519,12 @@ function AdminTimetableView() {
                           <TableBody>
                             {groupedByDay[day]?.map((entry) => (
                               <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                                <TableCell className="min-w-[120px]">{entry.time}</TableCell>
-                                <TableCell className="min-w-[100px]">{entry.room}</TableCell>
-                                <TableCell className="min-w-[150px]">{entry.courseCode}</TableCell>
-                                <TableCell className="min-w-[150px]">{entry.lecturer}</TableCell>
-                                <TableCell className="min-w-[200px]">{entry.departments.join(', ')}</TableCell>
-                                <TableCell className="min-w-[100px]">{entry.level}</TableCell>
+                                <TableCell>{entry.time}</TableCell>
+                                <TableCell>{entry.room}</TableCell>
+                                <TableCell>{entry.courseCode}</TableCell>
+                                <TableCell>{entry.lecturer}</TableCell>
+                                <TableCell>{entry.departments.join(', ')}</TableCell>
+                                <TableCell>{entry.level}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -536,12 +573,43 @@ function AdminTimetableView() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time" className="text-right">Time</Label>
-              <Input id="time" value={editedFormData?.time || ''} onChange={(e) => handleEditInputChange('time', e.target.value)} className="col-span-3" />
+              <Label htmlFor="room" className="text-right">Room</Label>
+               <Select
+                  value={editedFormData?.room || ''}
+                  onValueChange={(value) => handleEditInputChange('room', value)}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a room" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={editedFormData?.room || ''} disabled>
+                        {editedFormData?.room || 'Current'}
+                    </SelectItem>
+                    {availableRoomsForDay.map(room => (
+                        <SelectItem key={room} value={room}>{room}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="room" className="text-right">Room</Label>
-              <Input id="room" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
+              <Label htmlFor="time" className="text-right">Time</Label>
+               <Select
+                  value={editedFormData?.time || ''}
+                  onValueChange={(value) => handleEditInputChange('time', value)}
+                  disabled={!editedFormData?.room}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                     <SelectItem value={editedFormData?.time || ''} disabled>
+                        {editedFormData?.time || 'Current'}
+                    </SelectItem>
+                    {availableTimesForRoom.map(time => (
+                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="courseCode" className="text-right">Course</Label>
