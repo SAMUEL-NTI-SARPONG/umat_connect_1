@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, Save, X } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, Save, X, FilterX } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable, users } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
@@ -233,6 +234,7 @@ function AdminTimetableView() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showInvalid, setShowInvalid] = useState(false);
 
   useEffect(() => {
     if (isEditing && parsedData) {
@@ -277,6 +279,7 @@ function AdminTimetableView() {
     setIsEditing(false);
     setError(null);
     setSearchTerm('');
+    setShowInvalid(false);
   };
 
   const handleSave = () => {
@@ -289,21 +292,20 @@ function AdminTimetableView() {
     setEditedData(null);
   };
   
-  const handleEditInputChange = (day: string, originalIndex: number, field: keyof TimetableEntry, value: string) => {
+  const handleEditInputChange = (originalIndex: number, field: keyof TimetableEntry, value: string | number) => {
     if (!editedData) return;
-
     const dataToUpdate = [...editedData];
-    const dayEntries = dataToUpdate.filter(e => e.day === day);
-    const targetEntry = dayEntries[originalIndex];
+    const targetEntry = dataToUpdate[originalIndex];
+
     if (targetEntry) {
-      if (field === 'departments') {
-        (targetEntry[field] as any) = value.split(',').map(s => s.trim());
-      } else if (field === 'level') {
-        (targetEntry[field] as any) = parseInt(value, 10) || 0;
-      } else {
-        (targetEntry[field] as any) = value;
-      }
-      setEditedData(dataToUpdate);
+        if (field === 'departments') {
+            (targetEntry[field] as any) = (value as string).split(',').map(s => s.trim());
+        } else if (field === 'level') {
+            (targetEntry[field] as any) = Number(value);
+        } else {
+            (targetEntry[field] as any) = value;
+        }
+        setEditedData(dataToUpdate);
     }
   };
 
@@ -311,27 +313,36 @@ function AdminTimetableView() {
 
   const filteredData = useMemo(() => {
     if (!currentData) return null;
-    if (!searchTerm) return currentData;
+
+    let data = [...currentData];
+
+    if (showInvalid) {
+        data = data.filter(entry => entry.lecturer.toLowerCase() === 'unknown' || entry.lecturer.toLowerCase() === 'tba');
+    }
+    
+    if (!searchTerm) return data;
+
     const lowercasedFilter = searchTerm.toLowerCase();
-    return currentData.filter(entry => 
+    return data.filter(entry => 
       entry.courseCode.toLowerCase().includes(lowercasedFilter) ||
       entry.lecturer.toLowerCase().includes(lowercasedFilter) ||
       entry.room.toLowerCase().includes(lowercasedFilter) ||
       entry.departments.some(dep => dep.toLowerCase().includes(lowercasedFilter))
     );
-  }, [currentData, searchTerm]);
+  }, [currentData, searchTerm, showInvalid]);
 
   const groupedByDay = useMemo(() => {
     if (!filteredData) return {};
-    return filteredData.reduce((acc, entry) => {
+    return filteredData.reduce((acc, entry, index) => {
       const day = entry.day;
       if (!acc[day]) {
         acc[day] = [];
       }
-      acc[day].push(entry);
+      const originalIndex = parsedData?.findIndex(p => p === entry) ?? -1;
+      acc[day].push({ ...entry, originalIndex });
       return acc;
-    }, {} as Record<string, TimetableEntry[]>);
-  }, [filteredData]);
+    }, {} as Record<string, (TimetableEntry & { originalIndex: number })[]>);
+  }, [filteredData, parsedData]);
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -346,7 +357,7 @@ function AdminTimetableView() {
       />
       <div className="flex flex-col sm:flex-row gap-4 items-start">
         <TooltipProvider>
-          <div className="flex gap-4 flex-shrink-0">
+          <div className="flex gap-2 flex-wrap flex-shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading || isEditing}>
@@ -367,6 +378,18 @@ function AdminTimetableView() {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Edit Current</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData || isEditing}>
+                  <FilterX className="h-4 w-4" />
+                  <span className="sr-only">Filter for review</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Filter for review</p>
               </TooltipContent>
             </Tooltip>
 
@@ -454,9 +477,11 @@ function AdminTimetableView() {
             <CardDescription>
               {isEditing
                 ? `Making changes to ${currentData.length} entries.`
-                : searchTerm 
-                  ? `Found ${filteredData?.length || 0} matching entries.`
-                  : `A total of ${parsedData?.length || 0} entries were found.`
+                : showInvalid 
+                  ? `Found ${filteredData?.length || 0} entries for review.`
+                  : searchTerm 
+                    ? `Found ${filteredData?.length || 0} matching entries.`
+                    : `A total of ${parsedData?.length || 0} entries were found.`
               }
             </CardDescription>
           </CardHeader>
@@ -471,47 +496,64 @@ function AdminTimetableView() {
               </TabsList>
               {daysWithData.map(day => (
                 <TabsContent key={day} value={day}>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Room</TableHead>
-                          <TableHead>Course</TableHead>
-                          <TableHead>Lecturer</TableHead>
-                          <TableHead>Departments</TableHead>
-                          <TableHead>Level</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupedByDay[day]?.map((entry, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(day, index, 'time', e.target.value)} /> : entry.time}
-                            </TableCell>
-                            <TableCell>
-                              {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(day, index, 'room', e.target.value)}/> : entry.room}
-                            </TableCell>
-                            <TableCell>
-                               {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(day, index, 'courseCode', e.target.value)}/> : entry.courseCode}
-                            </TableCell>
-                            <TableCell>
-                               {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(day, index, 'lecturer', e.target.value)}/> : entry.lecturer}
-                            </TableCell>
-                            <TableCell>
-                               {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(day, index, 'departments', e.target.value)}/> : entry.departments.join(', ')}
-                            </TableCell>
-                             <TableCell>
-                               {isEditing ? <Input type="number" defaultValue={entry.level} onChange={(e) => handleEditInputChange(day, index, 'level', e.target.value)}/> : entry.level}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Time</TableHead>
+                              <TableHead>Room</TableHead>
+                              <TableHead>Course</TableHead>
+                              <TableHead>Lecturer</TableHead>
+                              <TableHead>Departments</TableHead>
+                              <TableHead>Level</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {groupedByDay[day]?.map((entry, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="min-w-[120px]">
+                                  {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(entry.originalIndex, 'time', e.target.value)} /> : entry.time}
+                                </TableCell>
+                                <TableCell className="min-w-[100px]">
+                                  {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(entry.originalIndex, 'room', e.target.value)}/> : entry.room}
+                                </TableCell>
+                                <TableCell className="min-w-[150px]">
+                                   {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(entry.originalIndex, 'courseCode', e.target.value)}/> : entry.courseCode}
+                                </TableCell>
+                                <TableCell className="min-w-[150px]">
+                                   {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(entry.originalIndex, 'lecturer', e.target.value)}/> : entry.lecturer}
+                                </TableCell>
+                                <TableCell className="min-w-[200px]">
+                                   {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(entry.originalIndex, 'departments', e.target.value)}/> : entry.departments.join(', ')}
+                                </TableCell>
+                                 <TableCell className="min-w-[100px]">
+                                   {isEditing ? (
+                                        <Select
+                                            value={String(entry.level)}
+                                            onValueChange={(value) => handleEditInputChange(entry.originalIndex, 'level', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select level" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="100">100</SelectItem>
+                                                <SelectItem value="200">200</SelectItem>
+                                                <SelectItem value="300">300</SelectItem>
+                                                <SelectItem value="400">400</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                   ) : entry.level}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
               ))}
-               {daysWithData.length === 0 && searchTerm && (
+               {daysWithData.length === 0 && (searchTerm || showInvalid) && (
                   <div className="text-center p-12 text-muted-foreground">
-                    <p>No results found for "{searchTerm}".</p>
+                    <p>No results found for your filter criteria.</p>
                   </div>
                )}
             </Tabs>
@@ -539,8 +581,10 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="md:p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {renderContent()}
     </div>
   );
 }
+
+    
