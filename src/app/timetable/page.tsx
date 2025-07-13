@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable, users } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { handleFileUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
 
@@ -217,6 +218,7 @@ function AdminTimetableView() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -247,10 +249,18 @@ function AdminTimetableView() {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+  
+  const filteredData = useMemo(() => {
+    if (!parsedData) return null;
+    if (!searchTerm) return parsedData;
+    return parsedData.filter(entry => 
+      entry.courseCode.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [parsedData, searchTerm]);
 
   const groupedByDay = useMemo(() => {
-    if (!parsedData) return {};
-    return parsedData.reduce((acc, entry) => {
+    if (!filteredData) return {};
+    return filteredData.reduce((acc, entry) => {
       const day = entry.day;
       if (!acc[day]) {
         acc[day] = [];
@@ -258,7 +268,7 @@ function AdminTimetableView() {
       acc[day].push(entry);
       return acc;
     }, {} as Record<string, TimetableEntry[]>);
-  }, [parsedData]);
+  }, [filteredData]);
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -271,43 +281,56 @@ function AdminTimetableView() {
         className="hidden"
         accept=".xlsx, .xls"
       />
-      <TooltipProvider>
-        <div className="flex gap-4">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                <span className="sr-only">Upload New</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Upload New Timetable</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" disabled>
-                <FilePenLine className="h-4 w-4" />
-                <span className="sr-only">Edit Current</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Edit Current</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="destructive" size="icon" disabled>
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Delete</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Delete</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </TooltipProvider>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <TooltipProvider>
+          <div className="flex gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="sr-only">Upload New</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload New Timetable</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" disabled>
+                  <FilePenLine className="h-4 w-4" />
+                  <span className="sr-only">Edit Current</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit Current</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="destructive" size="icon" disabled>
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
+        {parsedData && (
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search by course code..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
 
       {error && (
          <Alert variant="destructive">
@@ -317,16 +340,19 @@ function AdminTimetableView() {
          </Alert>
       )}
 
-      {parsedData && (
+      {filteredData && (
         <Card>
           <CardHeader>
             <CardTitle>Parsed Timetable Preview</CardTitle>
             <CardDescription>
-              Review the parsed schedule below. A total of {parsedData.length} entries were found.
+              {searchTerm 
+                ? `Found ${filteredData.length} matching entries.`
+                : `A total of ${parsedData?.length || 0} entries were found.`
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={daysWithData[0]} className="w-full">
+            <Tabs defaultValue={daysWithData.length > 0 ? daysWithData[0] : ""} className="w-full">
               <TabsList>
                 {daysWithData.map(day => (
                   <TabsTrigger key={day} value={day}>
@@ -362,6 +388,11 @@ function AdminTimetableView() {
                     </Table>
                 </TabsContent>
               ))}
+               {daysWithData.length === 0 && searchTerm && (
+                  <div className="text-center p-12 text-muted-foreground">
+                    <p>No results found for "{searchTerm}".</p>
+                  </div>
+               )}
             </Tabs>
           </CardContent>
         </Card>
