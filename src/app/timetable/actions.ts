@@ -82,7 +82,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
         if (departments.length === 0) continue;
 
-        const level = parseInt(courseNum[0], 10) * 100;
+        const level = (parseInt(courseNum[0], 10) * 100) || 0;
 
         validSchedules.push({
           day,
