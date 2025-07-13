@@ -81,6 +81,40 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     }
   }
 
+  const departmentMap = new Map([
+    // Faculty of mining and minerals
+    ['MN', 'Mining Engineering'],
+    ['MR', 'Minerals Engineering'],
+    // Faculty of Engineering
+    ['MC', 'Mechanical Engineering'],
+    ['EL', 'Electrical and Electronic Engineering'],
+    ['RN', 'Renewable Energy Engineering'],
+    ['TC', 'Telecommunication Engineering'],
+    ['PM', 'Plant and Maintenance Engineering'],
+    // Faculty of computing and mathematical sciences
+    ['CY', 'Cyber Security'],
+    ['CE', 'Computer Science And Engineering'],
+    ['IS', 'Information Systems and Technology'],
+    ['MA', 'Mathematics'],
+    ['SD', 'Statistical Data Science'],
+    // Faculty of integrate management studies
+    ['LT', 'Logistics and Transport Management'],
+    ['EC', 'Economics and Industrial Organisation'],
+    // Faculty of geosciences and environmental studies
+    ['GM', 'Geomatic Engineering'],
+    ['GL', 'Geological Engineering'],
+    ['SP', 'Spatial Planning'],
+    ['ES', 'Environmental and Safety Engineering'],
+    ['LA', 'Land Administration and Information Systems'],
+    // School of Petroleum studies
+    ['PE', 'Petroleum Engineering'],
+    ['NG', 'Natural Gas Engineering'],
+    ['PG', 'Petroleum Geosciences and Engineering'],
+    ['RP', 'Petroleum Refining and Petrochemical Engineering'],
+    ['CH', 'Chemical Engineering'],
+  ]);
+
+
   // Post-process to add level and departments
   return finalSchedule.map(entry => {
     const courseNumMatch = entry.courseCode.match(/\d+/);
@@ -96,10 +130,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     }
 
     const deptStr = courseParts.join(' ');
-    const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
-    if (departments.length === 0 && deptStr.length > 0) {
-        departments.push(deptStr);
-    }
+    const deptInitials = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
+    const departments = deptInitials.map(initial => departmentMap.get(initial) || initial);
 
     return { ...entry, level, departments, courseCode: `${deptStr} ${courseNum}`.trim() };
   });
