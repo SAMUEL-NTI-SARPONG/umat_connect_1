@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, Save, X } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable, users } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -215,10 +215,20 @@ function LecturerTimetableView() {
 
 function AdminTimetableView() {
   const [parsedData, setParsedData] = useState<TimetableEntry[] | null>(null);
+  const [editedData, setEditedData] = useState<TimetableEntry[] | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (isEditing && parsedData) {
+      setEditedData(JSON.parse(JSON.stringify(parsedData))); // Deep copy
+    } else {
+      setEditedData(null);
+    }
+  }, [isEditing, parsedData]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -227,6 +237,7 @@ function AdminTimetableView() {
     setIsLoading(true);
     setError(null);
     setParsedData(null);
+    setIsEditing(false);
 
     try {
       const data = await handleFileUpload(file);
@@ -239,7 +250,6 @@ function AdminTimetableView() {
       setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
     } finally {
       setIsLoading(false);
-      // Reset file input to allow re-uploading the same file
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -249,14 +259,54 @@ function AdminTimetableView() {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+
+  const handleDelete = () => {
+    setParsedData(null);
+    setIsEditing(false);
+    setError(null);
+    setSearchTerm('');
+  };
+
+  const handleSave = () => {
+    setParsedData(editedData);
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedData(null);
+  };
   
-  const filteredData = useMemo(() => {
-    if (!parsedData) return null;
-    if (!searchTerm) return parsedData;
-    return parsedData.filter(entry => 
-      entry.courseCode.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleEditInputChange = (day: string, originalIndex: number, field: keyof TimetableEntry, value: string) => {
+    if (!editedData) return;
+
+    const dataToUpdate = [...editedData];
+    const entryIndex = dataToUpdate.findIndex(entry => 
+      entry.day === day && 
+      (parsedData && parsedData.indexOf(entry) === originalIndex)
     );
-  }, [parsedData, searchTerm]);
+    
+    // This is tricky, need a better way to find the item
+    // For now, let's find the item inside the grouped day
+    const dayEntries = dataToUpdate.filter(e => e.day === day);
+    const targetEntry = dayEntries[originalIndex];
+    if(targetEntry) {
+      (targetEntry[field] as any) = value;
+      setEditedData(dataToUpdate);
+    }
+  };
+
+  const currentData = isEditing ? editedData : parsedData;
+
+  const filteredData = useMemo(() => {
+    if (!currentData) return null;
+    if (!searchTerm) return currentData;
+    return currentData.filter(entry => 
+      entry.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.lecturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.room.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [currentData, searchTerm]);
 
   const groupedByDay = useMemo(() => {
     if (!filteredData) return {};
@@ -281,12 +331,12 @@ function AdminTimetableView() {
         className="hidden"
         accept=".xlsx, .xls"
       />
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
         <TooltipProvider>
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading || isEditing}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   <span className="sr-only">Upload New</span>
                 </Button>
@@ -297,7 +347,7 @@ function AdminTimetableView() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" disabled>
+                <Button variant="outline" size="icon" onClick={() => setIsEditing(true)} disabled={!parsedData || isEditing}>
                   <FilePenLine className="h-4 w-4" />
                   <span className="sr-only">Edit Current</span>
                 </Button>
@@ -308,22 +358,44 @@ function AdminTimetableView() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="destructive" size="icon" disabled>
+                <Button variant="destructive" size="icon" onClick={handleDelete} disabled={!parsedData || isEditing}>
                   <Trash2 className="h-4 w-4" />
                   <span className="sr-only">Delete</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Delete</p>
+                <p>Delete Timetable</p>
               </TooltipContent>
             </Tooltip>
+             {isEditing && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleSave}>
+                      <Save className="h-4 w-4 text-green-600" />
+                      <span className="sr-only">Save</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Save Changes</p></TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handleCancelEdit}>
+                      <X className="h-4 w-4 text-red-600" />
+                      <span className="sr-only">Cancel</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Cancel Edit</p></TooltipContent>
+                </Tooltip>
+              </>
+            )}
           </div>
         </TooltipProvider>
-        {parsedData && (
-          <div className="relative flex-grow">
+        {parsedData && !isEditing && (
+          <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search by course code..."
+              placeholder="Search course, lecturer, room..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -340,14 +412,18 @@ function AdminTimetableView() {
          </Alert>
       )}
 
-      {filteredData && (
+      {currentData && (
         <Card>
           <CardHeader>
-            <CardTitle>Parsed Timetable Preview</CardTitle>
+            <CardTitle>
+              {isEditing ? 'Editing Timetable' : 'Parsed Timetable Preview'}
+            </CardTitle>
             <CardDescription>
-              {searchTerm 
-                ? `Found ${filteredData.length} matching entries.`
-                : `A total of ${parsedData?.length || 0} entries were found.`
+              {isEditing
+                ? `Making changes to ${currentData.length} entries.`
+                : searchTerm 
+                  ? `Found ${filteredData?.length || 0} matching entries.`
+                  : `A total of ${parsedData?.length || 0} entries were found.`
               }
             </CardDescription>
           </CardHeader>
@@ -376,12 +452,24 @@ function AdminTimetableView() {
                       <TableBody>
                         {groupedByDay[day].map((entry, index) => (
                           <TableRow key={index}>
-                            <TableCell>{entry.time}</TableCell>
-                            <TableCell>{entry.room}</TableCell>
-                            <TableCell>{entry.courseCode}</TableCell>
-                            <TableCell>{entry.lecturer}</TableCell>
-                            <TableCell>{entry.departments.join(', ')}</TableCell>
-                            <TableCell>{entry.level}</TableCell>
+                            <TableCell>
+                              {isEditing ? <Input defaultValue={entry.time} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'time', e.target.value)} /> : entry.time}
+                            </TableCell>
+                            <TableCell>
+                              {isEditing ? <Input defaultValue={entry.room} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'room', e.target.value)}/> : entry.room}
+                            </TableCell>
+                            <TableCell>
+                               {isEditing ? <Input defaultValue={entry.courseCode} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'courseCode', e.target.value)}/> : entry.courseCode}
+                            </TableCell>
+                            <TableCell>
+                               {isEditing ? <Input defaultValue={entry.lecturer} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'lecturer', e.target.value)}/> : entry.lecturer}
+                            </TableCell>
+                            <TableCell>
+                               {isEditing ? <Input defaultValue={entry.departments.join(', ')} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'departments', e.target.value)}/> : entry.departments.join(', ')}
+                            </TableCell>
+                             <TableCell>
+                               {isEditing ? <Input type="number" defaultValue={entry.level} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'level', e.target.value)}/> : entry.level}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
