@@ -537,28 +537,28 @@ function AdminTimetableView() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="time" className="text-right">Time</Label>
-              <Input id="time" value={editedFormData?.time} onChange={(e) => handleEditInputChange('time', e.target.value)} className="col-span-3" />
+              <Input id="time" value={editedFormData?.time || ''} onChange={(e) => handleEditInputChange('time', e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="room" className="text-right">Room</Label>
-              <Input id="room" value={editedFormData?.room} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
+              <Input id="room" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="courseCode" className="text-right">Course</Label>
-              <Input id="courseCode" value={editedFormData?.courseCode} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
+              <Input id="courseCode" value={editedFormData?.courseCode || ''} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="lecturer" className="text-right">Lecturer</Label>
-              <Input id="lecturer" value={editedFormData?.lecturer} onChange={(e) => handleEditInputChange('lecturer', e.target.value)} className="col-span-3" />
+              <Input id="lecturer" value={editedFormData?.lecturer || ''} onChange={(e) => handleEditInputChange('lecturer', e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="departments" className="text-right">Depts</Label>
-              <Input id="departments" value={editedFormData?.departments.join(', ')} onChange={(e) => handleEditInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" />
+              <Input id="departments" value={editedFormData?.departments.join(', ') || ''} onChange={(e) => handleEditInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="level" className="text-right">Level</Label>
                <Select
-                  defaultValue={String(editedFormData?.level)}
+                  value={String(editedFormData?.level || '')}
                   onValueChange={(value) => handleEditInputChange('level', Number(value))}
                 >
                   <SelectTrigger className="col-span-3">
@@ -622,3 +622,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
