@@ -16,17 +16,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Image as ImageIcon, X } from 'lucide-react';
 import { useUser } from '@/app/providers/user-provider';
 import { ProfileAvatar } from '../ui/profile-avatar';
-import { users } from '@/lib/data';
 import Image from 'next/image';
 
 export default function CreatePostCard() {
-  const { role, name } = useUser();
+  const { user } = useUser();
   const [content, setContent] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const currentUser = users.find((u) => u.role === role && u.name === name);
 
   const handlePost = () => {
     // Logic to create a new post with content and image would go here
@@ -61,7 +58,7 @@ export default function CreatePostCard() {
     setIsDialogOpen(false);
   };
 
-  if (role === 'student') {
+  if (!user || user.role === 'student') {
     return null;
   }
 
@@ -69,14 +66,12 @@ export default function CreatePostCard() {
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <div className="p-3 mb-4 bg-card rounded-xl shadow-sm border flex items-center gap-4 cursor-pointer hover:bg-muted" onClick={() => setIsDialogOpen(true)}>
-            {currentUser && (
-                <ProfileAvatar
-                    src={currentUser.profileImage}
-                    fallback={currentUser.name.charAt(0)}
-                    alt={`${currentUser.name}'s profile picture`}
-                    imageHint="profile picture"
-                />
-            )}
+            <ProfileAvatar
+                src={user.profileImage}
+                fallback={user.name.charAt(0)}
+                alt={`${user.name}'s profile picture`}
+                imageHint="profile picture"
+            />
             <div className="flex-grow text-left text-muted-foreground">
                 What's on your mind?
             </div>

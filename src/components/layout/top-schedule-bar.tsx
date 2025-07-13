@@ -49,9 +49,9 @@ function ScheduleItem({
 }
 
 export default function TopScheduleBar() {
-  const { role } = useUser();
+  const { user } = useUser();
 
-  if (role !== 'student') {
+  if (!user || user.role !== 'student') {
     return null;
   }
 

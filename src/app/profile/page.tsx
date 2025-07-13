@@ -7,21 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { Separator } from '@/components/ui/separator';
-import { Camera, Settings, Moon, Sun, Monitor } from 'lucide-react';
+import { Camera, Settings } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
-import { users } from '@/lib/data';
 
 export default function ProfilePage() {
   const { 
-    role, setRole,
-    name, setName, 
-    profileImage, setProfileImage,
-    department, setDepartment,
-    phone, setPhone
+    user, 
+    updateUser 
   } = useUser();
   
   const [isEditing, setIsEditing] = useState(false);
@@ -30,51 +26,25 @@ export default function ProfilePage() {
   const [fontSize, setFontSize] = useState(16);
 
   const [formData, setFormData] = useState({ 
-    name: name, 
-    department: department, 
-    phone: phone
+    name: user?.name || '', 
+    department: user?.department || '', 
+    phone: user?.phone || ''
   });
-  const [localProfileImage, setLocalProfileImage] = useState(profileImage);
-  const isMounted = useRef(false);
-
-  // This effect runs ONLY when the user manually changes the role via the dropdown.
-  // It resets the profile to the default for the newly selected role.
+  const [localProfileImage, setLocalProfileImage] = useState(user?.profileImage || '');
+  
+  // This effect keeps the form data synchronized with the global user state
+  // when not in editing mode. This ensures that if the user data is updated
+  // elsewhere, the profile page reflects it.
   useEffect(() => {
-    // We use a ref to skip this effect on the initial component mount.
-    if (isMounted.current) {
-      // Find the first user that matches the new role to use as default.
-      const userData = users.find(u => u.role === role);
-      if (userData) {
-        // Update global user context state
-        setName(userData.name);
-        setDepartment(userData.department);
-        setPhone(userData.phone);
-        setProfileImage(userData.profileImage);
-        
-        // Update local form state to match the new user data
-        setFormData({
-          name: userData.name,
-          department: userData.department,
-          phone: userData.phone
-        });
-        setLocalProfileImage(userData.profileImage);
-        setIsEditing(false); // Exit editing mode on role change
-      }
-    } else {
-      // On the first mount, just mark it as mounted.
-      isMounted.current = true;
+    if (user && !isEditing) {
+      setFormData({
+        name: user.name,
+        department: user.department,
+        phone: user.phone
+      });
+      setLocalProfileImage(user.profileImage);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, setRole]); // This hook ONLY depends on `role` and `setRole`.
-
-  // This effect keeps the local form data synchronized with the global user state
-  // ONLY when the user is NOT in editing mode. This prevents saved changes from being overwritten.
-  useEffect(() => {
-    if (!isEditing) {
-      setFormData({ name, department, phone });
-      setLocalProfileImage(profileImage);
-    }
-  }, [name, department, phone, profileImage, isEditing]);
+  }, [user, isEditing]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,18 +68,28 @@ export default function ProfilePage() {
       handleCancel();
     } else {
       // When entering edit mode, sync the form with the current global state.
-      setFormData({ name, department, phone });
-      setLocalProfileImage(profileImage);
+      if (user) {
+        setFormData({ name: user.name, department: user.department, phone: user.phone });
+        setLocalProfileImage(user.profileImage);
+      }
       setIsEditing(true);
     }
   };
 
   const handleSaveChanges = () => {
+    if (!user) return;
+    
+    // Create the updated user object
+    const updatedUser = {
+      ...user,
+      name: formData.name,
+      department: formData.department,
+      phone: formData.phone,
+      profileImage: localProfileImage,
+    };
+    
     // Update the global user context with the new data from the form.
-    setName(formData.name);
-    setDepartment(formData.department);
-    setPhone(formData.phone);
-    setProfileImage(localProfileImage);
+    updateUser(updatedUser);
     
     // Exit editing mode.
     setIsEditing(false);
@@ -123,11 +103,14 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
   
-  const currentUserData = users.find(u => u.name === name);
   const currentTheme = theme;
   // Determine which data to display based on whether we are editing or not.
-  const displayImage = isEditing ? localProfileImage : profileImage;
-  const displayName = isEditing ? formData.name : name;
+  const displayImage = isEditing ? localProfileImage : user?.profileImage;
+  const displayName = isEditing ? formData.name : user?.name;
+
+  if (!user) {
+    return <div>Loading profile...</div>;
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
@@ -137,7 +120,7 @@ export default function ProfilePage() {
             <div className="relative">
               <ProfileAvatar
                 src={displayImage}
-                fallback={name.charAt(0).toUpperCase()}
+                fallback={user.name.charAt(0).toUpperCase()}
                 alt="User's profile picture"
                 className="w-24 h-24 text-3xl"
                 imageHint="profile picture"
@@ -176,7 +159,7 @@ export default function ProfilePage() {
                     <span className="sr-only">{isEditing ? 'Cancel Editing' : 'Edit Profile'}</span>
                   </Button>
               </div>
-              <p className="text-muted-foreground capitalize">{role}</p>
+              <p className="text-muted-foreground capitalize">{user.role}</p>
             </div>
           </div>
         </CardHeader>
@@ -187,7 +170,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="name" value={formData.name} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{name}</p>
+              <p className="text-muted-foreground">{user.name}</p>
             )}
           </div>
           <div className="grid gap-2">
@@ -195,7 +178,7 @@ export default function ProfilePage() {
             <Input
               id="email"
               type="email"
-              defaultValue={currentUserData?.email}
+              defaultValue={user.email}
               disabled
             />
           </div>
@@ -204,7 +187,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="department" value={formData.department} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{department}</p>
+              <p className="text-muted-foreground">{user.department}</p>
             )}
           </div>
           <div className="grid gap-2">
@@ -212,7 +195,7 @@ export default function ProfilePage() {
             {isEditing ? (
               <Input id="phone" type="tel" value={formData.phone} onChange={handleInputChange} />
             ) : (
-              <p className="text-muted-foreground">{phone}</p>
+              <p className="text-muted-foreground">{user.phone}</p>
             )}
           </div>
           {isEditing && (

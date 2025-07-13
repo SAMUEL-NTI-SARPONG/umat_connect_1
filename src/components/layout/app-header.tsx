@@ -16,10 +16,10 @@ const pageTitles: { [key: string]: string } = {
 
 export default function AppHeader() {
   const pathname = usePathname();
-  const { role } = useUser();
+  const { user } = useUser();
 
   const getTitle = () => {
-    if (pathname === '/timetable' && role === 'administrator') {
+    if (pathname === '/timetable' && user?.role === 'administrator') {
       return 'Manage Timetable';
     }
     return pageTitles[pathname] || 'UMaT Connect';

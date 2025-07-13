@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
-import { users, departments as allDepartments } from '@/lib/data';
+import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -903,52 +903,51 @@ function AdminTimetableView({
 }
 
 export default function TimetablePage() {
-  const { role, name, department } = useUser();
-  const currentUser = users.find(u => u.name === name);
+  const { user } = useUser();
 
-  // Centralized state for all schedules
-  const [adminParsedData, setAdminParsedData] = useState<TimetableEntry[] | null>(null);
+  // Centralized state for all schedules, managed by a single source of truth
+  const [masterSchedule, setMasterSchedule] = useState<TimetableEntry[] | null>(null);
   const [emptySlots, setEmptySlots] = useState<EmptySlot[]>([]);
-  const [lecturerSchedule, setLecturerSchedule] = useState<TimetableEntry[]>([]);
-  const [studentSchedule, setStudentSchedule] = useState<TimetableEntry[]>([]);
+  
+  // Derived states are now calculated within the render logic using useMemo
+  const lecturerSchedule = useMemo(() => {
+    if (!masterSchedule || !user || user.role !== 'lecturer') return [];
+    
+    const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+    return masterSchedule.filter(entry => 
+      currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+    );
+  }, [masterSchedule, user]);
 
-  // Effect to update role-specific schedules when admin data changes
-  useEffect(() => {
-    if (adminParsedData) {
-      // Filter for the current lecturer
-      const currentLecturerNameParts = name.toLowerCase().split(' ');
-      setLecturerSchedule(
-        adminParsedData.filter(entry => 
-          currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
-        )
+  const studentSchedule = useMemo(() => {
+    if (!masterSchedule || !user || user.role !== 'student') return [];
+
+    return masterSchedule.filter(entry =>
+        entry.level === user.level &&
+        entry.departments.some(dep => user.department.includes(dep))
       );
-      
-      // Filter for the current student
-      if (currentUser && role === 'student') {
-        setStudentSchedule(
-          adminParsedData.filter(entry =>
-            entry.level === currentUser.level &&
-            entry.departments.some(dep => department.includes(dep))
-          )
-        );
-      }
-    } else {
-      // Reset schedules if admin data is cleared
-      setLecturerSchedule([]);
-      setStudentSchedule([]);
-    }
-  }, [adminParsedData, role, name, department, currentUser]);
-
+  }, [masterSchedule, user]);
 
   const renderContent = () => {
-    switch (role) {
+    if (!user) return <p>Loading...</p>;
+
+    switch (user.role) {
       case 'student':
         return <StudentTimetableView schedule={studentSchedule} />;
       case 'lecturer':
-        // Pass the lecturer's own schedule, but provide a setter for the *entire* admin dataset
-        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setAdminParsedData as any} emptySlots={emptySlots} />;
+        // The lecturer view can now modify the master schedule directly
+        return <LecturerTimetableView 
+                  schedule={lecturerSchedule} 
+                  setSchedule={setMasterSchedule as any} 
+                  emptySlots={emptySlots} 
+               />;
       case 'administrator':
-        return <AdminTimetableView parsedData={adminParsedData} setParsedData={setAdminParsedData} emptySlots={emptySlots} setEmptySlots={setEmptySlots} />;
+        return <AdminTimetableView 
+                  parsedData={masterSchedule} 
+                  setParsedData={setMasterSchedule} 
+                  emptySlots={emptySlots} 
+                  setEmptySlots={setEmptySlots} 
+               />;
       default:
         return <p>Select a role to see the timetable.</p>;
     }

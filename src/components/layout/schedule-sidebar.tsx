@@ -31,9 +31,11 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { role } = useUser();
+  const { user } = useUser();
 
-  const scheduleData = timetable[role] || [];
+  if (!user) return null;
+
+  const scheduleData = timetable[user.role] || [];
   const hasSchedule = scheduleData.length > 0;
 
   return (

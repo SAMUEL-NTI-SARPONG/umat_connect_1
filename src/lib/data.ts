@@ -1,7 +1,18 @@
 
 export type UserRole = 'student' | 'lecturer' | 'administrator';
 
-export const users = [
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  level: number;
+  phone: string;
+  profileImage: string;
+}
+
+export const users: User[] = [
   {
     id: 1,
     name: 'Student User',
@@ -18,6 +29,7 @@ export const users = [
     email: 'yaw.mensah@umat.edu.gh',
     role: 'lecturer' as UserRole,
     department: 'Computer Science And Engineering',
+    level: 0, // Not applicable
     phone: '+233 20 123 4567',
     profileImage: 'https://placehold.co/100x100/673AB7/FFFFFF/png',
   },
@@ -27,6 +39,7 @@ export const users = [
     email: 'admin@umat.edu.gh',
     role: 'administrator' as UserRole,
     department: 'Administration',
+    level: 0, // Not applicable
     phone: '+233 31 201 2345',
     profileImage: 'https://placehold.co/100x100/EDE7F6/311B92/png',
   },
@@ -46,6 +59,7 @@ export const users = [
     email: 'adwoa.ansa@umat.edu.gh',
     role: 'lecturer' as UserRole,
     department: 'Geomatic Engineering',
+    level: 0, // Not applicable
     phone: '+233 27 888 9999',
     profileImage: 'https://placehold.co/100x100/9FA8DA/FFFFFF/png',
   },

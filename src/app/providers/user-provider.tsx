@@ -7,45 +7,56 @@ import {
   useState,
   useMemo,
   ReactNode,
+  useEffect,
 } from 'react';
-
-export type UserRole = 'student' | 'lecturer' | 'administrator';
+import { users as allUsers, type User } from '@/lib/data';
 
 interface UserContextType {
-  role: UserRole;
-  setRole: (role: UserRole) => void;
-  name: string;
-  setName: (name: string) => void;
-  profileImage: string;
-  setProfileImage: (imageUrl: string) => void;
-  department: string;
-  setDepartment: (department: string) => void;
-  phone: string;
-  setPhone: (phone: string) => void;
+  user: User | null;
+  login: (userId: number) => void;
+  logout: () => void;
+  updateUser: (updatedUser: User) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<UserRole>('student');
-  const [name, setName] = useState('User Name');
-  const [profileImage, setProfileImage] = useState('https://placehold.co/100x100.png');
-  const [department, setDepartment] = useState('Computer Science');
-  const [phone, setPhone] = useState('+233 12 345 6789');
+  const [user, setUser] = useState<User | null>(null);
 
+  useEffect(() => {
+    // Attempt to load user from session storage on initial load
+    const storedUserId = sessionStorage.getItem('userId');
+    if (storedUserId) {
+      const foundUser = allUsers.find(u => u.id === parseInt(storedUserId, 10));
+      if (foundUser) {
+        setUser(foundUser);
+      }
+    }
+  }, []);
 
-  const value = useMemo(() => ({ 
-    role, 
-    setRole,
-    name,
-    setName,
-    profileImage,
-    setProfileImage,
-    department,
-    setDepartment,
-    phone,
-    setPhone,
-   }), [role, name, profileImage, department, phone]);
+  const login = (userId: number) => {
+    const foundUser = allUsers.find(u => u.id === userId);
+    if (foundUser) {
+      setUser(foundUser);
+      sessionStorage.setItem('userId', String(userId));
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    sessionStorage.removeItem('userId');
+  };
+
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
+  const value = useMemo(() => ({
+    user,
+    login,
+    logout,
+    updateUser,
+  }), [user]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

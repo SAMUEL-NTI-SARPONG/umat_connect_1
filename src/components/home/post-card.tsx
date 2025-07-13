@@ -39,8 +39,7 @@ export default function PostCard({ post }: { post: Post }) {
   const [isCommentSectionOpen, setIsCommentSectionOpen] = useState(false);
 
   const author = users.find(u => u.id === post.authorId);
-  const { name: currentUserName } = useUser();
-  const currentUser = users.find(u => u.name === currentUserName);
+  const { user: currentUser } = useUser();
 
   if (!author) return null;
 

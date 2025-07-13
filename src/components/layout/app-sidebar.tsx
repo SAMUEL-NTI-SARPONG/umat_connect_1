@@ -5,47 +5,43 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { GraduationCap, Calendar, Home, User, LogOut, Compass } from 'lucide-react';
+import { Calendar, Home, User, LogOut, Compass } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useUser } from '@/app/providers/user-provider';
 import { ProfileAvatar } from '../ui/profile-avatar';
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { role, setRole, name, profileImage } = useUser();
+  const { user, logout } = useUser();
 
-  const timetableLabel = role === 'administrator' ? 'Manage Timetable' : 'Timetable';
+  if (!user) {
+    return null;
+  }
+  
+  const timetableLabel = user.role === 'administrator' ? 'Manage Timetable' : 'Timetable';
 
   return (
     <>
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
         <Link href="/profile">
           <ProfileAvatar
-              src={profileImage}
-              fallback={name.charAt(0).toUpperCase()}
+              src={user.profileImage}
+              fallback={user.name.charAt(0).toUpperCase()}
               alt="Current user's profile picture"
               className="w-16 h-16 text-2xl"
               imageHint="profile picture"
             />
         </Link>
         <div>
-          <p className="font-semibold">{name}</p>
+          <p className="font-semibold">{user.name}</p>
           <p className="text-sm capitalize text-sidebar-foreground/80">
-            {role}
+            {user.role}
           </p>
         </div>
       </div>
@@ -71,7 +67,7 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-           {role === 'lecturer' && (
+           {user.role === 'lecturer' && (
             <SidebarMenuItem>
               <Link href="/explore" passHref>
                 <SidebarMenuButton
@@ -95,16 +91,6 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-           <SidebarMenuItem>
-             <Link href="/" passHref>
-              <SidebarMenuButton
-                tooltip="Logout"
-              >
-                <LogOut />
-                <span>Logout</span>
-              </SidebarMenuButton>
-             </Link>
-          </SidebarMenuItem>
         </SidebarMenu>
          <div className='md:hidden p-4 text-center text-muted-foreground'>
             <p>Main navigation is in the bottom bar.</p>
@@ -112,22 +98,17 @@ export default function AppSidebar() {
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter>
-        <SidebarGroup>
-          <SidebarGroupLabel>Switch Role</SidebarGroupLabel>
-          <Select
-            value={role}
-            onValueChange={(value) => setRole(value as any)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="student">Student</SelectItem>
-              <SelectItem value="lecturer">Lecturer</SelectItem>
-              <SelectItem value="administrator">Administrator</SelectItem>
-            </SelectContent>
-          </Select>
-        </SidebarGroup>
+        <SidebarMenu>
+          <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Logout"
+                onClick={logout}
+              >
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </>
   );
