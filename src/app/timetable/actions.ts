@@ -3,109 +3,136 @@
 
 import * as XLSX from 'xlsx';
 
+// Based on the user-provided logic, using a fixed time slot array is more reliable.
+const timeSlots = [
+  '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00', 
+  '12:00-1:00', '1:30-2:30', '2:30-3:30', '3:30-4:30', '4:30-5:30', '5:30-6:30', '6:30-7:30'
+];
+
+// Time slot for the break, which corresponds to column index 6
+const breakColumnIndex = 6; 
+
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
+// Helper function to combine time slots into a range, inspired by user's code.
+function combineTimeSlots(startIndex: number, endIndex: number) {
+  if (startIndex < 0 || endIndex >= timeSlots.length || startIndex > endIndex) {
+    return 'Unknown Time';
+  }
+  const startTime = timeSlots[startIndex].split('-')[0];
+  const endTime = timeSlots[endIndex].split('-')[1];
+  return `${startTime} - ${endTime}`;
+}
+
+
+// New parsing function implementing the user's provided algorithm.
 function parseUniversitySchedule(fileBuffer: Buffer) {
   const workbook = XLSX.read(fileBuffer, { type: "buffer" });
-  const validSchedules = [];
+  const finalSchedule = [];
 
   for (const day of days) {
     const sheet = workbook.Sheets[day];
     if (!sheet) continue;
 
-    const merges = sheet['!merges'] || [];
-    const mergeMap: { [key: string]: { s: any; e: any } } = {};
-    for (const merge of merges) {
-      for (let r = merge.s.r; r <= merge.e.r; r++) {
-        for (let c = merge.s.c; c <= merge.e.c; c++) {
-          mergeMap[`${r},${c}`] = merge;
-        }
-      }
-    }
+    // Convert sheet to JSON, starting from the data rows.
+    // `range: 5` tells sheet_to_json to start from the 6th row (index 5)
+    // header: 1 turns rows into arrays of strings
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, range: 5 }) as (string | number)[][];
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as (string | number)[][];
-    if (rows.length < 5) continue;
-
-    const timeHeaders = rows[4]?.slice(1).map(String) || [];
-    const dataRows = rows.slice(5);
-
-    for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i];
-      const room = row[0]?.toString().trim();
-      if (!room) continue;
-
-      const rowIndexInSheet = i + 5;
-
-      for (let j = 1; j < row.length; j++) {
-        const cellValue = row[j]?.toString();
-        if (!cellValue || cellValue.toUpperCase().includes('BREAK')) continue;
-
-        const mergeInfo = mergeMap[`${rowIndexInSheet},${j}`];
-        if (mergeInfo && (mergeInfo.s.c !== j || mergeInfo.s.r !== rowIndexInSheet)) {
-          continue;
+    for (const row of rows) {
+        const room = row[0]?.toString().trim();
+        // Skip rows that are not valid rooms.
+        if (!room || room.toUpperCase().includes('VLE') || room.toUpperCase().includes('FIELD WORK') || room.toUpperCase().includes('LAB')) {
+            continue;
         }
 
-        let time = "Unknown Time";
-        if (mergeInfo) {
-          // Handle merged cells for multi-hour classes
-          const startColIndex = mergeInfo.s.c;
-          const endColIndex = mergeInfo.e.c;
-          const startTimeString = timeHeaders[startColIndex - 1];
-          const endTimeString = timeHeaders[endColIndex - 1];
+        let lastCourseInfo: { courseCode: string; lecturer: string } | null = null;
+        let startTimeIndex: number | null = null;
 
-          if (startTimeString && endTimeString) {
-            const startTime = startTimeString.split('-')[0]?.trim();
-            const endTime = endTimeString.split('-')[1]?.trim();
-            if (startTime && endTime) {
-              time = `${startTime} - ${endTime}`;
+        // Iterate through the time slot columns (1 to 12)
+        for (let j = 1; j <= 12; j++) {
+            // Adjust index for break column
+            const timeSlotIndex = j > breakColumnIndex ? j - 2 : j - 1;
+            const cellValue = row[j]?.toString().trim();
+
+            const isNewCourse = cellValue && cellValue.toUpperCase() !== 'B R E A K';
+
+            if (isNewCourse) {
+                // A new course has started. First, save the previous one if it exists.
+                if (lastCourseInfo && startTimeIndex !== null) {
+                    const endTimeIndex = timeSlotIndex -1;
+                    finalSchedule.push({
+                        day,
+                        room,
+                        time: combineTimeSlots(startTimeIndex, endTimeIndex),
+                        ...lastCourseInfo,
+                        departments: [], // Re-add if needed
+                        level: 0,
+                    });
+                }
+
+                // Start tracking the new course.
+                const lines = cellValue.split('\n').map(line => line.trim()).filter(Boolean);
+                const lecturer = lines.length > 1 ? lines.pop()! : 'TBA';
+                const courseCode = lines.join(' ');
+                
+                lastCourseInfo = { courseCode, lecturer };
+                startTimeIndex = timeSlotIndex;
+
+            } else if (!cellValue && lastCourseInfo) {
+                // This is an empty cell, indicating the previous course continues.
+                // Do nothing and let it extend.
+            } else {
+                // This is a break, an empty cell at the start of a row, or the end of a course.
+                // Save the tracked course.
+                if (lastCourseInfo && startTimeIndex !== null) {
+                    const endTimeIndex = timeSlotIndex - 1;
+                    finalSchedule.push({
+                        day,
+                        room,
+                        time: combineTimeSlots(startTimeIndex, endTimeIndex),
+                        ...lastCourseInfo,
+                        departments: [], // Re-add if needed
+                        level: 0,
+                    });
+                }
+                // Reset tracker
+                lastCourseInfo = null;
+                startTimeIndex = null;
             }
-          }
-        } else {
-          // Handle single-hour classes
-          const timeString = timeHeaders[j - 1];
-          if (timeString) {
-            time = timeString;
-          }
         }
-        
-        const lines = cellValue.split("\n").map(line => line.trim()).filter(Boolean);
-        if (lines.length < 2) continue;
 
-        const lecturerName = lines.pop() || '';
-        const courseCode = lines.join(' ');
-        
-        // Extract departments from the course code string
-        const courseParts = courseCode.trim().split(/\s+/);
-        courseParts.pop(); // Remove the course number part
-        const deptStr = courseParts.join(' ');
-        const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
-        if (departments.length === 0 && deptStr.length > 0) {
-            departments.push(deptStr);
+        // After the loop, handle any course that extends to the end of the row.
+        if (lastCourseInfo && startTimeIndex !== null) {
+             finalSchedule.push({
+                day,
+                room,
+                time: combineTimeSlots(startTimeIndex, timeSlots.length - 1),
+                ...lastCourseInfo,
+                departments: [], // Re-add if needed
+                level: 0,
+            });
         }
-        if (departments.length === 0) continue;
-
-        // Calculate level: first digit of course number * 100
-        const firstDigitMatch = courseCode.match(/\d/);
-        const level = firstDigitMatch ? parseInt(firstDigitMatch[0], 10) * 100 : 0;
-
-        validSchedules.push({
-          day,
-          time,
-          room,
-          departments,
-          level,
-          courseCode,
-          lecturer: lecturerName
-        });
-
-        if (mergeInfo) {
-          j = mergeInfo.e.c;
-        }
-      }
     }
   }
-  return validSchedules;
+
+  // Post-process to add level and departments
+  return finalSchedule.map(entry => {
+    const firstDigitMatch = entry.courseCode.match(/\d/);
+    const level = firstDigitMatch ? parseInt(firstDigitMatch[0], 10) * 100 : 0;
+    
+    const courseParts = entry.courseCode.trim().split(/\s+/);
+    courseParts.pop(); // Remove course number
+    const deptStr = courseParts.join(' ');
+    const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
+    if (departments.length === 0 && deptStr.length > 0) {
+        departments.push(deptStr);
+    }
+
+    return { ...entry, level, departments };
+  });
 }
+
 
 export async function handleFileUpload(file: File) {
   try {
