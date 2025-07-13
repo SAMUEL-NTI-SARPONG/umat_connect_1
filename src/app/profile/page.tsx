@@ -37,32 +37,38 @@ export default function ProfilePage() {
   const [localProfileImage, setLocalProfileImage] = useState(profileImage);
   const isMounted = useRef(false);
 
-  // This effect resets the profile to the default for a given role when the role changes.
+  // This effect runs ONLY when the user manually changes the role via the dropdown.
+  // It resets the profile to the default for the newly selected role.
   useEffect(() => {
-    // We use a ref to skip the initial mount, so it only runs on subsequent role changes.
+    // We use a ref to skip this effect on the initial component mount.
     if (isMounted.current) {
+      // Find the first user that matches the new role to use as default.
       const userData = users.find(u => u.role === role);
       if (userData) {
-        // Update global state
+        // Update global user context state
         setName(userData.name);
         setDepartment(userData.department);
         setPhone(userData.phone);
         setProfileImage(userData.profileImage);
         
-        // Update local form state to match
+        // Update local form state to match the new user data
         setFormData({
           name: userData.name,
           department: userData.department,
           phone: userData.phone
         });
         setLocalProfileImage(userData.profileImage);
+        setIsEditing(false); // Exit editing mode on role change
       }
     } else {
+      // On the first mount, just mark it as mounted.
       isMounted.current = true;
     }
-  }, [role, setRole]); // Only re-run when the role changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, setRole]); // This hook ONLY depends on `role` and `setRole`.
 
-  // This effect ensures the local form data is in sync with the global state when not editing.
+  // This effect keeps the local form data synchronized with the global user state
+  // ONLY when the user is NOT in editing mode. This prevents saved changes from being overwritten.
   useEffect(() => {
     if (!isEditing) {
       setFormData({ name, department, phone });
@@ -91,6 +97,7 @@ export default function ProfilePage() {
     if (isEditing) {
       handleCancel();
     } else {
+      // When entering edit mode, sync the form with the current global state.
       setFormData({ name, department, phone });
       setLocalProfileImage(profileImage);
       setIsEditing(true);
@@ -98,24 +105,27 @@ export default function ProfilePage() {
   };
 
   const handleSaveChanges = () => {
+    // Update the global user context with the new data from the form.
     setName(formData.name);
     setDepartment(formData.department);
     setPhone(formData.phone);
     setProfileImage(localProfileImage);
     
+    // Exit editing mode.
     setIsEditing(false);
+    // Note: Font size change is a global DOM manipulation and should be handled with care.
     document.documentElement.style.fontSize = `${fontSize}px`;
   };
 
   const handleCancel = () => {
-    // On cancel, revert form to global state
-    setFormData({ name, department, phone });
-    setLocalProfileImage(profileImage);
+    // On cancel, simply exit editing mode. The local form state will be
+    // re-synced with the (unchanged) global state by the useEffect hook.
     setIsEditing(false);
   };
   
   const currentUserData = users.find(u => u.name === name);
   const currentTheme = theme;
+  // Determine which data to display based on whether we are editing or not.
   const displayImage = isEditing ? localProfileImage : profileImage;
   const displayName = isEditing ? formData.name : name;
 
