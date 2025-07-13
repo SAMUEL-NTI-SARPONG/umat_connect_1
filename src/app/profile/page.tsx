@@ -13,6 +13,7 @@ import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ProfilePage() {
   const { user, updateUser } = useUser();
@@ -25,25 +26,31 @@ export default function ProfilePage() {
     name: user?.name || '',
     department: user?.department || '',
     phone: user?.phone || '',
+    level: user?.level || 0,
   });
   const [localProfileImage, setLocalProfileImage] = useState(user?.profileImage || '');
 
   // Sync local form state when the user data changes (e.g., on login)
   // or when editing is cancelled.
   useEffect(() => {
-    if (user) {
+    if (user && !isEditing) {
       setFormData({
         name: user.name,
         department: user.department,
         phone: user.phone,
+        level: user.level,
       });
       setLocalProfileImage(user.profileImage);
     }
-  }, [user]);
+  }, [user, isEditing]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleLevelChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, level: Number(value) }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +68,7 @@ export default function ProfilePage() {
     if (isEditing) {
       // Revert changes if cancelling
       if (user) {
-        setFormData({ name: user.name, department: user.department, phone: user.phone });
+        setFormData({ name: user.name, department: user.department, phone: user.phone, level: user.level });
         setLocalProfileImage(user.profileImage);
       }
     }
@@ -76,6 +83,7 @@ export default function ProfilePage() {
       name: formData.name,
       department: formData.department,
       phone: formData.phone,
+      level: formData.level,
       profileImage: localProfileImage,
     };
 
@@ -86,7 +94,7 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     if (user) {
-        setFormData({ name: user.name, department: user.department, phone: user.phone });
+        setFormData({ name: user.name, department: user.department, phone: user.phone, level: user.level });
         setLocalProfileImage(user.profileImage);
     }
     setIsEditing(false);
@@ -181,7 +189,21 @@ export default function ProfilePage() {
           {user.role === 'student' && (
             <div className="grid gap-2">
               <Label htmlFor="level">Level</Label>
-              <p className="text-muted-foreground">{user.level}</p>
+              {isEditing ? (
+                 <Select value={String(formData.level)} onValueChange={handleLevelChange}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="100">100</SelectItem>
+                        <SelectItem value="200">200</SelectItem>
+                        <SelectItem value="300">300</SelectItem>
+                        <SelectItem value="400">400</SelectItem>
+                    </SelectContent>
+                 </Select>
+              ) : (
+                <p className="text-muted-foreground">{user.level}</p>
+              )}
             </div>
           )}
           <div className="grid gap-2">
