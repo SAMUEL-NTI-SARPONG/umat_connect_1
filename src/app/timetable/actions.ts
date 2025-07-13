@@ -6,14 +6,6 @@ import * as XLSX from 'xlsx';
 // Define expected days of the week
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-// Define department initials to validate department codes
-const departmentInitials = [
-  "MN", "MR", "MC", "EL", "RN", "TC", "PM",
-  "CY", "CE", "IS", "SD", "LT", "EC",
-  "GM", "GE", "SP", "ES", "LA",
-  "PE", "NG", "PG", "RP", "CH"
-];
-
 // Main parser function based on the new algorithm
 function parseUniversitySchedule(fileBuffer: Buffer) {
   const workbook = XLSX.read(fileBuffer, { type: "buffer" });
@@ -37,7 +29,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as string[][];
     if (rows.length < 5) continue; 
 
-    // Time slots are in row 5 (index 4) as per user instruction.
+    // Time slots are in row 5 (index 4)
     const timeHeaders = rows[4]?.slice(1) || [];
 
     // Data starts from row 6 (index 5)
@@ -81,18 +73,15 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const courseLine = lines[0];
         const lecturerName = lines[lines.length - 1];
         
-        // Use a more flexible regex to capture department codes that might have dots or hyphens
-        const match = courseLine.match(/^([\w\s,.-]+?)\s+(\d{3})$/);
-        if (!match) continue;
+        const courseParts = courseLine.trim().split(/\s+/);
+        if (courseParts.length < 2) continue;
+        
+        const courseNum = courseParts.pop() || '';
+        const deptStr = courseParts.join(' ');
 
-        const deptStr = match[1].trim();
-        const courseNum = match[2].trim();
+        if (!/^\d{3}$/.test(courseNum)) continue;
 
-        // Validate departments against the known list
-        const departments = deptStr.split(/[, ]+/)
-          .map(d => d.trim().replace(/[.-]/g, '')) // Normalize by removing dots/hyphens for comparison
-          .filter(dep => departmentInitials.includes(dep));
-
+        const departments = deptStr.split(/[, ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
         if (departments.length === 0) continue;
 
         const level = parseInt(courseNum[0], 10) * 100;
