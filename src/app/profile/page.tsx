@@ -32,20 +32,23 @@ export default function ProfilePage() {
   const currentUserData = users.find(u => u.role === role);
 
   const [formData, setFormData] = useState({ 
-    name: currentUserData?.name || name, 
-    department: currentUserData?.department || department, 
-    phone: currentUserData?.phone || phone
+    name: name, 
+    department: department, 
+    phone: phone
   });
-  const [localProfileImage, setLocalProfileImage] = useState(currentUserData?.profileImage || profileImage);
+  const [localProfileImage, setLocalProfileImage] = useState(profileImage);
 
   // Sync with global context or mock data when role changes
   useEffect(() => {
     const userData = users.find(u => u.role === role);
     if (userData) {
+      // Update global state
       setName(userData.name);
       setDepartment(userData.department);
       setPhone(userData.phone);
       setProfileImage(userData.profileImage);
+      
+      // Update local form state
       setFormData({
         name: userData.name,
         department: userData.department,
