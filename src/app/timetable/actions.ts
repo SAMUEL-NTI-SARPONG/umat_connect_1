@@ -152,7 +152,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 }
 
 
-export async function handleFileUpload(fileBuffer: Buffer) {
+export async function handleFileUpload(fileData: string) {
+  const fileBuffer = Buffer.from(fileData, 'base64');
   try {
     const parsedData = parseUniversitySchedule(fileBuffer);
     
@@ -169,7 +170,8 @@ export async function handleFileUpload(fileBuffer: Buffer) {
   }
 }
 
-export async function findEmptyClassrooms(fileBuffer: Buffer) {
+export async function findEmptyClassrooms(fileData: string) {
+  const fileBuffer = Buffer.from(fileData, 'base64');
   const result: { day: string; location: string; time: string }[] = [];
 
   // Define time slots, excluding break column (1:00-1:30)
