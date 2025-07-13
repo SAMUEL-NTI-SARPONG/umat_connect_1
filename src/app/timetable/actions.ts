@@ -45,17 +45,26 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
           continue;
         }
 
-        const endColIndex = mergeInfo ? mergeInfo.e.c : j;
-        
         let time = "Unknown Time";
-        const startTimeString = timeHeaders[j - 1];
-        const endTimeString = timeHeaders[endColIndex - 1];
+        if (mergeInfo) {
+          // Handle merged cells for multi-hour classes
+          const startColIndex = mergeInfo.s.c;
+          const endColIndex = mergeInfo.e.c;
+          const startTimeString = timeHeaders[startColIndex - 1];
+          const endTimeString = timeHeaders[endColIndex - 1];
 
-        if (startTimeString && endTimeString) {
-          const startTime = startTimeString.split('-')[0]?.trim();
-          const endTime = endTimeString.split('-')[1]?.trim();
-          if (startTime && endTime) {
-            time = `${startTime} - ${endTime}`;
+          if (startTimeString && endTimeString) {
+            const startTime = startTimeString.split('-')[0]?.trim();
+            const endTime = endTimeString.split('-')[1]?.trim();
+            if (startTime && endTime) {
+              time = `${startTime} - ${endTime}`;
+            }
+          }
+        } else {
+          // Handle single-hour classes
+          const timeString = timeHeaders[j - 1];
+          if (timeString) {
+            time = timeString;
           }
         }
         
