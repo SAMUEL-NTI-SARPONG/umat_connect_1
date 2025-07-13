@@ -93,72 +93,10 @@ export const departments = [
 ];
 
 
-export const posts = [
-  {
-    id: 1,
-    authorId: 2, // Dr. Yaw Mensah
-    timestamp: '2 hours ago',
-    content: 'Reminder: The assignment deadline for COEN 457 is this Friday. No extensions will be granted. Please submit via the university portal.',
-    imageUrl: 'https://placehold.co/600x400/EDE7F6/311B92/png',
-    comments: [
-      { author: 'Alice', text: 'Thank you for the reminder, Dr. Mensah!' },
-    ],
-  },
-  {
-    id: 2,
-    authorId: 3, // Admin Office
-    timestamp: '8 hours ago',
-    content: 'The final examination timetable for the second semester has been released. Please check your student dashboards for your personal schedule.',
-    comments: [],
-  },
-  {
-    id: 3,
-    authorId: 5, // Dr. Adwoa Ansa
-    timestamp: 'Yesterday',
-    content: 'Guest lecture on "Modern GIS Applications" will be held tomorrow at the main auditorium. All Geomatic Engineering students are encouraged to attend.',
-    comments: [],
-  },
-];
+export const posts: any[] = [];
 
 export const timetable = {
-  student: [
-    {
-      day: 'Monday',
-      course: 'COEN 457: Software Engineering',
-      time: '10:00 AM - 12:00 PM',
-      location: 'Room C15',
-      status: 'confirmed',
-    },
-    {
-      day: 'Monday',
-      course: 'MATH 251: Calculus II',
-      time: '1:00 PM - 3:00 PM',
-      location: 'Auditorium A',
-      status: 'undecided',
-    },
-    {
-      day: 'Wednesday',
-      course: 'PHYS 164: Electromagnetism',
-      time: '3:00 PM - 5:00 PM',
-      location: 'Lab 3B',
-      status: 'canceled',
-    },
-  ],
-  lecturer: [
-     {
-      day: 'Monday',
-      course: 'COEN 457: Software Engineering',
-      time: '10:00 AM - 12:00 PM',
-      location: 'Room C15',
-      status: 'confirmed',
-    },
-    {
-      day: 'Tuesday',
-      course: 'COEN 363: Computer Architecture',
-      time: '3:00 PM - 5:00 PM',
-      location: 'Room C11',
-      status: 'undecided',
-    },
-  ],
-  administrator: [], // Admins don't have a personal schedule in this context
+  student: [],
+  lecturer: [],
+  administrator: [],
 };

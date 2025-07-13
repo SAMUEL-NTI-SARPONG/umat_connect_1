@@ -1,9 +1,10 @@
 
 'use client';
 
-import { useUser } from '@/app/providers/user-provider';
+import { useUser, type EventStatus } from '@/app/providers/user-provider';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { useMemo } from 'react';
 
 function ScheduleItem({
   course,
@@ -14,7 +15,7 @@ function ScheduleItem({
   course: string;
   time: string;
   location: string;
-  status: 'confirmed' | 'canceled' | 'undecided';
+  status: EventStatus;
 }) {
   const statusConfig = {
     confirmed: {
@@ -49,39 +50,36 @@ function ScheduleItem({
 }
 
 export default function TopScheduleBar() {
-  const { user } = useUser();
+  const { user, masterSchedule } = useUser();
 
-  if (!user || user.role !== 'student') {
+  const studentSchedule = useMemo(() => {
+    if (!masterSchedule || !user || user.role !== 'student') return [];
+
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+    return masterSchedule.filter(entry =>
+        entry.level === user.level &&
+        entry.departments.some(dep => user.department.includes(dep)) &&
+        entry.day === today
+      );
+  }, [masterSchedule, user]);
+
+  if (!user || user.role !== 'student' || studentSchedule.length === 0) {
     return null;
   }
 
   return (
     <div className="md:hidden sticky top-[56px] z-10 p-2 border-b bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        <ScheduleItem
-          course="COEN 457"
-          time="10-12"
-          location="C15"
-          status="confirmed"
-        />
-        <ScheduleItem
-          course="MATH 251"
-          time="1-3"
-          location="Audi A"
-          status="undecided"
-        />
-        <ScheduleItem
-          course="PHYS 164"
-          time="3-5"
-          location="Lab 3B"
-          status="canceled"
-        />
-        <ScheduleItem
-          course="ELEN 342"
-          time="5-7"
-          location="Lab 1A"
-          status="confirmed"
-        />
+        {studentSchedule.map(event => (
+           <ScheduleItem
+            key={event.id}
+            course={event.courseCode}
+            time={event.time}
+            location={event.room}
+            status={event.status}
+          />
+        ))}
       </div>
     </div>
   );
