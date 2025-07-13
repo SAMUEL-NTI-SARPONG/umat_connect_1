@@ -67,7 +67,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         
         // Extract departments from the course code string
         const courseParts = courseCode.trim().split(/\s+/);
-        const courseNumPart = courseParts.pop() || '';
+        courseParts.pop(); // Remove the course number part
         const deptStr = courseParts.join(' ');
         const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
         if (departments.length === 0 && deptStr.length > 0) {
