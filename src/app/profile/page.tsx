@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { departments as allDepartments } from '@/lib/data';
 
 export default function ProfilePage() {
   const { user, updateUser } = useUser();
@@ -51,6 +52,10 @@ export default function ProfilePage() {
 
   const handleLevelChange = (value: string) => {
     setFormData((prev) => ({ ...prev, level: Number(value) }));
+  };
+
+  const handleDepartmentChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, department: value }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,7 +186,16 @@ export default function ProfilePage() {
           <div className="grid gap-2">
             <Label htmlFor="department">Department</Label>
             {isEditing ? (
-              <Input id="department" value={formData.department} onChange={handleInputChange} />
+              <Select value={formData.department} onValueChange={handleDepartmentChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allDepartments.map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
               <p className="text-muted-foreground">{user.department}</p>
             )}
