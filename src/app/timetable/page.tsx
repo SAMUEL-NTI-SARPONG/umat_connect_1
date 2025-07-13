@@ -272,7 +272,7 @@ function AdminTimetableView() {
     try {
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       const [data, slots] = await Promise.all([
-        handleFileUpload(file),
+        handleFileUpload(fileBuffer),
         findEmptyClassrooms(fileBuffer)
       ]);
       

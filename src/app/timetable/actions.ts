@@ -152,9 +152,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 }
 
 
-export async function handleFileUpload(file: File) {
+export async function handleFileUpload(fileBuffer: Buffer) {
   try {
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
     const parsedData = parseUniversitySchedule(fileBuffer);
     
     if (!parsedData || parsedData.length === 0) {
