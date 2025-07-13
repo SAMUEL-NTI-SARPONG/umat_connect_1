@@ -27,6 +27,18 @@ import { handleFileUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
 
@@ -281,17 +293,16 @@ function AdminTimetableView() {
     if (!editedData) return;
 
     const dataToUpdate = [...editedData];
-    const entryIndex = dataToUpdate.findIndex(entry => 
-      entry.day === day && 
-      (parsedData && parsedData.indexOf(entry) === originalIndex)
-    );
-    
-    // This is tricky, need a better way to find the item
-    // For now, let's find the item inside the grouped day
     const dayEntries = dataToUpdate.filter(e => e.day === day);
     const targetEntry = dayEntries[originalIndex];
-    if(targetEntry) {
-      (targetEntry[field] as any) = value;
+    if (targetEntry) {
+      if (field === 'departments') {
+        (targetEntry[field] as any) = value.split(',').map(s => s.trim());
+      } else if (field === 'level') {
+        (targetEntry[field] as any) = parseInt(value, 10) || 0;
+      } else {
+        (targetEntry[field] as any) = value;
+      }
       setEditedData(dataToUpdate);
     }
   };
@@ -301,10 +312,12 @@ function AdminTimetableView() {
   const filteredData = useMemo(() => {
     if (!currentData) return null;
     if (!searchTerm) return currentData;
+    const lowercasedFilter = searchTerm.toLowerCase();
     return currentData.filter(entry => 
-      entry.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.lecturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.room.toLowerCase().includes(searchTerm.toLowerCase())
+      entry.courseCode.toLowerCase().includes(lowercasedFilter) ||
+      entry.lecturer.toLowerCase().includes(lowercasedFilter) ||
+      entry.room.toLowerCase().includes(lowercasedFilter) ||
+      entry.departments.some(dep => dep.toLowerCase().includes(lowercasedFilter))
     );
   }, [currentData, searchTerm]);
 
@@ -356,17 +369,34 @@ function AdminTimetableView() {
                 <p>Edit Current</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="destructive" size="icon" onClick={handleDelete} disabled={!parsedData || isEditing}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Delete</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Delete Timetable</p>
-              </TooltipContent>
-            </Tooltip>
+
+            <AlertDialog>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                   <Button variant="destructive" size="icon" disabled={!parsedData || isEditing}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete Timetable</p>
+                </TooltipContent>
+              </Tooltip>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    timetable data from this view.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
              {isEditing && (
               <>
                 <Tooltip>
@@ -391,14 +421,15 @@ function AdminTimetableView() {
             )}
           </div>
         </TooltipProvider>
-        {parsedData && !isEditing && (
+        {parsedData && (
           <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search course, lecturer, room..."
+              placeholder="Search course, lecturer, room, department..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={isEditing}
             />
           </div>
         )}
@@ -432,7 +463,7 @@ function AdminTimetableView() {
               <TabsList>
                 {daysWithData.map(day => (
                   <TabsTrigger key={day} value={day}>
-                    {day} ({groupedByDay[day].length})
+                    {day} ({groupedByDay[day]?.length || 0})
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -450,7 +481,7 @@ function AdminTimetableView() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {groupedByDay[day].map((entry, index) => (
+                        {groupedByDay[day]?.map((entry, index) => (
                           <TableRow key={index}>
                             <TableCell>
                               {isEditing ? <Input defaultValue={entry.time} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'time', e.target.value)} /> : entry.time}
