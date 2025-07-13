@@ -121,19 +121,30 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
     
     const courseParts = entry.courseCode.trim().split(/\s+/);
-    let courseNum = courseParts.pop(); // Remove course number like "158" or "274"
+    const courseNumParts: string[] = [];
+    const deptInitialParts: string[] = [];
+
+    courseParts.forEach(part => {
+      if (/^\d/.test(part)) {
+        courseNumParts.push(part);
+      } else if (/[a-zA-Z]/.test(part)) {
+        deptInitialParts.push(part.replace(/[.-]/g, ''));
+      }
+    });
+
+    const deptStr = deptInitialParts.join(' ');
+    const courseNumStr = courseNumParts.join(' ');
+
+    const departments = deptInitialParts
+      .join(' ')
+      .split(/[/ ]+/)
+      .map(d => d.trim())
+      .filter(Boolean)
+      .map(initial => departmentMap.get(initial) || initial);
     
-    // Check if the removed part is actually the course number
-    if (!/^\d{3}$/.test(courseNum ?? '')) {
-       courseParts.push(courseNum ?? ''); // it wasn't a course number, put it back
-       courseNum = ''; // no valid course number found
-    }
+    const finalCourseCode = `${deptStr} ${courseNumStr}`.trim();
 
-    const deptStr = courseParts.join(' ');
-    const deptInitials = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
-    const departments = deptInitials.map(initial => departmentMap.get(initial) || initial);
-
-    return { ...entry, level, departments, courseCode: `${deptStr} ${courseNum}`.trim() };
+    return { ...entry, level, departments, courseCode: finalCourseCode };
   });
 }
 
