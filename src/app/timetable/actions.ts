@@ -62,22 +62,22 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const lines = cellValue.split("\n").map(line => line.trim()).filter(Boolean);
         if (lines.length < 2) continue;
 
-        const courseLine = lines[0];
-        const lecturerName = lines[lines.length - 1];
+        const lecturerName = lines.pop() || '';
+        const courseCode = lines.join(' ');
         
-        const courseParts = courseLine.trim().split(/\s+/);
-        if (courseParts.length < 1) continue;
-        
-        const courseNum = courseParts.pop() || '';
+        // Extract departments from the course code string
+        const courseParts = courseCode.trim().split(/\s+/);
+        const courseNumPart = courseParts.pop() || '';
         const deptStr = courseParts.join(' ');
-        
         const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
         if (departments.length === 0 && deptStr.length > 0) {
             departments.push(deptStr);
         }
         if (departments.length === 0) continue;
 
-        const level = parseInt(courseNum.charAt(0), 10) * 100 || 0;
+        // Calculate level: first digit of course number * 100
+        const firstDigitMatch = courseCode.match(/\d/);
+        const level = firstDigitMatch ? parseInt(firstDigitMatch[0], 10) * 100 : 0;
 
         validSchedules.push({
           day,
@@ -85,7 +85,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
           room,
           departments,
           level,
-          courseCode: `${deptStr} ${courseNum}`,
+          courseCode,
           lecturer: lecturerName
         });
 
