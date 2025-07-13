@@ -17,7 +17,7 @@ import { users } from '@/lib/data';
 
 export default function ProfilePage() {
   const { 
-    role,
+    role, setRole,
     name, setName, 
     profileImage, setProfileImage,
     department, setDepartment,
@@ -35,15 +35,12 @@ export default function ProfilePage() {
     phone: phone
   });
   const [localProfileImage, setLocalProfileImage] = useState(profileImage);
+  const isMounted = useRef(false);
 
-  const currentUserData = users.find(u => u.role === role && u.name === name) || users.find(u => u.role === role);
-
+  // This effect resets the profile to the default for a given role when the role changes.
   useEffect(() => {
-    // Only switch to a default user for the role if the current user's details don't match any known user for that role.
-    // This makes the changes on the profile page "stick" for the session.
-    const currentUserExistsForRole = users.some(u => u.role === role && u.name === name);
-
-    if (!currentUserExistsForRole) {
+    // We use a ref to skip the initial mount, so it only runs on subsequent role changes.
+    if (isMounted.current) {
       const userData = users.find(u => u.role === role);
       if (userData) {
         // Update global state
@@ -52,7 +49,7 @@ export default function ProfilePage() {
         setPhone(userData.phone);
         setProfileImage(userData.profileImage);
         
-        // Update local form state
+        // Update local form state to match
         setFormData({
           name: userData.name,
           department: userData.department,
@@ -61,11 +58,18 @@ export default function ProfilePage() {
         setLocalProfileImage(userData.profileImage);
       }
     } else {
-        // If the user *does* exist, ensure the form is synced with the current global state.
-        setFormData({ name, department, phone });
-        setLocalProfileImage(profileImage);
+      isMounted.current = true;
     }
-  }, [role, name, department, phone, profileImage, setName, setDepartment, setPhone, setProfileImage]);
+  }, [role, setRole]); // Only re-run when the role changes
+
+  // This effect ensures the local form data is in sync with the global state when not editing.
+  useEffect(() => {
+    if (!isEditing) {
+      setFormData({ name, department, phone });
+      setLocalProfileImage(profileImage);
+    }
+  }, [name, department, phone, profileImage, isEditing]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -109,7 +113,8 @@ export default function ProfilePage() {
     setLocalProfileImage(profileImage);
     setIsEditing(false);
   };
-
+  
+  const currentUserData = users.find(u => u.name === name);
   const currentTheme = theme;
   const displayImage = isEditing ? localProfileImage : profileImage;
   const displayName = isEditing ? formData.name : name;
