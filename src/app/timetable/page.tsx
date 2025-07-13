@@ -259,6 +259,9 @@ function AdminTimetableView() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
 
+  const [startTime, setStartTime] = useState<string>('');
+  const [endTime, setEndTime] = useState<string>('');
+
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -297,6 +300,9 @@ function AdminTimetableView() {
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
     setEditedFormData(entry); // Pre-fill form data
+    const [start, end] = entry.time.split('-');
+    setStartTime(start);
+    setEndTime(end);
     setIsActionModalOpen(true);
   };
 
@@ -319,22 +325,29 @@ function AdminTimetableView() {
   };
   
   const handleSaveEdit = () => {
-     if (!editedFormData || !parsedData) return;
-     setParsedData(parsedData.map(item => item.id === editedFormData.id ? editedFormData : item));
+     if (!editedFormData || !parsedData || !startTime || !endTime) return;
+     const updatedEntry = { ...editedFormData, time: `${startTime}-${endTime}` };
+     setParsedData(parsedData.map(item => item.id === updatedEntry.id ? updatedEntry : item));
      closeAllModals();
   };
 
   const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
     if (!editedFormData) return;
     
-    const updatedData = { ...editedFormData, [field]: value };
+    let updatedData = { ...editedFormData, [field]: value };
 
-    // If room is changed, reset time
+    // If room is changed, reset times
     if (field === 'room') {
-      updatedData.time = '';
+      setStartTime('');
+      setEndTime('');
     }
     
     setEditedFormData(updatedData);
+  };
+
+  const handleStartTimeChange = (value: string) => {
+    setStartTime(value);
+    setEndTime(''); // Reset end time when start time changes
   };
   
   const closeAllModals = () => {
@@ -343,6 +356,8 @@ function AdminTimetableView() {
     setIsDeleteConfirmOpen(false);
     setSelectedEntry(null);
     setEditedFormData(null);
+    setStartTime('');
+    setEndTime('');
   }
 
   const filteredData = useMemo(() => {
@@ -376,6 +391,46 @@ function AdminTimetableView() {
       return acc;
     }, {} as Record<string, TimetableEntry[]>);
   }, [filteredData]);
+  
+  const availableSlotsForRoomAndDay = useMemo(() => {
+    if (!editedFormData) return [];
+    return emptySlots
+      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
+      .map(slot => slot.time)
+      .sort((a, b) => {
+        const timeA = parseInt(a.split(':')[0]);
+        const timeB = parseInt(b.split(':')[0]);
+        return timeA - timeB;
+      });
+  }, [emptySlots, editedFormData]);
+
+  const availableStartTimes = useMemo(() => {
+    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split('-')[0]))];
+  }, [availableSlotsForRoomAndDay]);
+
+  const availableEndTimes = useMemo(() => {
+    if (!startTime) return [];
+    
+    const startIndex = availableSlotsForRoomAndDay.findIndex(slot => slot.startsWith(startTime));
+    if (startIndex === -1) return [];
+
+    let continuousEndTimes: string[] = [];
+    for (let i = startIndex; i < availableSlotsForRoomAndDay.length; i++) {
+        const currentSlot = availableSlotsForRoomAndDay[i];
+        const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
+
+        if (prevSlot) {
+            const prevEndTime = prevSlot.split('-')[1];
+            const currentStartTime = currentSlot.split('-')[0];
+            if (prevEndTime !== currentStartTime) {
+                break; // Break if not continuous
+            }
+        }
+        continuousEndTimes.push(currentSlot.split('-')[1]);
+    }
+    
+    return continuousEndTimes;
+  }, [startTime, availableSlotsForRoomAndDay]);
 
   const availableRoomsForDay = useMemo(() => {
     if (!editedFormData) return [];
@@ -383,14 +438,6 @@ function AdminTimetableView() {
     // Get unique room locations
     return [...new Set(daySlots.map(slot => slot.location))];
   }, [emptySlots, editedFormData]);
-  
-  const availableTimesForRoom = useMemo(() => {
-    if (!editedFormData || !editedFormData.room) return [];
-    return emptySlots
-      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
-      .map(slot => slot.time);
-  }, [emptySlots, editedFormData]);
-
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -566,7 +613,7 @@ function AdminTimetableView() {
       
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Timetable Entry</DialogTitle>
             <DialogDescription>
@@ -584,7 +631,7 @@ function AdminTimetableView() {
                     <SelectValue placeholder="Select a room" />
                   </SelectTrigger>
                   <SelectContent>
-                    {editedFormData?.room && editedFormData.room !== '' && <SelectItem value={editedFormData.room} disabled>
+                    {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
                         {editedFormData.room} (Current)
                     </SelectItem>}
                     {availableRoomsForDay.map(room => (
@@ -594,24 +641,39 @@ function AdminTimetableView() {
                 </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time" className="text-right">Time</Label>
-               <Select
-                  value={editedFormData?.time || ''}
-                  onValueChange={(value) => handleEditInputChange('time', value)}
+              <Label className="text-right">Time</Label>
+              <div className="col-span-3 grid grid-cols-2 gap-2">
+                <Select
+                  value={startTime}
+                  onValueChange={handleStartTimeChange}
                   disabled={!editedFormData?.room}
                 >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a time" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Start" />
                   </SelectTrigger>
                   <SelectContent>
-                     {editedFormData?.time && editedFormData.time !== '' && <SelectItem value={editedFormData.time} disabled>
-                        {editedFormData.time} (Current)
-                    </SelectItem>}
-                    {availableTimesForRoom.map(time => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                     {editedFormData?.time.split('-')[0] && <SelectItem value={editedFormData.time.split('-')[0]} disabled>{editedFormData.time.split('-')[0]} (Current)</SelectItem>}
+                    {availableStartTimes.map(time => (
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Select
+                  value={endTime}
+                  onValueChange={setEndTime}
+                  disabled={!startTime}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="End" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {editedFormData?.time.split('-')[1] && <SelectItem value={editedFormData.time.split('-')[1]} disabled>{editedFormData.time.split('-')[1]} (Current)</SelectItem>}
+                    {availableEndTimes.map(time => (
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="courseCode" className="text-right">Course</Label>
