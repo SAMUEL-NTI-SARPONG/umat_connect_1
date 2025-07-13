@@ -52,7 +52,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 
       for (let j = 1; j < row.length; j++) {
         const cellValue = row[j];
-        if (!cellValue || typeof cellValue !== 'string') continue;
+        if (!cellValue || typeof cellValue !== 'string' || cellValue.toUpperCase().includes('BREAK')) continue;
 
         const mergeInfo = mergeMap[`${rowIndexInSheet},${j}`];
 
@@ -81,14 +81,16 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const courseLine = lines[0];
         const lecturerName = lines[lines.length - 1];
         
-        const match = courseLine.match(/^([\w\s,]+?)\s+(\d{3})$/);
+        // Use a more flexible regex to capture department codes that might have dots or hyphens
+        const match = courseLine.match(/^([\w\s,.-]+?)\s+(\d{3})$/);
         if (!match) continue;
 
         const deptStr = match[1].trim();
         const courseNum = match[2].trim();
 
+        // Validate departments against the known list
         const departments = deptStr.split(/[, ]+/)
-          .map(d => d.trim())
+          .map(d => d.trim().replace(/[.-]/g, '')) // Normalize by removing dots/hyphens for comparison
           .filter(dep => departmentInitials.includes(dep));
 
         if (departments.length === 0) continue;
