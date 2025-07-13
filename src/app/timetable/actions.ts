@@ -3,6 +3,9 @@
 
 import * as XLSX from 'xlsx';
 
+// This new parser is a direct adaptation of the user-provided logic,
+// ensuring it correctly handles the specific format of the timetable Excel file.
+
 // Based on the user-provided logic, using a fixed time slot array is more reliable.
 const timeSlots = [
   '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00', 
@@ -60,7 +63,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
             if (isNewCourse) {
                 // A new course has started. First, save the previous one if it exists.
                 if (lastCourseInfo && startTimeIndex !== null) {
-                    const endTimeIndex = timeSlotIndex -1;
+                    const endTimeIndex = timeSlotIndex - 1;
                     finalSchedule.push({
                         day,
                         room,
@@ -119,7 +122,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
   // Post-process to add level and departments
   return finalSchedule.map(entry => {
     const firstDigitMatch = entry.courseCode.match(/\d/);
-    const level = firstDigitMatch ? parseInt(firstDigitMatch[0], 10) * 100 : 0;
+    const level = firstDigitMatch ? (parseInt(firstDigitMatch[0], 10) * 100 || 0) : 0;
     
     const courseParts = entry.courseCode.trim().split(/\s+/);
     courseParts.pop(); // Remove course number
