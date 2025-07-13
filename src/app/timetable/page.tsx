@@ -270,8 +270,9 @@ function AdminTimetableView() {
     setEmptySlots([]);
 
     try {
-      const fileBuffer = Buffer.from(await file.arrayBuffer());
-      const fileData = fileBuffer.toString('base64');
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const fileData = buffer.toString('base64');
       const [data, slots] = await Promise.all([
         handleFileUpload(fileData),
         findEmptyClassrooms(fileData)
@@ -583,9 +584,9 @@ function AdminTimetableView() {
                     <SelectValue placeholder="Select a room" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={editedFormData?.room || ''} disabled>
-                        {editedFormData?.room || 'Current'}
-                    </SelectItem>
+                    {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
+                        {editedFormData.room} (Current)
+                    </SelectItem>}
                     {availableRoomsForDay.map(room => (
                         <SelectItem key={room} value={room}>{room}</SelectItem>
                     ))}
@@ -603,9 +604,9 @@ function AdminTimetableView() {
                     <SelectValue placeholder="Select a time" />
                   </SelectTrigger>
                   <SelectContent>
-                     <SelectItem value={editedFormData?.time || ''} disabled>
-                        {editedFormData?.time || 'Current'}
-                    </SelectItem>
+                     {editedFormData?.time && <SelectItem value={editedFormData.time} disabled>
+                        {editedFormData.time} (Current)
+                    </SelectItem>}
                     {availableTimesForRoom.map(time => (
                         <SelectItem key={time} value={time}>{time}</SelectItem>
                     ))}
