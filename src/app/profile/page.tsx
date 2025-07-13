@@ -15,37 +15,31 @@ import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
 
 export default function ProfilePage() {
-  const { 
-    user, 
-    updateUser 
-  } = useUser();
-  
+  const { user, updateUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
   const [fontSize, setFontSize] = useState(16);
 
-  const [formData, setFormData] = useState({ 
-    name: user?.name || '', 
-    department: user?.department || '', 
-    phone: user?.phone || ''
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    department: user?.department || '',
+    phone: user?.phone || '',
   });
   const [localProfileImage, setLocalProfileImage] = useState(user?.profileImage || '');
-  
-  // This effect keeps the form data synchronized with the global user state
-  // when not in editing mode. This ensures that if the user data is updated
-  // elsewhere, the profile page reflects it.
+
+  // Sync local form state when the user data changes (e.g., on login)
+  // or when editing is cancelled.
   useEffect(() => {
-    if (user && !isEditing) {
+    if (user) {
       setFormData({
         name: user.name,
         department: user.department,
-        phone: user.phone
+        phone: user.phone,
       });
       setLocalProfileImage(user.profileImage);
     }
-  }, [user, isEditing]);
-
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -62,24 +56,21 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const handleEditToggle = () => {
     if (isEditing) {
-      handleCancel();
-    } else {
-      // When entering edit mode, sync the form with the current global state.
+      // Revert changes if cancelling
       if (user) {
         setFormData({ name: user.name, department: user.department, phone: user.phone });
         setLocalProfileImage(user.profileImage);
       }
-      setIsEditing(true);
     }
+    setIsEditing(!isEditing);
   };
 
   const handleSaveChanges = () => {
     if (!user) return;
-    
-    // Create the updated user object
+
     const updatedUser = {
       ...user,
       name: formData.name,
@@ -87,24 +78,21 @@ export default function ProfilePage() {
       phone: formData.phone,
       profileImage: localProfileImage,
     };
-    
-    // Update the global user context with the new data from the form.
+
     updateUser(updatedUser);
-    
-    // Exit editing mode.
     setIsEditing(false);
-    // Note: Font size change is a global DOM manipulation and should be handled with care.
     document.documentElement.style.fontSize = `${fontSize}px`;
   };
 
   const handleCancel = () => {
-    // On cancel, simply exit editing mode. The local form state will be
-    // re-synced with the (unchanged) global state by the useEffect hook.
+    if (user) {
+        setFormData({ name: user.name, department: user.department, phone: user.phone });
+        setLocalProfileImage(user.profileImage);
+    }
     setIsEditing(false);
   };
   
   const currentTheme = theme;
-  // Determine which data to display based on whether we are editing or not.
   const displayImage = isEditing ? localProfileImage : user?.profileImage;
   const displayName = isEditing ? formData.name : user?.name;
 

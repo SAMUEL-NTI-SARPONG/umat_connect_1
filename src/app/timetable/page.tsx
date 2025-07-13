@@ -5,7 +5,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock } from 'lucide-react';
-import { useUser } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,27 +50,6 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-
-
-type EventStatus = 'confirmed' | 'canceled' | 'undecided';
-
-interface TimetableEntry {
-  day: string;
-  time: string;
-  room: string;
-  departments: string[];
-  level: number;
-  courseCode: string;
-  lecturer: string;
-  id: number;
-  status: EventStatus;
-}
-
-interface EmptySlot {
-  day: string;
-  location: string;
-  time: string;
-}
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -161,7 +140,7 @@ function LecturerTimetableView({
   emptySlots,
 }: {
   schedule: TimetableEntry[];
-  setSchedule: React.Dispatch<React.SetStateAction<TimetableEntry[]>>;
+  setSchedule: (schedule: TimetableEntry[]) => void;
   emptySlots: EmptySlot[];
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -172,8 +151,8 @@ function LecturerTimetableView({
   const [endTime, setEndTime] = useState('');
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
-    setSchedule((prev) =>
-      prev.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
+    setSchedule(
+      schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
     );
   };
 
@@ -196,7 +175,7 @@ function LecturerTimetableView({
   const handleSaveEdit = () => {
     if (!editedFormData) return;
     const updatedEntry = { ...editedFormData, time: `${startTime}-${endTime}` };
-    setSchedule((prev) => prev.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
+    setSchedule(schedule.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
     closeAllModals();
   };
 
@@ -405,9 +384,9 @@ function AdminTimetableView({
   setEmptySlots,
 }: {
   parsedData: TimetableEntry[] | null;
-  setParsedData: React.Dispatch<React.SetStateAction<TimetableEntry[] | null>>;
+  setParsedData: (data: TimetableEntry[] | null) => void;
   emptySlots: EmptySlot[];
-  setEmptySlots: React.Dispatch<React.SetStateAction<EmptySlot[]>>;
+  setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -423,16 +402,13 @@ function AdminTimetableView({
 
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
-
-
+  
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsLoading(true);
     setError(null);
-    setParsedData(null);
-    setEmptySlots([]);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -444,6 +420,8 @@ function AdminTimetableView({
       
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+        setParsedData(null);
+        setEmptySlots([]);
       } else {
         const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
         setParsedData(dataWithIdsAndStatus);
@@ -903,11 +881,13 @@ function AdminTimetableView({
 }
 
 export default function TimetablePage() {
-  const { user } = useUser();
-
-  // Centralized state for all schedules, managed by a single source of truth
-  const [masterSchedule, setMasterSchedule] = useState<TimetableEntry[] | null>(null);
-  const [emptySlots, setEmptySlots] = useState<EmptySlot[]>([]);
+  const { 
+    user, 
+    masterSchedule, 
+    setMasterSchedule, 
+    emptySlots, 
+    setEmptySlots 
+  } = useUser();
   
   // Derived states are now calculated within the render logic using useMemo
   const lecturerSchedule = useMemo(() => {
@@ -935,7 +915,6 @@ export default function TimetablePage() {
       case 'student':
         return <StudentTimetableView schedule={studentSchedule} />;
       case 'lecturer':
-        // The lecturer view can now modify the master schedule directly
         return <LecturerTimetableView 
                   schedule={lecturerSchedule} 
                   setSchedule={setMasterSchedule as any} 

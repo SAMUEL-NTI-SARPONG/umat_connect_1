@@ -17,6 +17,7 @@ import TopScheduleBar from '@/components/layout/top-schedule-bar';
 import { ThemeProvider } from './providers/theme-provider';
 import LoginPage from './login/page';
 import type { Metadata } from 'next';
+import { Toaster } from '@/components/ui/toaster';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -79,6 +80,7 @@ export default function RootLayout({
           <UserProvider>
             <AppLayout>{children}</AppLayout>
           </UserProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
