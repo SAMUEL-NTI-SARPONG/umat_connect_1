@@ -14,8 +14,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
     '12:00-1:00', '1:30-2:30', '2:30-3:30', '3:30-4:30', '4:30-5:30', '5:30-6:30', '6:30-7:30'
   ];
-  
-  // Helper function to combine time slots into a range
+
+    // Helper function to combine time slots into a range
   function combineTimeSlots(startIndex: number, endIndex: number): string {
     startIndex = Math.max(0, startIndex);
     endIndex = Math.min(timeSlots.length - 1, endIndex);
@@ -27,6 +27,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const endTime = (timeSlots[endIndex] || '').split('-')[1];
     return `${startTime}-${endTime}`;
   }
+
 
   for (const day of workbook.SheetNames) {
     const sheet = workbook.Sheets[day];
