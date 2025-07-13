@@ -178,6 +178,12 @@ export default function ProfilePage() {
               <p className="text-muted-foreground">{user.department}</p>
             )}
           </div>
+          {user.role === 'student' && (
+            <div className="grid gap-2">
+              <Label htmlFor="level">Level</Label>
+              <p className="text-muted-foreground">{user.level}</p>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="phone">Primary Phone</Label>
             {isEditing ? (
