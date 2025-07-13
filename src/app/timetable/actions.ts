@@ -32,88 +32,51 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const sheet = workbook.Sheets[day];
     if (!sheet) continue;
 
+    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
     const merges = sheet['!merges'] || [];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, range: 5, defval: '' }) as (string | number)[][];
     
-    // Process rows starting from the data content
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const rowIndexInData = i + 5; // XLSX row index (1-based) is different from array index
-        const room = row[0]?.toString().trim();
-        
-        if (!room) continue; // Skip if room name is empty
+    // Process rows starting from the data content (row index 5, which is the 6th row)
+    for (let i = 5; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        if (!row || !row[0] || !String(row[0]).trim()) continue; // Skip if room name is empty
 
-        let lastCourseInfo: { courseCode: string; lecturer: string; startTimeIndex: number; span: number; } | null = null;
+        const room = String(row[0]).trim();
 
-        // j represents the column in the excel sheet (0-indexed)
-        // we start at 1 because column 0 is the room
-        for (let j = 1; j <= 12; j++) {
-            const isBreakColumn = j === 6;
-            if (isBreakColumn) continue;
-
-            const timeSlotIndex = j > 6 ? j - 2 : j - 1;
-
-            let isStartOfMerge = false;
+        for (let j = 1; j < row.length; j++) {
+            const cellValue = String(row[j] || '').trim();
+            if (!cellValue || cellValue.toLowerCase().includes('break')) continue;
+            
+            // Find merge info for this cell
             let mergeSpan = 1;
-
             for (const merge of merges) {
-                if (merge.s.r === rowIndexInData && merge.s.c === j) {
-                    isStartOfMerge = true;
+                if (merge.s.r === i && merge.s.c === j) {
                     mergeSpan = merge.e.c - merge.s.c + 1;
                     break;
                 }
             }
 
-            const cellValue = sheet[XLSX.utils.encode_cell({ r: rowIndexInData, c: j })]?.v?.toString().trim() || '';
+            const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
+            if (courseEntries.length === 0) continue;
 
-            if (cellValue) {
-                // If there's a course being tracked, save it first.
-                if (lastCourseInfo) {
-                    const endTimeIndex = lastCourseInfo.startTimeIndex + lastCourseInfo.span - 1;
-                    finalSchedule.push({
-                        day,
-                        room,
-                        time: combineTimeSlots(lastCourseInfo.startTimeIndex, endTimeIndex),
-                        courseCode: lastCourseInfo.courseCode,
-                        lecturer: lastCourseInfo.lecturer,
-                    });
-                    lastCourseInfo = null;
-                }
+            const lecturer = courseEntries.length > 1 ? courseEntries.pop()! : 'TBA';
+            const courseCode = courseEntries.join(' ');
+            
+            // Adjust for 1-based indexing and break column when calculating time
+            const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
+            const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan -1;
 
-                const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
-                const lecturer = courseEntries.length > 1 ? courseEntries.pop()! : 'TBA';
-                const courseCode = courseEntries.join(' ');
-                
-                lastCourseInfo = {
-                    courseCode,
-                    lecturer,
-                    startTimeIndex: timeSlotIndex,
-                    span: mergeSpan
-                };
-            } else if (lastCourseInfo && timeSlotIndex >= lastCourseInfo.startTimeIndex + lastCourseInfo.span) {
-                 // End of a course block
-                const endTimeIndex = lastCourseInfo.startTimeIndex + lastCourseInfo.span - 1;
-                finalSchedule.push({
-                    day,
-                    room,
-                    time: combineTimeSlots(lastCourseInfo.startTimeIndex, endTimeIndex),
-                    courseCode: lastCourseInfo.courseCode,
-                    lecturer: lastCourseInfo.lecturer,
-                });
-                lastCourseInfo = null;
-            }
-        }
-        
-        // Save any remaining course at the end of the row
-        if (lastCourseInfo) {
-            const endTimeIndex = lastCourseInfo.startTimeIndex + lastCourseInfo.span - 1;
             finalSchedule.push({
                 day,
                 room,
-                time: combineTimeSlots(lastCourseInfo.startTimeIndex, endTimeIndex),
-                courseCode: lastCourseInfo.courseCode,
-                lecturer: lastCourseInfo.lecturer,
+                time: combineTimeSlots(timeSlotIndexStart, timeSlotIndexEnd),
+                courseCode,
+                lecturer,
             });
+
+            // Skip columns that are part of this merge
+            if (mergeSpan > 1) {
+                j += mergeSpan - 1;
+            }
         }
     }
   }
