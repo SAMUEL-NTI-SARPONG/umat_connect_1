@@ -78,10 +78,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         
         const courseNum = courseParts.pop() || '';
         const deptStr = courseParts.join(' ');
-
-        if (!/^\d{3}$/.test(courseNum)) continue;
-
-        const departments = deptStr.split(/[, ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
+        
+        const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
         if (departments.length === 0) continue;
 
         const level = parseInt(courseNum[0], 10) * 100;
