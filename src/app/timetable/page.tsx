@@ -372,15 +372,17 @@ function AdminTimetableView() {
 
             <AlertDialog>
               <Tooltip>
-                <TooltipTrigger asChild>
-                   <Button variant="destructive" size="icon" disabled={!parsedData || isEditing}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete Timetable</p>
-                </TooltipContent>
+                  <TooltipTrigger asChild>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon" disabled={!parsedData || isEditing}>
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
+                          </Button>
+                      </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Delete Timetable</p>
+                  </TooltipContent>
               </Tooltip>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -484,22 +486,22 @@ function AdminTimetableView() {
                         {groupedByDay[day]?.map((entry, index) => (
                           <TableRow key={index}>
                             <TableCell>
-                              {isEditing ? <Input defaultValue={entry.time} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'time', e.target.value)} /> : entry.time}
+                              {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(day, index, 'time', e.target.value)} /> : entry.time}
                             </TableCell>
                             <TableCell>
-                              {isEditing ? <Input defaultValue={entry.room} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'room', e.target.value)}/> : entry.room}
+                              {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(day, index, 'room', e.target.value)}/> : entry.room}
                             </TableCell>
                             <TableCell>
-                               {isEditing ? <Input defaultValue={entry.courseCode} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'courseCode', e.target.value)}/> : entry.courseCode}
+                               {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(day, index, 'courseCode', e.target.value)}/> : entry.courseCode}
                             </TableCell>
                             <TableCell>
-                               {isEditing ? <Input defaultValue={entry.lecturer} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'lecturer', e.target.value)}/> : entry.lecturer}
+                               {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(day, index, 'lecturer', e.target.value)}/> : entry.lecturer}
                             </TableCell>
                             <TableCell>
-                               {isEditing ? <Input defaultValue={entry.departments.join(', ')} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'departments', e.target.value)}/> : entry.departments.join(', ')}
+                               {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(day, index, 'departments', e.target.value)}/> : entry.departments.join(', ')}
                             </TableCell>
                              <TableCell>
-                               {isEditing ? <Input type="number" defaultValue={entry.level} className="h-8" onChange={(e) => handleEditInputChange(day, index, 'level', e.target.value)}/> : entry.level}
+                               {isEditing ? <Input type="number" defaultValue={entry.level} onChange={(e) => handleEditInputChange(day, index, 'level', e.target.value)}/> : entry.level}
                             </TableCell>
                           </TableRow>
                         ))}
