@@ -59,7 +59,7 @@ export default function TopScheduleBar() {
 
     return masterSchedule.filter(entry =>
         entry.level === user.level &&
-        entry.departments.some(dep => user.department.includes(dep)) &&
+        entry.departments.includes(user.department) &&
         entry.day === today
       );
   }, [masterSchedule, user]);

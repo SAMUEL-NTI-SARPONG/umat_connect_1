@@ -904,7 +904,7 @@ export default function TimetablePage() {
 
     return masterSchedule.filter(entry =>
         entry.level === user.level &&
-        entry.departments.some(dep => user.department.includes(dep))
+        entry.departments.includes(user.department)
       );
   }, [masterSchedule, user]);
 
