@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable, users, departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -63,6 +63,7 @@ interface TimetableEntry {
   courseCode: string;
   lecturer: string;
   id: number;
+  status: EventStatus;
 }
 
 interface EmptySlot {
@@ -79,9 +80,8 @@ const statusConfig = {
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function StudentTimetableView() {
+function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const dailySchedule = useMemo(() => {
-    const schedule = timetable.student;
     return schedule.reduce((acc, event) => {
       const day = event.day || "Monday"; 
       if (!acc[day]) {
@@ -90,7 +90,7 @@ function StudentTimetableView() {
       acc[day].push(event);
       return acc;
     }, {} as Record<string, typeof schedule>);
-  }, []);
+  }, [schedule]);
 
   return (
     <Tabs defaultValue="Monday" className="w-full">
@@ -107,7 +107,6 @@ function StudentTimetableView() {
             <div className="space-y-4">
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                 dailySchedule[day].map((event, index) => {
-                  const lecturer = users.find(u => u.name.includes(event.course.split(" ")[0])) // simplified lookup
                   const status = statusConfig[event.status as EventStatus];
 
                   return (
@@ -117,7 +116,7 @@ function StudentTimetableView() {
                         <div className="flex-grow p-3 md:p-4">
                           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
                               <div>
-                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.course}</CardTitle>
+                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.courseCode}</CardTitle>
                                   <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
                               </div>
                               <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
@@ -128,11 +127,11 @@ function StudentTimetableView() {
                           <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
                               <div className="flex items-center gap-2">
                                   <MapPin className="w-3.5 h-3.5 text-primary/70"/>
-                                  <span>{event.location}</span>
+                                  <span>{event.room}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                   <BookUser className="w-3.5 h-3.5 text-primary/70"/>
-                                  <span>{lecturer ? lecturer.name : 'TBA'}</span>
+                                  <span>{event.lecturer}</span>
                               </div>
                           </div>
                         </div>
@@ -156,100 +155,263 @@ function StudentTimetableView() {
   );
 }
 
-function LecturerTimetableView() {
-  const [schedule, setSchedule] = useState(timetable.lecturer);
+function LecturerTimetableView({
+  schedule,
+  setSchedule,
+  emptySlots,
+}: {
+  schedule: TimetableEntry[];
+  setSchedule: React.Dispatch<React.SetStateAction<TimetableEntry[]>>;
+  emptySlots: EmptySlot[];
+}) {
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
 
-  const handleStatusChange = (index: number, newStatus: EventStatus) => {
-    const updatedSchedule = [...schedule];
-    updatedSchedule[index].status = newStatus;
-    setSchedule(updatedSchedule);
+  const handleStatusChange = (id: number, newStatus: EventStatus) => {
+    setSchedule((prev) =>
+      prev.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
+    );
   };
-  
+
+  const handleCancelClick = (entry: TimetableEntry) => {
+    setSelectedEntry(entry);
+    setIsActionModalOpen(true);
+  };
+
+  const handleRescheduleClick = () => {
+    setEditedFormData(selectedEntry);
+    if (selectedEntry) {
+      const [start, end] = selectedEntry.time.split('-');
+      setStartTime(start?.trim() || '');
+      setEndTime(end?.trim() || '');
+    }
+    setIsActionModalOpen(false);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editedFormData) return;
+    const updatedEntry = { ...editedFormData, time: `${startTime}-${endTime}` };
+    setSchedule((prev) => prev.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
+    closeAllModals();
+  };
+
+  const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
+    if (!editedFormData) return;
+    const updatedData = { ...editedFormData, [field]: value };
+    if (field === 'room') {
+      setStartTime('');
+      setEndTime('');
+    }
+    setEditedFormData(updatedData);
+  };
+
+  const closeAllModals = () => {
+    setIsActionModalOpen(false);
+    setIsEditModalOpen(false);
+    setSelectedEntry(null);
+    setEditedFormData(null);
+    setStartTime('');
+    setEndTime('');
+  };
+
   const dailySchedule = useMemo(() => {
-    return schedule.reduce((acc, event, index) => {
-      const day = event.day || "Monday"; 
-      if (!acc[day]) {
-        acc[day] = [];
-      }
-      acc[day].push({ ...event, originalIndex: index });
+    return schedule.reduce((acc, event) => {
+      const day = event.day || "Monday";
+      if (!acc[day]) acc[day] = [];
+      acc[day].push(event);
       return acc;
-    }, {} as Record<string, (typeof schedule[0] & { originalIndex: number })[]>);
+    }, {} as Record<string, TimetableEntry[]>);
   }, [schedule]);
 
+  const availableRoomsForDay = useMemo(() => {
+    if (!editedFormData) return [];
+    const daySlots = emptySlots.filter((slot) => slot.day === editedFormData.day);
+    return [...new Set(daySlots.map((slot) => slot.location))];
+  }, [emptySlots, editedFormData]);
+
+  const availableSlotsForRoomAndDay = useMemo(() => {
+    if (!editedFormData) return [];
+    return emptySlots
+      .filter((slot) => slot.day === editedFormData.day && slot.location === editedFormData.room)
+      .map((slot) => slot.time)
+      .sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+  }, [emptySlots, editedFormData]);
+
+  const availableStartTimes = useMemo(() => {
+    return [...new Set(availableSlotsForRoomAndDay.map((time) => time.split('-')[0]))];
+  }, [availableSlotsForRoomAndDay]);
+
+  const availableEndTimes = useMemo(() => {
+    if (!startTime) return [];
+    const startIndex = availableSlotsForRoomAndDay.findIndex((slot) => slot.startsWith(startTime));
+    if (startIndex === -1) return [];
+    let continuousEndTimes: string[] = [];
+    for (let i = startIndex; i < availableSlotsForRoomAndDay.length; i++) {
+      const currentSlot = availableSlotsForRoomAndDay[i];
+      const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
+      if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
+      continuousEndTimes.push(currentSlot.split('-')[1]);
+    }
+    return continuousEndTimes;
+  }, [startTime, availableSlotsForRoomAndDay]);
 
   return (
-    <Tabs defaultValue="Monday" className="w-full">
-       <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-        <TabsList className="grid w-full grid-cols-7 h-12">
-          {days.map(day => (
-            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
-       <div className="py-6">
-        {days.map(day => (
-          <TabsContent key={day} value={day}>
-            <div className="space-y-4">
-              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                dailySchedule[day].map((event) => {
-                  const status = statusConfig[event.status as EventStatus];
-
-                  return (
-                    <Card key={event.originalIndex} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
-                      <div className="flex">
-                        <div className={cn("w-2", status.color)}></div>
-                        <div className="flex-grow p-3 md:p-4">
-                           <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
+    <>
+      <Tabs defaultValue="Monday" className="w-full">
+        <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+          <TabsList className="grid w-full grid-cols-7 h-12">
+            {days.map((day) => (
+              <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+        <div className="py-6">
+          {days.map((day) => (
+            <TabsContent key={day} value={day}>
+              <div className="space-y-4">
+                {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                  dailySchedule[day].map((event) => {
+                    const status = statusConfig[event.status as EventStatus];
+                    return (
+                      <Card key={event.id} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
+                        <div className="flex">
+                          <div className={cn("w-2", status.color)}></div>
+                          <div className="flex-grow p-3 md:p-4">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
                               <div>
-                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.course}</CardTitle>
-                                  <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
+                                <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.courseCode}</CardTitle>
+                                <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
                               </div>
                               <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
-                                  <Clock className="w-3 h-3"/>
-                                  <span>{event.time}</span>
+                                <Clock className="w-3 h-3" />
+                                <span>{event.time}</span>
                               </div>
-                          </div>
-                          <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
+                            </div>
+                            <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
                               <div className="flex items-center gap-2">
-                                  <MapPin className="w-3.5 h-3.5 text-primary/70"/>
-                                  <span>{event.location}</span>
+                                <MapPin className="w-3.5 h-3.5 text-primary/70" />
+                                <span>{event.room}</span>
                               </div>
-                          </div>
-                           <div className="mt-4 flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.originalIndex, 'confirmed')} disabled={event.status === 'confirmed'}>
+                            </div>
+                            <div className="mt-4 flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
                                 <Check className="h-4 w-4 mr-1" /> Confirm
                               </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.originalIndex, 'canceled')} disabled={event.status === 'canceled'}>
-                                <Ban className="h-4 w-4 mr-1" /> Cancel
+                              <Button size="sm" variant="outline" onClick={() => handleCancelClick(event)}>
+                                <Ban className="h-4 w-4 mr-1" /> Cancel / Reschedule
                               </Button>
                             </div>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  )
-                })
-              ) : (
-                <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                   <CardContent className="text-center text-muted-foreground">
-                       <p className="font-medium">No classes scheduled for {day}.</p>
-                       <p className="text-sm">Enjoy your day off!</p>
-                   </CardContent>
-                </Card>
-              )}
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                    <CardContent className="text-center text-muted-foreground">
+                      <p className="font-medium">No classes scheduled for {day}.</p>
+                      <p className="text-sm">Enjoy your day off!</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
+
+      {/* Action Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel or Reschedule Class</DialogTitle>
+            <DialogDescription>
+              Would you like to cancel this class or reschedule it for another time/location?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-around py-4">
+            <Button variant="destructive" onClick={() => {
+              if(selectedEntry) handleStatusChange(selectedEntry.id, 'canceled');
+              closeAllModals();
+            }}>
+              <XCircle className="mr-2 h-4 w-4" /> Just Cancel
+            </Button>
+            <Button variant="outline" onClick={handleRescheduleClick}>
+              <CalendarClock className="mr-2 h-4 w-4" /> Reschedule
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reschedule Class</DialogTitle>
+            <DialogDescription>
+              Select a new room and time for this class.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="room" className="text-right">Room</Label>
+              <Select value={editedFormData?.room || ''} onValueChange={(value) => handleEditInputChange('room', value)}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a room" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
+                  {availableRoomsForDay.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-          </TabsContent>
-        ))}
-      </div>
-    </Tabs>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Time</Label>
+              <div className="col-span-3 grid grid-cols-2 gap-2">
+                <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
+                  <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                  <SelectContent>
+                    {availableStartTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
+                  <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                  <SelectContent>
+                    {availableEndTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+            <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-function AdminTimetableView() {
-  const [parsedData, setParsedData] = useState<TimetableEntry[] | null>(null);
-  const [emptySlots, setEmptySlots] = useState<EmptySlot[]>([]);
+function AdminTimetableView({
+  parsedData,
+  setParsedData,
+  emptySlots,
+  setEmptySlots,
+}: {
+  parsedData: TimetableEntry[] | null;
+  setParsedData: React.Dispatch<React.SetStateAction<TimetableEntry[] | null>>;
+  emptySlots: EmptySlot[];
+  setEmptySlots: React.Dispatch<React.SetStateAction<EmptySlot[]>>;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showInvalid, setShowInvalid] = useState(false);
   
@@ -283,8 +445,8 @@ function AdminTimetableView() {
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
       } else {
-        const dataWithIds = data.map((item, index) => ({ ...item, id: index }));
-        setParsedData(dataWithIds);
+        const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
+        setParsedData(dataWithIdsAndStatus);
         setEmptySlots(slots);
       }
     } catch (err) {
@@ -297,12 +459,17 @@ function AdminTimetableView() {
     }
   };
   
+  useEffect(() => {
+    if (selectedEntry && isEditModalOpen) {
+      setEditedFormData(selectedEntry);
+      const [start, end] = selectedEntry.time.split('-');
+      setStartTime(start?.trim() || '');
+      setEndTime(end?.trim() || '');
+    }
+  }, [selectedEntry, isEditModalOpen]);
+
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
-    setEditedFormData(entry); // Pre-fill form data
-    const [start, end] = entry.time.split('-');
-    setStartTime(start);
-    setEndTime(end);
     setIsActionModalOpen(true);
   };
 
@@ -336,7 +503,6 @@ function AdminTimetableView() {
     
     let updatedData = { ...editedFormData, [field]: value };
 
-    // If room is changed, reset times
     if (field === 'room') {
       setStartTime('');
       setEndTime('');
@@ -344,20 +510,12 @@ function AdminTimetableView() {
     
     setEditedFormData(updatedData);
   };
-
-  const handleStartTimeChange = (value: string) => {
-    setStartTime(value);
-    setEndTime(''); // Reset end time when start time changes
-  };
   
   const closeAllModals = () => {
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteConfirmOpen(false);
     setSelectedEntry(null);
-    setEditedFormData(null);
-    setStartTime('');
-    setEndTime('');
   }
 
   const filteredData = useMemo(() => {
@@ -404,6 +562,12 @@ function AdminTimetableView() {
       });
   }, [emptySlots, editedFormData]);
 
+  const availableRoomsForDay = useMemo(() => {
+    if (!editedFormData) return [];
+    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    return [...new Set(daySlots.map(slot => slot.location))];
+  }, [emptySlots, editedFormData]);
+
   const availableStartTimes = useMemo(() => {
     return [...new Set(availableSlotsForRoomAndDay.map(time => time.split('-')[0]))];
   }, [availableSlotsForRoomAndDay]);
@@ -431,13 +595,6 @@ function AdminTimetableView() {
     
     return continuousEndTimes;
   }, [startTime, availableSlotsForRoomAndDay]);
-
-  const availableRoomsForDay = useMemo(() => {
-    if (!editedFormData) return [];
-    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
-    // Get unique room locations
-    return [...new Set(daySlots.map(slot => slot.location))];
-  }, [emptySlots, editedFormData]);
 
   const daysWithData = Object.keys(groupedByDay);
 
@@ -645,14 +802,16 @@ function AdminTimetableView() {
               <div className="col-span-3 grid grid-cols-2 gap-2">
                 <Select
                   value={startTime}
-                  onValueChange={handleStartTimeChange}
+                  onValueChange={(value) => {
+                    setStartTime(value);
+                    setEndTime('');
+                  }}
                   disabled={!editedFormData?.room}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Start" />
                   </SelectTrigger>
                   <SelectContent>
-                     {editedFormData?.time.split('-')[0] && <SelectItem value={editedFormData.time.split('-')[0]} disabled>{editedFormData.time.split('-')[0]} (Current)</SelectItem>}
                     {availableStartTimes.map(time => (
                       <SelectItem key={time} value={time}>{time}</SelectItem>
                     ))}
@@ -667,7 +826,6 @@ function AdminTimetableView() {
                     <SelectValue placeholder="End" />
                   </SelectTrigger>
                   <SelectContent>
-                    {editedFormData?.time.split('-')[1] && <SelectItem value={editedFormData.time.split('-')[1]} disabled>{editedFormData.time.split('-')[1]} (Current)</SelectItem>}
                     {availableEndTimes.map(time => (
                       <SelectItem key={time} value={time}>{time}</SelectItem>
                     ))}
@@ -745,16 +903,52 @@ function AdminTimetableView() {
 }
 
 export default function TimetablePage() {
-  const { role } = useUser();
+  const { role, name } = useUser();
+  const { lecturer: lecturerUser, student: studentUser } = users.reduce((acc, user) => {
+    if (user.role === 'lecturer') acc.lecturer = user;
+    if (user.role === 'student') acc.student = user;
+    return acc;
+  }, {} as { lecturer?: any, student?: any });
+
+  // Centralized state for all schedules
+  const [adminParsedData, setAdminParsedData] = useState<TimetableEntry[] | null>(null);
+  const [emptySlots, setEmptySlots] = useState<EmptySlot[]>([]);
+  const [lecturerSchedule, setLecturerSchedule] = useState<TimetableEntry[]>([]);
+  const [studentSchedule, setStudentSchedule] = useState<TimetableEntry[]>([]);
+
+  // Effect to update role-specific schedules when admin data changes
+  useEffect(() => {
+    if (adminParsedData) {
+      // Filter for current lecturer based on name
+      const currentLecturerName = lecturerUser?.name || 'Dr. Yaw Mensah';
+      setLecturerSchedule(adminParsedData.filter(entry => entry.lecturer === currentLecturerName));
+      
+      // Filter for student based on department and level
+      const currentStudentDept = studentUser?.department || 'Computer Science';
+      const studentLevel = 100; // This would be dynamic in a real app
+      setStudentSchedule(
+        adminParsedData.filter(
+          (entry) =>
+            entry.departments.includes(currentStudentDept) &&
+            Math.floor(entry.level / 100) === Math.floor(studentLevel / 100)
+        )
+      );
+    } else {
+      // Reset schedules if admin data is cleared
+      setLecturerSchedule([]);
+      setStudentSchedule([]);
+    }
+  }, [adminParsedData, lecturerUser, studentUser, name]);
+
 
   const renderContent = () => {
     switch (role) {
       case 'student':
-        return <StudentTimetableView />;
+        return <StudentTimetableView schedule={studentSchedule} />;
       case 'lecturer':
-        return <LecturerTimetableView />;
+        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setLecturerSchedule} emptySlots={emptySlots} />;
       case 'administrator':
-        return <AdminTimetableView />;
+        return <AdminTimetableView parsedData={adminParsedData} setParsedData={setAdminParsedData} emptySlots={emptySlots} setEmptySlots={setEmptySlots} />;
       default:
         return <p>Select a role to see the timetable.</p>;
     }
