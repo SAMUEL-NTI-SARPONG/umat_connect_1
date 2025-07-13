@@ -915,16 +915,20 @@ export default function TimetablePage() {
   // Effect to update role-specific schedules when admin data changes
   useEffect(() => {
     if (adminParsedData) {
-      // For lecturer, we now pass the full data and let the component handle its own schedule.
-      // But for simplicity of state management, we can update it here.
-      setLecturerSchedule(adminParsedData.filter(entry => entry.lecturer.includes(name)));
+      // Filter for the current lecturer
+      const currentLecturerNameParts = name.toLowerCase().split(' ');
+      setLecturerSchedule(
+        adminParsedData.filter(entry => 
+          currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+        )
+      );
       
-      if (currentUser) {
+      // Filter for the current student
+      if (currentUser && role === 'student') {
         setStudentSchedule(
-          adminParsedData.filter(
-            (entry) =>
-              entry.level === currentUser.level &&
-              entry.departments.some(dep => department.includes(dep))
+          adminParsedData.filter(entry =>
+            entry.level === currentUser.level &&
+            entry.departments.some(dep => department.includes(dep))
           )
         );
       }
@@ -933,7 +937,7 @@ export default function TimetablePage() {
       setLecturerSchedule([]);
       setStudentSchedule([]);
     }
-  }, [adminParsedData, name, department, currentUser]);
+  }, [adminParsedData, role, name, department, currentUser]);
 
 
   const renderContent = () => {
@@ -941,8 +945,8 @@ export default function TimetablePage() {
       case 'student':
         return <StudentTimetableView schedule={studentSchedule} />;
       case 'lecturer':
-        // Pass the full admin data down so changes can be made to the single source of truth
-        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setAdminParsedData} emptySlots={emptySlots} />;
+        // Pass the lecturer's own schedule, but provide a setter for the *entire* admin dataset
+        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setAdminParsedData as any} emptySlots={emptySlots} />;
       case 'administrator':
         return <AdminTimetableView parsedData={adminParsedData} setParsedData={setAdminParsedData} emptySlots={emptySlots} setEmptySlots={setEmptySlots} />;
       default:
