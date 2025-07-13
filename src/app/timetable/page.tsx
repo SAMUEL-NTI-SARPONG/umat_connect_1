@@ -322,14 +322,16 @@ function AdminTimetableView() {
           <CardHeader>
             <CardTitle>Parsed Timetable Preview</CardTitle>
             <CardDescription>
-              Review the parsed schedule below before saving.
+              Review the parsed schedule below. A total of {parsedData.length} entries were found.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={daysWithData[0]} className="w-full">
               <TabsList>
                 {daysWithData.map(day => (
-                  <TabsTrigger key={day} value={day}>{day}</TabsTrigger>
+                  <TabsTrigger key={day} value={day}>
+                    {day} ({groupedByDay[day].length})
+                  </TabsTrigger>
                 ))}
               </TabsList>
               {daysWithData.map(day => (
