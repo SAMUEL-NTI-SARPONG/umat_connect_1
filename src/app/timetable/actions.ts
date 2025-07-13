@@ -3,10 +3,8 @@
 
 import * as XLSX from 'xlsx';
 
-// Define expected days of the week
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-// Main parser function based on the new algorithm
 function parseUniversitySchedule(fileBuffer: Buffer) {
   const workbook = XLSX.read(fileBuffer, { type: "buffer" });
   const validSchedules = [];
@@ -15,7 +13,6 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const sheet = workbook.Sheets[day];
     if (!sheet) continue;
 
-    // Create a map of merged cells for quick lookup
     const merges = sheet['!merges'] || [];
     const mergeMap: { [key: string]: { s: any; e: any } } = {};
     for (const merge of merges) {
@@ -26,13 +23,10 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
       }
     }
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as string[][];
-    if (rows.length < 5) continue; 
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false }) as (string | number)[][];
+    if (rows.length < 5) continue;
 
-    // Time slots are in row 5 (index 4)
-    const timeHeaders = rows[4]?.slice(1) || [];
-
-    // Data starts from row 6 (index 5)
+    const timeHeaders = rows[4]?.slice(1).map(String) || [];
     const dataRows = rows.slice(5);
 
     for (let i = 0; i < dataRows.length; i++) {
@@ -40,15 +34,13 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
       const room = row[0]?.toString().trim();
       if (!room) continue;
 
-      const rowIndexInSheet = i + 5; // Get the actual row index in the original sheet
+      const rowIndexInSheet = i + 5;
 
       for (let j = 1; j < row.length; j++) {
-        const cellValue = row[j];
-        if (!cellValue || typeof cellValue !== 'string' || cellValue.toUpperCase().includes('BREAK')) continue;
+        const cellValue = row[j]?.toString();
+        if (!cellValue || cellValue.toUpperCase().includes('BREAK')) continue;
 
         const mergeInfo = mergeMap[`${rowIndexInSheet},${j}`];
-
-        // Skip if this cell is part of a merge but not the starting cell of the merge
         if (mergeInfo && (mergeInfo.s.c !== j || mergeInfo.s.r !== rowIndexInSheet)) {
           continue;
         }
@@ -56,15 +48,15 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const endColIndex = mergeInfo ? mergeInfo.e.c : j;
         
         let time = "Unknown Time";
-        const startTimeString = timeHeaders[j - 1]; // -1 to adjust for 0-based index
+        const startTimeString = timeHeaders[j - 1];
         const endTimeString = timeHeaders[endColIndex - 1];
-        
+
         if (startTimeString && endTimeString) {
-            const startTime = startTimeString.split('-')[0]?.trim();
-            const endTime = endTimeString.split('-')[1]?.trim();
-            if(startTime && endTime) {
-                time = `${startTime} - ${endTime}`;
-            }
+          const startTime = startTimeString.split('-')[0]?.trim();
+          const endTime = endTimeString.split('-')[1]?.trim();
+          if (startTime && endTime) {
+            time = `${startTime} - ${endTime}`;
+          }
         }
         
         const lines = cellValue.split("\n").map(line => line.trim()).filter(Boolean);
@@ -74,15 +66,18 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         const lecturerName = lines[lines.length - 1];
         
         const courseParts = courseLine.trim().split(/\s+/);
-        if (courseParts.length < 2) continue;
+        if (courseParts.length < 1) continue;
         
         const courseNum = courseParts.pop() || '';
         const deptStr = courseParts.join(' ');
         
         const departments = deptStr.split(/[,/ ]+/).map(d => d.trim().replace(/[.-]/g, '')).filter(Boolean);
+        if (departments.length === 0 && deptStr.length > 0) {
+            departments.push(deptStr);
+        }
         if (departments.length === 0) continue;
 
-        const level = (parseInt(courseNum[0], 10) * 100) || 0;
+        const level = parseInt(courseNum.charAt(0), 10) * 100 || 0;
 
         validSchedules.push({
           day,
@@ -94,7 +89,6 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
           lecturer: lecturerName
         });
 
-        // If part of a merge, skip the other columns covered by this merge
         if (mergeInfo) {
           j = mergeInfo.e.c;
         }
@@ -103,7 +97,6 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
   }
   return validSchedules;
 }
-
 
 export async function handleFileUpload(file: File) {
   try {
