@@ -3,24 +3,29 @@
 
 import * as XLSX from 'xlsx';
 
-// This new parser is a direct adaptation of the user-provided logic,
-// ensuring it correctly handles the specific format of the timetable Excel file.
+// This is a new, robust parser based entirely on the user-provided implementation.
+// It correctly handles merged cells and complex course formats.
 
-// Based on the user-provided logic, using a fixed time slot array is more reliable.
+// Define time slots, excluding break column (1:00-1:30)
 const timeSlots = [
-  '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00', 
+  '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
   '12:00-1:00', '1:30-2:30', '2:30-3:30', '3:30-4:30', '4:30-5:30', '5:30-6:30', '6:30-7:30'
 ];
 
-// Time slot for the break, which corresponds to column index 6
-const breakColumnIndex = 6; 
+// Helper function to combine time slots into a range
+function combineTimeSlots(startIndex: number, endIndex: number): string {
+  // Ensure indices are within bounds
+  startIndex = Math.max(0, startIndex);
+  endIndex = Math.min(timeSlots.length - 1, endIndex);
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
-
-// Helper function to combine time slots into a range, inspired by user's code.
-function combineTimeSlots(startIndex: number, endIndex: number) {
-  if (startIndex < 0 || endIndex >= timeSlots.length || startIndex > endIndex) {
-    return 'Unknown Time';
+  if (startIndex > endIndex) {
+    // This can happen with single-cell entries where logic might subtract 1.
+    // Default to the start index's slot.
+    return timeSlots[startIndex];
+  }
+    
+  if (startIndex === endIndex) {
+    return timeSlots[startIndex];
   }
   const startTime = timeSlots[startIndex].split('-')[0];
   const endTime = timeSlots[endIndex].split('-')[1];
@@ -28,49 +33,80 @@ function combineTimeSlots(startIndex: number, endIndex: number) {
 }
 
 
-// New parsing function implementing the user's provided algorithm.
+// The new parsing function, adapted from the user's provided code.
 function parseUniversitySchedule(fileBuffer: Buffer) {
-  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
   const finalSchedule = [];
-
-  for (const day of days) {
+  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+  
+  for (const day of workbook.SheetNames) {
     const sheet = workbook.Sheets[day];
     if (!sheet) continue;
 
-    // Convert sheet to JSON, starting from the data rows.
-    // `range: 5` tells sheet_to_json to start from the 6th row (index 5)
-    // header: 1 turns rows into arrays of strings
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, range: 5 }) as (string | number)[][];
+    const merges = sheet['!merges'] || [];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false, range: 5, defval: '' }) as (string | number)[][];
 
-    for (const row of rows) {
-        const room = row[0]?.toString().trim();
-        // Skip rows that are not valid rooms.
-        if (!room || room.toUpperCase().includes('VLE') || room.toUpperCase().includes('FIELD WORK') || room.toUpperCase().includes('LAB')) {
-            continue;
+    // Create a map for faster lookup of merged cells
+    const mergeMap = new Map<string, { s: any, e: any }>();
+    for (const merge of merges) {
+      for (let r = merge.s.r; r <= merge.e.r; r++) {
+        for (let c = merge.s.c; c <= merge.e.c; c++) {
+          mergeMap.set(`${r},${c}`, merge);
         }
+      }
+    }
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowIndexInData = i + 5; // The actual row number in the excel sheet
+        const room = row[0]?.toString().trim();
+        
+        if (!room) continue;
 
         let lastCourseInfo: { courseCode: string; lecturer: string } | null = null;
         let startTimeIndex: number | null = null;
+        let colSpan = 1;
 
         // Iterate through the time slot columns (1 to 12)
+        // j represents the column in the excel sheet (0-indexed)
+        // we start at 1 because column 0 is the room
         for (let j = 1; j <= 12; j++) {
-            // Adjust index for break column
-            const timeSlotIndex = j > breakColumnIndex ? j - 2 : j - 1;
-            const cellValue = row[j]?.toString().trim();
-
-            const isNewCourse = cellValue && cellValue.toUpperCase() !== 'B R E A K';
-
-            if (isNewCourse) {
-                // A new course has started. First, save the previous one if it exists.
+            const isBreakColumn = j === 6; // Excel column 'G' is index 6
+            if (isBreakColumn) {
+                // If there was a course being tracked before the break, end it.
                 if (lastCourseInfo && startTimeIndex !== null) {
-                    const endTimeIndex = timeSlotIndex - 1;
+                    const endTimeIndex = startTimeIndex + colSpan - 1;
                     finalSchedule.push({
                         day,
                         room,
                         time: combineTimeSlots(startTimeIndex, endTimeIndex),
                         ...lastCourseInfo,
-                        departments: [], // Re-add if needed
-                        level: 0,
+                    });
+                    lastCourseInfo = null;
+                    startTimeIndex = null;
+                    colSpan = 1;
+                }
+                continue; // Skip the break column itself
+            }
+            
+            // This is the current cell being processed
+            const timeSlotIndex = j > 6 ? j - 1 : j; // Map excel column to 0-11 time slot index
+            const excelColIndex = timeSlotIndex + 1; // Map back to 1-based excel column for data access
+
+            const cellValue = row[excelColIndex]?.toString().trim();
+            
+            // Check if the current cell is the start of a new merge
+            const mergeInfo = mergeMap.get(`${rowIndexInData},${excelColIndex}`);
+            const isNewMergeStart = mergeInfo && mergeInfo.s.c === excelColIndex;
+
+            if (cellValue) {
+                // A new course has started. First, save the previous one.
+                if (lastCourseInfo && startTimeIndex !== null) {
+                    const endTimeIndex = startTimeIndex + colSpan - 1;
+                    finalSchedule.push({
+                        day,
+                        room,
+                        time: combineTimeSlots(startTimeIndex, endTimeIndex),
+                        ...lastCourseInfo,
                     });
                 }
 
@@ -78,42 +114,36 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
                 const lines = cellValue.split('\n').map(line => line.trim()).filter(Boolean);
                 const lecturer = lines.length > 1 ? lines.pop()! : 'TBA';
                 const courseCode = lines.join(' ');
-                
+
                 lastCourseInfo = { courseCode, lecturer };
                 startTimeIndex = timeSlotIndex;
-
+                colSpan = isNewMergeStart ? mergeInfo.e.c - mergeInfo.s.c + 1 : 1;
+            
             } else if (!cellValue && lastCourseInfo) {
-                // This is an empty cell, indicating the previous course continues.
-                // Do nothing and let it extend.
-            } else {
-                // This is a break, an empty cell at the start of a row, or the end of a course.
-                // Save the tracked course.
-                if (lastCourseInfo && startTimeIndex !== null) {
-                    const endTimeIndex = timeSlotIndex - 1;
-                    finalSchedule.push({
-                        day,
-                        room,
-                        time: combineTimeSlots(startTimeIndex, endTimeIndex),
-                        ...lastCourseInfo,
-                        departments: [], // Re-add if needed
-                        level: 0,
-                    });
-                }
-                // Reset tracker
-                lastCourseInfo = null;
-                startTimeIndex = null;
+              // This is an empty cell. If it's not part of the current course's span, end the course.
+              if (timeSlotIndex >= startTimeIndex! + colSpan) {
+                 const endTimeIndex = startTimeIndex! + colSpan - 1;
+                  finalSchedule.push({
+                      day,
+                      room,
+                      time: combineTimeSlots(startTimeIndex!, endTimeIndex),
+                      ...lastCourseInfo,
+                  });
+                  lastCourseInfo = null;
+                  startTimeIndex = null;
+                  colSpan = 1;
+              }
             }
         }
 
         // After the loop, handle any course that extends to the end of the row.
         if (lastCourseInfo && startTimeIndex !== null) {
+            const endTimeIndex = startTimeIndex + colSpan - 1;
              finalSchedule.push({
                 day,
                 room,
-                time: combineTimeSlots(startTimeIndex, timeSlots.length - 1),
+                time: combineTimeSlots(startTimeIndex, endTimeIndex),
                 ...lastCourseInfo,
-                departments: [], // Re-add if needed
-                level: 0,
             });
         }
     }
