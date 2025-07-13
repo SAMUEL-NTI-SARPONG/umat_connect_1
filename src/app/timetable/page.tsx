@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
-import { timetable, users, departments as allDepartments } from '@/lib/data';
+import { users, departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -903,12 +903,8 @@ function AdminTimetableView({
 }
 
 export default function TimetablePage() {
-  const { role, name } = useUser();
-  const { lecturer: lecturerUser, student: studentUser } = users.reduce((acc, user) => {
-    if (user.role === 'lecturer') acc.lecturer = user;
-    if (user.role === 'student') acc.student = user;
-    return acc;
-  }, {} as { lecturer?: any, student?: any });
+  const { role, name, department } = useUser();
+  const currentUser = users.find(u => u.name === name);
 
   // Centralized state for all schedules
   const [adminParsedData, setAdminParsedData] = useState<TimetableEntry[] | null>(null);
@@ -919,26 +915,25 @@ export default function TimetablePage() {
   // Effect to update role-specific schedules when admin data changes
   useEffect(() => {
     if (adminParsedData) {
-      // Filter for current lecturer based on name
-      const currentLecturerName = lecturerUser?.name || 'Dr. Yaw Mensah';
-      setLecturerSchedule(adminParsedData.filter(entry => entry.lecturer === currentLecturerName));
+      // For lecturer, we now pass the full data and let the component handle its own schedule.
+      // But for simplicity of state management, we can update it here.
+      setLecturerSchedule(adminParsedData.filter(entry => entry.lecturer.includes(name)));
       
-      // Filter for student based on department and level
-      const currentStudentDept = studentUser?.department || 'Computer Science';
-      const studentLevel = 100; // This would be dynamic in a real app
-      setStudentSchedule(
-        adminParsedData.filter(
-          (entry) =>
-            entry.departments.includes(currentStudentDept) &&
-            Math.floor(entry.level / 100) === Math.floor(studentLevel / 100)
-        )
-      );
+      if (currentUser) {
+        setStudentSchedule(
+          adminParsedData.filter(
+            (entry) =>
+              entry.level === currentUser.level &&
+              entry.departments.some(dep => department.includes(dep))
+          )
+        );
+      }
     } else {
       // Reset schedules if admin data is cleared
       setLecturerSchedule([]);
       setStudentSchedule([]);
     }
-  }, [adminParsedData, lecturerUser, studentUser, name]);
+  }, [adminParsedData, name, department, currentUser]);
 
 
   const renderContent = () => {
@@ -946,7 +941,8 @@ export default function TimetablePage() {
       case 'student':
         return <StudentTimetableView schedule={studentSchedule} />;
       case 'lecturer':
-        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setLecturerSchedule} emptySlots={emptySlots} />;
+        // Pass the full admin data down so changes can be made to the single source of truth
+        return <LecturerTimetableView schedule={lecturerSchedule} setSchedule={setAdminParsedData} emptySlots={emptySlots} />;
       case 'administrator':
         return <AdminTimetableView parsedData={adminParsedData} setParsedData={setAdminParsedData} emptySlots={emptySlots} setEmptySlots={setEmptySlots} />;
       default:
