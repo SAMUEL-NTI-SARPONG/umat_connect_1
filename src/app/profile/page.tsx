@@ -29,8 +29,6 @@ export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const [fontSize, setFontSize] = useState(16);
 
-  const currentUserData = users.find(u => u.role === role);
-
   const [formData, setFormData] = useState({ 
     name: name, 
     department: department, 
@@ -38,25 +36,36 @@ export default function ProfilePage() {
   });
   const [localProfileImage, setLocalProfileImage] = useState(profileImage);
 
-  // Sync with global context or mock data when role changes
+  const currentUserData = users.find(u => u.role === role && u.name === name) || users.find(u => u.role === role);
+
   useEffect(() => {
-    const userData = users.find(u => u.role === role);
-    if (userData) {
-      // Update global state
-      setName(userData.name);
-      setDepartment(userData.department);
-      setPhone(userData.phone);
-      setProfileImage(userData.profileImage);
-      
-      // Update local form state
-      setFormData({
-        name: userData.name,
-        department: userData.department,
-        phone: userData.phone
-      });
-      setLocalProfileImage(userData.profileImage);
+    // Only switch to a default user for the role if the current user's details don't match any known user for that role.
+    // This makes the changes on the profile page "stick" for the session.
+    const currentUserExistsForRole = users.some(u => u.role === role && u.name === name);
+
+    if (!currentUserExistsForRole) {
+      const userData = users.find(u => u.role === role);
+      if (userData) {
+        // Update global state
+        setName(userData.name);
+        setDepartment(userData.department);
+        setPhone(userData.phone);
+        setProfileImage(userData.profileImage);
+        
+        // Update local form state
+        setFormData({
+          name: userData.name,
+          department: userData.department,
+          phone: userData.phone
+        });
+        setLocalProfileImage(userData.profileImage);
+      }
+    } else {
+        // If the user *does* exist, ensure the form is synced with the current global state.
+        setFormData({ name, department, phone });
+        setLocalProfileImage(profileImage);
     }
-  }, [role, setName, setDepartment, setPhone, setProfileImage]);
+  }, [role, name, department, phone, profileImage, setName, setDepartment, setPhone, setProfileImage]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -95,6 +104,7 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
+    // On cancel, revert form to global state
     setFormData({ name, department, phone });
     setLocalProfileImage(profileImage);
     setIsEditing(false);
