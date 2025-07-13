@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
-import { timetable, users } from '@/lib/data';
+import { timetable, users, departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -271,8 +271,7 @@ function AdminTimetableView() {
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const fileData = buffer.toString('base64');
+      const fileData = Buffer.from(arrayBuffer).toString('base64');
       const [data, slots] = await Promise.all([
         handleFileUpload(fileData),
         findEmptyClassrooms(fileData)
@@ -381,6 +380,7 @@ function AdminTimetableView() {
   const availableRoomsForDay = useMemo(() => {
     if (!editedFormData) return [];
     const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    // Get unique room locations
     return [...new Set(daySlots.map(slot => slot.location))];
   }, [emptySlots, editedFormData]);
   
@@ -521,7 +521,7 @@ function AdminTimetableView() {
                           <TableBody>
                             {groupedByDay[day]?.map((entry) => (
                               <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                                <TableCell>{entry.time}</TableCell>
+                                <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
                                 <TableCell>{entry.room}</TableCell>
                                 <TableCell>{entry.courseCode}</TableCell>
                                 <TableCell>{entry.lecturer}</TableCell>
@@ -584,7 +584,7 @@ function AdminTimetableView() {
                     <SelectValue placeholder="Select a room" />
                   </SelectTrigger>
                   <SelectContent>
-                    {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
+                    {editedFormData?.room && editedFormData.room !== '' && <SelectItem value={editedFormData.room} disabled>
                         {editedFormData.room} (Current)
                     </SelectItem>}
                     {availableRoomsForDay.map(room => (
@@ -604,7 +604,7 @@ function AdminTimetableView() {
                     <SelectValue placeholder="Select a time" />
                   </SelectTrigger>
                   <SelectContent>
-                     {editedFormData?.time && <SelectItem value={editedFormData.time} disabled>
+                     {editedFormData?.time && editedFormData.time !== '' && <SelectItem value={editedFormData.time} disabled>
                         {editedFormData.time} (Current)
                     </SelectItem>}
                     {availableTimesForRoom.map(time => (
@@ -623,7 +623,19 @@ function AdminTimetableView() {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="departments" className="text-right">Depts</Label>
-              <Input id="departments" value={editedFormData?.departments.join(', ') || ''} onChange={(e) => handleEditInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" />
+              <Select
+                value={editedFormData?.departments[0] || ''}
+                onValueChange={(value) => handleEditInputChange('departments', [value])}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allDepartments.map(dept => (
+                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="level" className="text-right">Level</Label>

@@ -49,6 +49,34 @@ export const users = [
   },
 ];
 
+export const departments = [
+  'Mining Engineering',
+  'Minerals Engineering',
+  'Mechanical Engineering',
+  'Electrical and Electronic Engineering',
+  'Renewable Energy Engineering',
+  'Telecommunication Engineering',
+  'Plant and Maintenance Engineering',
+  'Cyber Security',
+  'Computer Science And Engineering',
+  'Information Systems and Technology',
+  'Mathematics',
+  'Statistical Data Science',
+  'Logistics and Transport Management',
+  'Economics and Industrial Organisation',
+  'Geomatic Engineering',
+  'Geological Engineering',
+  'Spatial Planning',
+  'Environmental and Safety Engineering',
+  'Land Administration and Information Systems',
+  'Petroleum Engineering',
+  'Natural Gas Engineering',
+  'Petroleum Geosciences and Engineering',
+  'Petroleum Refining and Petrochemical Engineering',
+  'Chemical Engineering',
+];
+
+
 export const posts = [
   {
     id: 1,
