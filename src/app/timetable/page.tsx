@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, Save, X, FilterX } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete } from 'lucide-react';
 import { useUser } from '../providers/user-provider';
 import { timetable, users } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 
 type EventStatus = 'confirmed' | 'canceled' | 'undecided';
@@ -229,21 +240,18 @@ function LecturerTimetableView() {
 
 function AdminTimetableView() {
   const [parsedData, setParsedData] = useState<TimetableEntry[] | null>(null);
-  const [editedData, setEditedData] = useState<TimetableEntry[] | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showInvalid, setShowInvalid] = useState(false);
+  
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
 
-  useEffect(() => {
-    if (isEditing && parsedData) {
-      setEditedData(JSON.parse(JSON.stringify(parsedData))); // Deep copy
-    } else {
-      setEditedData(null);
-    }
-  }, [isEditing, parsedData]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -252,7 +260,6 @@ function AdminTimetableView() {
     setIsLoading(true);
     setError(null);
     setParsedData(null);
-    setIsEditing(false);
 
     try {
       const data = await handleFileUpload(file);
@@ -271,52 +278,53 @@ function AdminTimetableView() {
       }
     }
   };
+  
+  const handleRowClick = (entry: TimetableEntry) => {
+    setSelectedEntry(entry);
+    setEditedFormData(entry); // Pre-fill form data
+    setIsActionModalOpen(true);
+  };
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleDelete = () => {
+  const handleDeleteAll = () => {
     setParsedData(null);
-    setIsEditing(false);
     setError(null);
     setSearchTerm('');
     setShowInvalid(false);
   };
   
-  const handleDeleteRow = (id: number) => {
-    if (!editedData) return;
-    setEditedData(editedData.filter(item => item.id !== id));
-  };
-
-  const handleSave = () => {
-    setParsedData(editedData);
-    setIsEditing(false);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditedData(null);
+  const handleDeleteRow = () => {
+    if (!selectedEntry || !parsedData) return;
+    setParsedData(parsedData.filter(item => item.id !== selectedEntry.id));
+    closeAllModals();
   };
   
-  const handleEditInputChange = (id: number, field: keyof TimetableEntry, value: string | number | string[]) => {
-    if (!editedData) return;
-    setEditedData(
-      editedData.map((item) => {
-        if (item.id === id) {
-          return { ...item, [field]: value };
-        }
-        return item;
-      })
-    );
+  const handleSaveEdit = () => {
+     if (!editedFormData || !parsedData) return;
+     setParsedData(parsedData.map(item => item.id === editedFormData.id ? editedFormData : item));
+     closeAllModals();
   };
 
-  const currentData = isEditing ? editedData : parsedData;
+  const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
+    if (!editedFormData) return;
+    setEditedFormData({ ...editedFormData, [field]: value });
+  };
+  
+  const closeAllModals = () => {
+    setIsActionModalOpen(false);
+    setIsEditModalOpen(false);
+    setIsDeleteConfirmOpen(false);
+    setSelectedEntry(null);
+    setEditedFormData(null);
+  }
 
   const filteredData = useMemo(() => {
-    if (!currentData) return null;
+    if (!parsedData) return null;
 
-    let data = [...currentData];
+    let data = [...parsedData];
 
     if (showInvalid) {
         data = data.filter(entry => entry.lecturer.toLowerCase() === 'unknown' || entry.lecturer.toLowerCase() === 'tba');
@@ -331,7 +339,7 @@ function AdminTimetableView() {
       entry.room.toLowerCase().includes(lowercasedFilter) ||
       entry.departments.some(dep => dep.toLowerCase().includes(lowercasedFilter))
     );
-  }, [currentData, searchTerm, showInvalid]);
+  }, [parsedData, searchTerm, showInvalid]);
 
   const groupedByDay = useMemo(() => {
     if (!filteredData) return {};
@@ -361,7 +369,7 @@ function AdminTimetableView() {
           <div className="flex gap-2 flex-wrap flex-shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading || isEditing}>
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   <span className="sr-only">Upload New</span>
                 </Button>
@@ -370,21 +378,10 @@ function AdminTimetableView() {
                 <p>Upload New Timetable</p>
               </TooltipContent>
             </Tooltip>
+            
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={() => setIsEditing(true)} disabled={!parsedData || isEditing}>
-                  <FilePenLine className="h-4 w-4" />
-                  <span className="sr-only">Edit Current</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Edit Current</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData || isEditing}>
+                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData}>
                   <FilterX className="h-4 w-4" />
                   <span className="sr-only">Filter for review</span>
                 </Button>
@@ -398,7 +395,7 @@ function AdminTimetableView() {
               <Tooltip>
                   <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={!parsedData || isEditing}>
+                          <Button variant="destructive" size="icon" disabled={!parsedData}>
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                           </Button>
@@ -413,38 +410,15 @@ function AdminTimetableView() {
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This action cannot be undone. This will permanently delete the
-                    timetable data from this view.
+                    entire timetable data from this view.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>Continue</AlertDialogAction>
+                  <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            
-             {isEditing && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleSave}>
-                      <Save className="h-4 w-4 text-green-600" />
-                      <span className="sr-only">Save</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Save Changes</p></TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleCancelEdit}>
-                      <X className="h-4 w-4 text-red-600" />
-                      <span className="sr-only">Cancel</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Cancel Edit</p></TooltipContent>
-                </Tooltip>
-              </>
-            )}
           </div>
         </TooltipProvider>
         {parsedData && (
@@ -455,7 +429,6 @@ function AdminTimetableView() {
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={isEditing}
             />
           </div>
         )}
@@ -469,20 +442,17 @@ function AdminTimetableView() {
          </Alert>
       )}
 
-      {currentData && (
+      {parsedData && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {isEditing ? 'Editing Timetable' : 'Parsed Timetable Preview'}
-            </CardTitle>
+            <CardTitle>Parsed Timetable Preview</CardTitle>
             <CardDescription>
-              {isEditing
-                ? `Making changes to ${currentData.length} entries.`
-                : showInvalid 
+              {
+                showInvalid 
                   ? `Found ${filteredData?.length || 0} entries for review.`
                   : searchTerm 
                     ? `Found ${filteredData?.length || 0} matching entries.`
-                    : `A total of ${parsedData?.length || 0} entries were found.`
+                    : `A total of ${parsedData?.length || 0} entries were found. Click a row to edit or delete.`
               }
             </CardDescription>
           </CardHeader>
@@ -507,57 +477,17 @@ function AdminTimetableView() {
                               <TableHead>Lecturer</TableHead>
                               <TableHead>Departments</TableHead>
                               <TableHead>Level</TableHead>
-                              {isEditing && <TableHead>Actions</TableHead>}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {groupedByDay[day]?.map((entry) => (
-                              <TableRow key={entry.id}>
-                                <TableCell className="min-w-[120px]">
-                                  {isEditing ? <Input defaultValue={entry.time} onChange={(e) => handleEditInputChange(entry.id, 'time', e.target.value)} /> : entry.time}
-                                </TableCell>
-                                <TableCell className="min-w-[100px]">
-                                  {isEditing ? <Input defaultValue={entry.room} onChange={(e) => handleEditInputChange(entry.id, 'room', e.target.value)}/> : entry.room}
-                                </TableCell>
-                                <TableCell className="min-w-[150px]">
-                                   {isEditing ? <Input defaultValue={entry.courseCode} onChange={(e) => handleEditInputChange(entry.id, 'courseCode', e.target.value)}/> : entry.courseCode}
-                                </TableCell>
-                                <TableCell className="min-w-[150px]">
-                                   {isEditing ? <Input defaultValue={entry.lecturer} onChange={(e) => handleEditInputChange(entry.id, 'lecturer', e.target.value)}/> : entry.lecturer}
-                                </TableCell>
-                                <TableCell className="min-w-[200px]">
-                                   {isEditing ? <Input defaultValue={entry.departments.join(', ')} onChange={(e) => handleEditInputChange(entry.id, 'departments', (e.target.value).split(',').map(s => s.trim()))}/> : entry.departments.join(', ')}
-                                </TableCell>
-                                 <TableCell className="min-w-[100px]">
-                                   {isEditing ? (
-                                        <Select
-                                            defaultValue={String(entry.level)}
-                                            onValueChange={(value) => handleEditInputChange(entry.id, 'level', Number(value))}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select level" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="100">100</SelectItem>
-                                                <SelectItem value="200">200</SelectItem>
-                                                <SelectItem value="300">300</SelectItem>
-                                                <SelectItem value="400">400</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                   ) : entry.level}
-                                </TableCell>
-                                {isEditing && (
-                                    <TableCell>
-                                        <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            onClick={() => handleDeleteRow(entry.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Delete row</span>
-                                        </Button>
-                                    </TableCell>
-                                )}
+                              <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                <TableCell className="min-w-[120px]">{entry.time}</TableCell>
+                                <TableCell className="min-w-[100px]">{entry.room}</TableCell>
+                                <TableCell className="min-w-[150px]">{entry.courseCode}</TableCell>
+                                <TableCell className="min-w-[150px]">{entry.lecturer}</TableCell>
+                                <TableCell className="min-w-[200px]">{entry.departments.join(', ')}</TableCell>
+                                <TableCell className="min-w-[100px]">{entry.level}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -574,6 +504,98 @@ function AdminTimetableView() {
           </CardContent>
         </Card>
       )}
+
+      {/* Action Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose Action</DialogTitle>
+            <DialogDescription>
+              What would you like to do with this timetable entry?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-around py-4">
+             <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+             </Button>
+             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Timetable Entry</DialogTitle>
+            <DialogDescription>
+              Make changes to the entry here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="time" className="text-right">Time</Label>
+              <Input id="time" value={editedFormData?.time} onChange={(e) => handleEditInputChange('time', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="room" className="text-right">Room</Label>
+              <Input id="room" value={editedFormData?.room} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="courseCode" className="text-right">Course</Label>
+              <Input id="courseCode" value={editedFormData?.courseCode} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="lecturer" className="text-right">Lecturer</Label>
+              <Input id="lecturer" value={editedFormData?.lecturer} onChange={(e) => handleEditInputChange('lecturer', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="departments" className="text-right">Depts</Label>
+              <Input id="departments" value={editedFormData?.departments.join(', ')} onChange={(e) => handleEditInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="level" className="text-right">Level</Label>
+               <Select
+                  defaultValue={String(editedFormData?.level)}
+                  onValueChange={(value) => handleEditInputChange('level', Number(value))}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="200">200</SelectItem>
+                    <SelectItem value="300">300</SelectItem>
+                    <SelectItem value="400">400</SelectItem>
+                  </SelectContent>
+                </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+            <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this timetable entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
@@ -600,5 +622,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    
