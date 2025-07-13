@@ -133,10 +133,12 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
       }
     });
 
-    const deptStr = deptInitialParts.join(' ');
+    const uniqueDeptInitials = [...new Set(deptInitialParts)];
+
+    const deptStr = uniqueDeptInitials.join(' ');
     const courseNumStr = courseNumParts.join(' ');
 
-    const departments = deptInitialParts
+    const departments = uniqueDeptInitials
       .join(' ')
       .split(/[/ ]+/)
       .map(d => d.trim())
