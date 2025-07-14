@@ -63,12 +63,14 @@ export default function CreatePostCard() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="flex justify-center mb-4">
         <DialogTrigger asChild>
-            <Button className="w-full mb-4">
+            <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Create Post
             </Button>
         </DialogTrigger>
+      </div>
 
       <DialogContent className="sm:max-w-[525px]" onInteractOutside={handleDialogClose}>
         <DialogHeader>
