@@ -40,14 +40,6 @@ export default function AppHeader() {
 
       <div className="flex-1 text-center flex items-center justify-center gap-2">
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
-        {pathname === '/' && user && (user.role === 'lecturer' || user.role === 'administrator') && (
-            <CreatePost>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                    <PlusCircle className="w-8 h-8" />
-                    <span className="sr-only">Create Post</span>
-                </Button>
-            </CreatePost>
-        )}
       </div>
 
       <div className="flex-1 flex justify-end">
