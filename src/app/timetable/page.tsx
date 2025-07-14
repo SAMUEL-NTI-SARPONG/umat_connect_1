@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -156,11 +157,12 @@ function LecturerTimetableView({
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
-  const { user } = useUser();
+  const { user, reviewedSchedules } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
   const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
@@ -180,6 +182,16 @@ function LecturerTimetableView({
     // Return unique courses
     return Array.from(new Map(courses.map(c => [c.courseCode, c])).values());
   }, [masterSchedule, user]);
+  
+  // Logic to show the review modal
+  useEffect(() => {
+    if (user && masterSchedule && masterSchedule.length > 0 && lecturerCourses.length > 0) {
+      const hasReviewed = reviewedSchedules.includes(user.id);
+      if (!hasReviewed) {
+        setIsReviewModalOpen(true);
+      }
+    }
+  }, [user, masterSchedule, lecturerCourses, reviewedSchedules]);
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
     setSchedule(
@@ -325,6 +337,12 @@ function LecturerTimetableView({
 
   return (
     <>
+      <LecturerReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        courses={lecturerCourses}
+      />
+
       <div className="flex justify-end mb-4">
         <Button onClick={() => setIsCreateModalOpen(true)}>
             <PlusCircle className="w-4 h-4 mr-2" />

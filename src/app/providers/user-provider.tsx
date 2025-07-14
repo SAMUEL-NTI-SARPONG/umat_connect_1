@@ -70,6 +70,9 @@ interface UserContextType {
   addComment: (postId: number, text: string) => void;
   lecturerSchedules: TimetableEntry[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  reviewedSchedules: number[];
+  markScheduleAsReviewed: (userId: number) => void;
+  removeScheduleEntry: (entryId: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -111,6 +114,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [lecturerSchedules, setLecturerSchedules] = useState<TimetableEntry[]>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
 
   // Initialize state from localStorage on mount
   useEffect(() => {
@@ -119,6 +123,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setEmptySlotsState(getFromStorage('emptySlots', []));
     setPosts(getFromStorage('posts', []));
     setLecturerSchedules(getFromStorage('lecturerSchedules', []));
+    setReviewedSchedules(getFromStorage('reviewedSchedules', []));
 
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -157,7 +162,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
     saveToStorage('masterSchedule', data);
-  }, []);
+    // When a new schedule is set, reset the review status for all lecturers.
+    setReviewedSchedules([]);
+    saveToStorage('reviewedSchedules', []);
+    toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
+  }, [toast]);
   
   const setEmptySlots = useCallback((slots: EmptySlot[]) => {
     setEmptySlotsState(slots);
@@ -244,6 +253,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
 
   }, [user, toast]);
+  
+  const removeScheduleEntry = useCallback((entryId: number) => {
+      setMasterScheduleState(prev => {
+        if (!prev) return null;
+        const updatedSchedule = prev.filter(entry => entry.id !== entryId);
+        saveToStorage('masterSchedule', updatedSchedule);
+        return updatedSchedule;
+      });
+  }, []);
+
+  const markScheduleAsReviewed = useCallback((userId: number) => {
+    setReviewedSchedules(prev => {
+        const updated = [...new Set([...prev, userId])];
+        saveToStorage('reviewedSchedules', updated);
+        return updated;
+    });
+    toast({ title: "Schedule Confirmed", description: "Thank you for reviewing your schedule." });
+  }, [toast]);
 
   const resetState = () => {
     logout(); // Log out current user
@@ -254,6 +281,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem('emptySlots');
     window.localStorage.removeItem('posts');
     window.localStorage.removeItem('lecturerSchedules');
+    window.localStorage.removeItem('reviewedSchedules');
     
     // Reset state to defaults
     setAllUsers(defaultUsers);
@@ -261,6 +289,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setEmptySlotsState([]);
     setPosts([]);
     setLecturerSchedules([]);
+    setReviewedSchedules([]);
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     
@@ -284,7 +313,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     addComment,
     lecturerSchedules,
     addLecturerSchedule,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost, addComment, lecturerSchedules, addLecturerSchedule]);
+    reviewedSchedules,
+    markScheduleAsReviewed,
+    removeScheduleEntry,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, setMasterSchedule, setEmptySlots, addPost, addComment, addLecturerSchedule, removeScheduleEntry, markScheduleAsReviewed]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
