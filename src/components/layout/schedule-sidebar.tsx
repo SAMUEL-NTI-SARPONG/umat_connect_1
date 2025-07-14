@@ -6,16 +6,19 @@ import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
+import { BookUser } from 'lucide-react';
 
 function ScheduleItem({
   title,
   time,
   location,
+  lecturer,
   status,
 }: {
   title: string;
   time: string;
   location: string;
+  lecturer: string;
   status: 'confirmed' | 'canceled' | 'undecided';
 }) {
   const statusClasses = {
@@ -25,9 +28,13 @@ function ScheduleItem({
   };
 
   return (
-    <div className={cn('mb-3 pl-3 border-l-4', statusClasses[status])}>
+    <div className={cn('mb-3 pl-3 border-l-4 space-y-1', statusClasses[status])}>
        <p className="font-semibold text-sm">{title}</p>
         <p className="text-xs text-muted-foreground">{time} - {location}</p>
+        <div className="flex items-center gap-2">
+            <BookUser className="w-3 h-3 text-muted-foreground"/>
+            <p className="text-xs text-muted-foreground">{lecturer}</p>
+        </div>
     </div>
   );
 }
@@ -76,6 +83,7 @@ export default function ScheduleSidebar() {
               title={event.courseCode}
               time={event.time.replace(/ AM| PM/g, '')} // Make time more compact
               location={event.room}
+              lecturer={event.lecturer}
               status={event.status}
             />
           ))
