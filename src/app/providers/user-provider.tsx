@@ -92,7 +92,12 @@ const saveToStorage = <T,>(key: string, value: T) => {
     const item = JSON.stringify(value);
     window.localStorage.setItem(key, item);
   } catch (error) {
-    console.error(`Error writing to localStorage key “${key}”:`, error);
+    // Catch quota exceeded errors
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        console.warn(`LocalStorage quota exceeded for key “${key}”. Data could not be saved.`);
+    } else {
+        console.error(`Error writing to localStorage key “${key}”:`, error);
+    }
   }
 };
 
@@ -162,13 +167,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
       authorId: user.id,
       timestamp: new Date().toISOString(),
       content: postData.content,
-      attachedFile: postData.attachedFile,
+      attachedFile: postData.attachedFile, // Keep it for immediate UI update
       comments: [],
     };
     
     setPosts(prevPosts => {
         const updatedPosts = [newPost, ...prevPosts];
-        saveToStorage('posts', updatedPosts);
+        
+        // Create a version of the post for storage without the large file data
+        const postForStorage = {
+            ...newPost,
+            attachedFile: newPost.attachedFile ? {
+                ...newPost.attachedFile,
+                url: 'file-data-omitted' // Replace large data URI
+            } : null
+        };
+
+        const postsForStorage = [postForStorage, ...prevPosts.map(p => ({
+            ...p,
+             attachedFile: p.attachedFile ? {
+                ...p.attachedFile,
+                url: 'file-data-omitted'
+            } : null
+        }))];
+        
+        saveToStorage('posts', postsForStorage);
         return updatedPosts;
     });
 
