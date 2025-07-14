@@ -8,22 +8,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Image as ImageIcon, FileText, Send, Paperclip } from 'lucide-react';
-import { useUser } from '@/app/providers/user-provider';
+import { useUser, type AttachedFile } from '@/app/providers/user-provider';
 import Image from 'next/image';
 import { Card } from '../ui/card';
 import { ProfileAvatar } from '../ui/profile-avatar';
-
-interface AttachedFile {
-  name: string;
-  type: string;
-  url: string;
-}
 
 export default function CreatePostCard() {
   const { user, addPost } = useUser();
@@ -148,7 +141,7 @@ export default function CreatePostCard() {
             variant="ghost"
             size="icon"
             className="rounded-full"
-            onClick={() => fileInput.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip className="h-5 w-5 text-muted-foreground" />
              <span className="sr-only">Attach file</span>
