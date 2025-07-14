@@ -10,10 +10,12 @@ import { useMemo } from 'react';
 function ScheduleItem({
   title,
   time,
+  location,
   status,
 }: {
   title: string;
   time: string;
+  location: string;
   status: 'confirmed' | 'canceled' | 'undecided';
 }) {
   const statusClasses = {
@@ -25,7 +27,7 @@ function ScheduleItem({
   return (
     <div className={cn('mb-3 pl-3 border-l-4', statusClasses[status])}>
        <p className="font-semibold text-sm">{title}</p>
-        <p className="text-xs text-muted-foreground">{time}</p>
+        <p className="text-xs text-muted-foreground">{time} - {location}</p>
     </div>
   );
 }
@@ -73,6 +75,7 @@ export default function ScheduleSidebar() {
               key={event.id}
               title={event.courseCode}
               time={event.time.replace(/ AM| PM/g, '')} // Make time more compact
+              location={event.room}
               status={event.status}
             />
           ))
