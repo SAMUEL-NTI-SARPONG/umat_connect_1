@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
 import { ScrollArea } from '../ui/scroll-area';
 import { EyeOff } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LecturerReviewModalProps {
   isOpen: boolean;
