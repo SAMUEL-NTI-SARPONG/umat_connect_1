@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -134,21 +134,38 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   );
 }
 
+const initialCreateFormState = {
+  courseCode: '',
+  day: 'Monday',
+  level: 100,
+  departments: [],
+  room: '',
+  time: '',
+};
+
 function LecturerTimetableView({
   schedule,
   setSchedule,
   emptySlots,
+  addLecturerSchedule,
 }: {
   schedule: TimetableEntry[];
   setSchedule: (schedule: TimetableEntry[]) => void;
   emptySlots: EmptySlot[];
+  addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
+  const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
+  
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [createStartTime, setCreateStartTime] = useState('');
+  const [createEndTime, setCreateEndTime] = useState('');
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
     setSchedule(
@@ -178,6 +195,24 @@ function LecturerTimetableView({
     setSchedule(schedule.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
     closeAllModals();
   };
+  
+  const handleSaveCreate = () => {
+    const { courseCode, day, level, departments, room } = createFormData;
+    if (!courseCode || !day || !level || !departments.length || !room || !createStartTime || !createEndTime) {
+      // Basic validation
+      alert("Please fill all fields");
+      return;
+    }
+    addLecturerSchedule({
+      courseCode,
+      day,
+      level,
+      departments,
+      room,
+      time: `${createStartTime}-${createEndTime}`,
+    });
+    closeAllModals();
+  };
 
   const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
     if (!editedFormData) return;
@@ -189,13 +224,28 @@ function LecturerTimetableView({
     setEditedFormData(updatedData);
   };
 
+  const handleCreateInputChange = (field: string, value: any) => {
+    setCreateFormData((prev: any) => {
+        const newState = { ...prev, [field]: value };
+        if (field === 'day' || field === 'room') {
+            setCreateStartTime('');
+            setCreateEndTime('');
+        }
+        return newState;
+    });
+  };
+
   const closeAllModals = () => {
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
+    setIsCreateModalOpen(false);
     setSelectedEntry(null);
     setEditedFormData(null);
+    setCreateFormData(initialCreateFormState);
     setStartTime('');
     setEndTime('');
+    setCreateStartTime('');
+    setCreateEndTime('');
   };
 
   const dailySchedule = useMemo(() => {
@@ -207,40 +257,54 @@ function LecturerTimetableView({
     }, {} as Record<string, TimetableEntry[]>);
   }, [schedule]);
 
-  const availableRoomsForDay = useMemo(() => {
-    if (!editedFormData) return [];
-    const daySlots = emptySlots.filter((slot) => slot.day === editedFormData.day);
-    return [...new Set(daySlots.map((slot) => slot.location))];
-  }, [emptySlots, editedFormData]);
-
-  const availableSlotsForRoomAndDay = useMemo(() => {
-    if (!editedFormData) return [];
-    return emptySlots
-      .filter((slot) => slot.day === editedFormData.day && slot.location === editedFormData.room)
-      .map((slot) => slot.time)
-      .sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-  }, [emptySlots, editedFormData]);
-
-  const availableStartTimes = useMemo(() => {
-    return [...new Set(availableSlotsForRoomAndDay.map((time) => time.split('-')[0]))];
-  }, [availableSlotsForRoomAndDay]);
-
-  const availableEndTimes = useMemo(() => {
-    if (!startTime) return [];
-    const startIndex = availableSlotsForRoomAndDay.findIndex((slot) => slot.startsWith(startTime));
-    if (startIndex === -1) return [];
-    let continuousEndTimes: string[] = [];
-    for (let i = startIndex; i < availableSlotsForRoomAndDay.length; i++) {
-      const currentSlot = availableSlotsForRoomAndDay[i];
-      const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
-      if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
-      continuousEndTimes.push(currentSlot.split('-')[1]);
+  const availableSlotsForEdit = useMemo(() => {
+    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
+    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    const rooms = [...new Set(daySlots.map(slot => slot.location))];
+    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0]))];
+    
+    let endTimes: string[] = [];
+    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
+    if (startTime && startIndex !== -1) {
+      for (let i = startIndex; i < roomDaySlots.length; i++) {
+        const currentSlot = roomDaySlots[i];
+        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
+        if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
+        endTimes.push(currentSlot.split('-')[1]);
+      }
     }
-    return continuousEndTimes;
-  }, [startTime, availableSlotsForRoomAndDay]);
+    return { rooms, times: roomDaySlots, startTimes, endTimes };
+  }, [emptySlots, editedFormData, startTime]);
+
+  const availableSlotsForCreate = useMemo(() => {
+    const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
+    const rooms = [...new Set(daySlots.map(slot => slot.location))];
+    const roomDaySlots = daySlots.filter(slot => slot.location === createFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0]))];
+
+    let endTimes: string[] = [];
+    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(createStartTime));
+    if (createStartTime && startIndex !== -1) {
+        for (let i = startIndex; i < roomDaySlots.length; i++) {
+            const currentSlot = roomDaySlots[i];
+            const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
+            if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
+            endTimes.push(currentSlot.split('-')[1]);
+        }
+    }
+    return { rooms, times: roomDaySlots, startTimes, endTimes };
+  }, [emptySlots, createFormData, createStartTime]);
+
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setIsCreateModalOpen(true)}>
+            <PlusCircle className="w-4 h-4 mr-2" />
+            Create Schedule
+        </Button>
+      </div>
       <Tabs defaultValue="Monday" className="w-full">
         <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
           <TabsList className="grid w-full grid-cols-7 h-12">
@@ -345,7 +409,7 @@ function LecturerTimetableView({
                 </SelectTrigger>
                 <SelectContent>
                   {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
-                  {availableRoomsForDay.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                  {availableSlotsForEdit.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -355,13 +419,13 @@ function LecturerTimetableView({
                 <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
                   <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
                   <SelectContent>
-                    {availableStartTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                    {availableSlotsForEdit.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
                   <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
                   <SelectContent>
-                    {availableEndTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                    {availableSlotsForEdit.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -370,6 +434,84 @@ function LecturerTimetableView({
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
             <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Create Modal */}
+      <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create New Schedule</DialogTitle>
+            <DialogDescription>
+              Add a new class. Select a day, room and time from available slots.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="courseCode-create" className="text-right">Course Code</Label>
+              <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="level-create" className="text-right">Level</Label>
+              <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', Number(value))}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="200">200</SelectItem>
+                  <SelectItem value="300">300</SelectItem>
+                  <SelectItem value="400">400</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="departments-create" className="text-right">Department</Label>
+              <Select value={createFormData.departments[0] || ''} onValueChange={(value) => handleCreateInputChange('departments', [value])}>
+                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a department" /></SelectTrigger>
+                <SelectContent>
+                  {allDepartments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="day-create" className="text-right">Day</Label>
+              <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="room-create" className="text-right">Room</Label>
+              <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)} disabled={!createFormData.day}>
+                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a room" /></SelectTrigger>
+                <SelectContent>
+                  {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Time</Label>
+              <div className="col-span-3 grid grid-cols-2 gap-2">
+                <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
+                  <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                  <SelectContent>
+                    {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
+                  <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                  <SelectContent>
+                    {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+            <Button type="submit" onClick={handleSaveCreate}>Add Class</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -886,27 +1028,34 @@ export default function TimetablePage() {
     masterSchedule, 
     setMasterSchedule, 
     emptySlots, 
-    setEmptySlots 
+    setEmptySlots,
+    lecturerSchedules,
+    addLecturerSchedule
   } = useUser();
   
+  const combinedSchedule = useMemo(() => {
+    return [...(masterSchedule || []), ...lecturerSchedules];
+  }, [masterSchedule, lecturerSchedules]);
+
   // Derived states are now calculated within the render logic using useMemo
   const lecturerSchedule = useMemo(() => {
-    if (!masterSchedule || !user || user.role !== 'lecturer') return [];
+    if (!combinedSchedule || !user || user.role !== 'lecturer') return [];
     
     const currentLecturerNameParts = user.name.toLowerCase().split(' ');
-    return masterSchedule.filter(entry => 
+    return combinedSchedule.filter(entry => 
       currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
-  }, [masterSchedule, user]);
+  }, [combinedSchedule, user]);
 
   const studentSchedule = useMemo(() => {
-    if (!masterSchedule || !user || user.role !== 'student') return [];
+    if (!combinedSchedule || !user || user.role !== 'student') return [];
 
-    return masterSchedule.filter(entry =>
+    return combinedSchedule.filter(entry =>
         entry.level === user.level &&
+        user.department &&
         entry.departments.includes(user.department)
       );
-  }, [masterSchedule, user]);
+  }, [combinedSchedule, user]);
 
   const renderContent = () => {
     if (!user) return <p>Loading...</p>;
@@ -919,6 +1068,7 @@ export default function TimetablePage() {
                   schedule={lecturerSchedule} 
                   setSchedule={setMasterSchedule as any} 
                   emptySlots={emptySlots} 
+                  addLecturerSchedule={addLecturerSchedule}
                />;
       case 'administrator':
         return <AdminTimetableView 

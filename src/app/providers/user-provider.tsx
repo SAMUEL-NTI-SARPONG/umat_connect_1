@@ -68,6 +68,8 @@ interface UserContextType {
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
   addComment: (postId: number, text: string) => void;
+  lecturerSchedules: TimetableEntry[];
+  addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -106,6 +108,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>([]);
+  const [lecturerSchedules, setLecturerSchedules] = useState<TimetableEntry[]>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
 
@@ -115,6 +118,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setMasterScheduleState(getFromStorage('masterSchedule', null));
     setEmptySlotsState(getFromStorage('emptySlots', []));
     setPosts(getFromStorage('posts', []));
+    setLecturerSchedules(getFromStorage('lecturerSchedules', []));
 
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -221,6 +225,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   }, [user]);
 
+  const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
+    if (!user || user.role !== 'lecturer') return;
+    
+    const newEntry: TimetableEntry = {
+      ...entry,
+      id: Date.now(), // Unique ID
+      status: 'confirmed', // Lecturer-added events are confirmed by default
+      lecturer: user.name,
+    };
+    
+    setLecturerSchedules(prev => {
+      const updatedSchedules = [...prev, newEntry];
+      saveToStorage('lecturerSchedules', updatedSchedules);
+      return updatedSchedules;
+    });
+    
+    toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
+
+  }, [user, toast]);
+
   const resetState = () => {
     logout(); // Log out current user
     
@@ -229,12 +253,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem('masterSchedule');
     window.localStorage.removeItem('emptySlots');
     window.localStorage.removeItem('posts');
+    window.localStorage.removeItem('lecturerSchedules');
     
     // Reset state to defaults
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
     setEmptySlotsState([]);
     setPosts([]);
+    setLecturerSchedules([]);
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     
@@ -256,7 +282,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     posts,
     addPost,
     addComment,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost, addComment]);
+    lecturerSchedules,
+    addLecturerSchedule,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost, addComment, lecturerSchedules, addLecturerSchedule]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
