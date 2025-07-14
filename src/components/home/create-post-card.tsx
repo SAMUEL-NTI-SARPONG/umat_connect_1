@@ -16,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Image as ImageIcon, X } from 'lucide-react';
 import { useUser } from '@/app/providers/user-provider';
 import Image from 'next/image';
+import { Card } from '../ui/card';
+import { ProfileAvatar } from '../ui/profile-avatar';
 
 export default function CreatePostCard() {
   const { user } = useUser();
@@ -63,14 +65,24 @@ export default function CreatePostCard() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <div className="flex justify-center mb-4">
+      <Card className="mb-4 p-3 rounded-xl shadow-sm">
         <DialogTrigger asChild>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create Post
-            </Button>
+            <div className="flex items-center gap-4 cursor-pointer">
+                <ProfileAvatar
+                    src={user.profileImage}
+                    fallback={user.name.charAt(0)}
+                    alt={`${user.name}'s profile picture`}
+                    imageHint="profile picture"
+                    className="w-10 h-10"
+                />
+                <div className="flex-grow text-left">
+                    <div className="w-full text-muted-foreground p-2 rounded-full bg-muted hover:bg-border transition-colors">
+                        What's on your mind?
+                    </div>
+                </div>
+            </div>
         </DialogTrigger>
-      </div>
+      </Card>
 
       <DialogContent className="sm:max-w-[525px]" onInteractOutside={handleDialogClose}>
         <DialogHeader>
