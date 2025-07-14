@@ -366,34 +366,34 @@ function LecturerTimetableView({
                     return (
                       <Card key={event.id} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
                         <div className="flex">
-                          <div className={cn("w-2", status.color)}></div>
-                           <div className="flex-grow p-3">
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                                  <div>
-                                      <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
-                                      <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
-                                      <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
-                                  </div>
-                                  <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 self-start sm:self-center">
-                                              <MoreHorizontal className="h-4 w-4" />
-                                              <span className="sr-only">More options</span>
-                                          </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                              <Check className="mr-2 h-4 w-4" /> Confirm Class
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
-                                              <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
-                                              <Ban className="mr-2 h-4 w-4" /> Cancel Class
-                                          </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                  </DropdownMenu>
-                              </div>
+                          <div className={cn("w-2 flex-shrink-0", status.color)}></div>
+                          <div className="flex-grow p-3">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                <div>
+                                    <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                    <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 self-start sm:self-center">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">More options</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                            <Check className="mr-2 h-4 w-4" /> Confirm Class
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
+                                            <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
+                                            <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                           </div>
                         </div>
                       </Card>
