@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
 import { BookUser } from 'lucide-react';
+import AdminStats from './admin-stats';
 
 function ScheduleItem({
   title,
@@ -66,12 +67,16 @@ export default function ScheduleSidebar() {
         );
     }
 
-    return []; // No schedule view for admin on this sidebar
+    return []; // No personal schedule for admin
   }, [masterSchedule, user, rejectedEntries]);
 
   const hasSchedule = todaysSchedule.length > 0;
 
-  if (!user || user.role === 'administrator') return null;
+  if (!user) return null;
+
+  if (user.role === 'administrator') {
+    return <AdminStats />;
+  }
 
   return (
     <div className="hidden md:flex flex-col h-full">
