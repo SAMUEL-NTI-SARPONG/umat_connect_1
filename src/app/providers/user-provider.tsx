@@ -158,11 +158,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const newPost: Post = {
       id: Date.now(),
       authorId: user.id,
-      timestamp: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
+      timestamp: new Date().toISOString(),
       content: postData.content,
       attachedFile: postData.attachedFile,
       comments: [],

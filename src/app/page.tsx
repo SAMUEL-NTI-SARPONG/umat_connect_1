@@ -12,11 +12,13 @@ export default function Home() {
     return null; // Or a loading spinner
   }
 
+  const sortedPosts = [...posts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
   return (
     <div className="py-4 md:py-6 max-w-2xl mx-auto">
       <CreatePostCard />
-      {posts.length > 0 ? (
-        posts.map(post => (
+      {sortedPosts.length > 0 ? (
+        sortedPosts.map(post => (
           <PostCard key={post.id} post={post} />
         ))
       ) : (

@@ -47,6 +47,7 @@ export default function PostCard({ post }: { post: Post }) {
   };
   
   const isImage = post.attachedFile?.type.startsWith('image/');
+  const formattedTimestamp = new Date(post.timestamp).toLocaleString();
 
   return (
     <Card className="mb-4 rounded-xl shadow-sm">
@@ -61,7 +62,7 @@ export default function PostCard({ post }: { post: Post }) {
           <div>
             <CardTitle className="text-base font-semibold">{author.name}</CardTitle>
             <CardDescription>
-              {author.department} - {post.timestamp}
+              {author.department} - {formattedTimestamp}
             </CardDescription>
           </div>
         </div>
