@@ -34,7 +34,7 @@ export default function Home() {
       {(user.role === 'lecturer' || user.role === 'administrator') && (
         <CreatePost>
           <Button
-            className="fixed bottom-6 right-6 md:right-[calc(50vw-32rem)] h-16 w-16 rounded-full shadow-lg"
+            className="fixed bottom-6 right-6 md:right-[calc(50vw-21rem-4rem)] h-16 w-16 rounded-full shadow-lg"
             size="icon"
           >
             <Plus className="h-8 w-8" />
