@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
-import { timetable } from '@/lib/data';
+import { useMemo } from 'react';
 
 function ScheduleItem({
   title,
@@ -31,12 +31,35 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { user } = useUser();
+  const { user, masterSchedule } = useUser();
 
-  if (!user) return null;
+  const todaysSchedule = useMemo(() => {
+    if (!masterSchedule || !user) return [];
 
-  const scheduleData = timetable[user.role] || [];
-  const hasSchedule = scheduleData.length > 0;
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+
+    if (user.role === 'student') {
+        return masterSchedule.filter(entry =>
+            entry.day === today &&
+            entry.level === user.level &&
+            entry.departments.includes(user.department)
+        );
+    }
+    
+    if (user.role === 'lecturer') {
+        const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+        return masterSchedule.filter(entry => 
+            entry.day === today &&
+            currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+        );
+    }
+
+    return []; // No schedule view for admin on this sidebar
+  }, [masterSchedule, user]);
+
+  const hasSchedule = todaysSchedule.length > 0;
+
+  if (!user || user.role === 'administrator') return null;
 
   return (
     <div className="hidden md:flex flex-col h-full">
@@ -45,17 +68,17 @@ export default function ScheduleSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-4 space-y-4">
         {hasSchedule ? (
-          scheduleData.map((event, index) => (
+          todaysSchedule.map((event) => (
             <ScheduleItem
-              key={index}
-              title={event.course.split(':')[0]} // Show only course code for brevity
+              key={event.id}
+              title={event.courseCode}
               time={event.time.replace(/ AM| PM/g, '')} // Make time more compact
-              status={event.status as 'confirmed' | 'canceled' | 'undecided'}
+              status={event.status}
             />
           ))
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>No schedule for today.</p>
+          <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+            <p>No classes scheduled for today.</p>
           </div>
         )}
       </SidebarContent>
