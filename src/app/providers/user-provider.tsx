@@ -54,6 +54,9 @@ export type Post = {
   comments: Comment[];
 };
 
+// Maps userId to an array of rejected entry IDs
+export type RejectedEntries = Record<number, number[]>;
+
 interface UserContextType {
   user: User | null;
   allUsers: User[];
@@ -72,7 +75,9 @@ interface UserContextType {
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   reviewedSchedules: number[];
   markScheduleAsReviewed: (userId: number) => void;
-  removeScheduleEntry: (entryId: number) => void;
+  rejectedEntries: RejectedEntries;
+  rejectScheduleEntry: (userId: number, entryId: number) => void;
+  unrejectScheduleEntry: (userId: number, entryId: number) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -115,6 +120,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
+  const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
 
   // Initialize state from localStorage on mount
   useEffect(() => {
@@ -124,6 +130,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setPosts(getFromStorage('posts', []));
     setLecturerSchedules(getFromStorage('lecturerSchedules', []));
     setReviewedSchedules(getFromStorage('reviewedSchedules', []));
+    setRejectedEntries(getFromStorage('rejectedEntries', {}));
 
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -162,9 +169,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
     saveToStorage('masterSchedule', data);
-    // When a new schedule is set, reset the review status for all lecturers.
+    // When a new schedule is set, reset the review status and rejections for all lecturers.
     setReviewedSchedules([]);
     saveToStorage('reviewedSchedules', []);
+    setRejectedEntries({});
+    saveToStorage('rejectedEntries', {});
     toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
   }, [toast]);
   
@@ -254,15 +263,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   }, [user, toast]);
   
-  const removeScheduleEntry = useCallback((entryId: number) => {
-      setMasterScheduleState(prev => {
-        if (!prev) return null;
-        const updatedSchedule = prev.filter(entry => entry.id !== entryId);
-        saveToStorage('masterSchedule', updatedSchedule);
-        return updatedSchedule;
-      });
-  }, []);
-
   const markScheduleAsReviewed = useCallback((userId: number) => {
     setReviewedSchedules(prev => {
         const updated = [...new Set([...prev, userId])];
@@ -271,6 +271,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
     toast({ title: "Schedule Confirmed", description: "Thank you for reviewing your schedule." });
   }, [toast]);
+  
+  const rejectScheduleEntry = useCallback((userId: number, entryId: number) => {
+    setRejectedEntries(prev => {
+      const userRejections = prev[userId] || [];
+      const newRejections = { ...prev, [userId]: [...new Set([...userRejections, entryId])] };
+      saveToStorage('rejectedEntries', newRejections);
+      return newRejections;
+    });
+  }, []);
+  
+  const unrejectScheduleEntry = useCallback((userId: number, entryId: number) => {
+    setRejectedEntries(prev => {
+      const userRejections = prev[userId] || [];
+      const newRejections = { ...prev, [userId]: userRejections.filter(id => id !== entryId) };
+      saveToStorage('rejectedEntries', newRejections);
+      return newRejections;
+    });
+  }, []);
+
 
   const resetState = () => {
     logout(); // Log out current user
@@ -282,6 +301,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem('posts');
     window.localStorage.removeItem('lecturerSchedules');
     window.localStorage.removeItem('reviewedSchedules');
+    window.localStorage.removeItem('rejectedEntries');
+
     
     // Reset state to defaults
     setAllUsers(defaultUsers);
@@ -290,6 +311,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setPosts([]);
     setLecturerSchedules([]);
     setReviewedSchedules([]);
+    setRejectedEntries({});
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     
@@ -315,8 +337,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     addLecturerSchedule,
     reviewedSchedules,
     markScheduleAsReviewed,
-    removeScheduleEntry,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, setMasterSchedule, setEmptySlots, addPost, addComment, addLecturerSchedule, removeScheduleEntry, markScheduleAsReviewed]);
+    rejectedEntries,
+    rejectScheduleEntry,
+    unrejectScheduleEntry,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, addComment, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

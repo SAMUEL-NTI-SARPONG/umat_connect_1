@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
 import { ScrollArea } from '../ui/scroll-area';
-import { Trash2 } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 
 interface LecturerReviewModalProps {
   isOpen: boolean;
@@ -24,14 +24,15 @@ interface LecturerReviewModalProps {
 export default function LecturerReviewModal({
   isOpen,
   onClose,
-  courses: initialCourses,
+  courses,
 }: LecturerReviewModalProps) {
-  const { user, removeScheduleEntry, markScheduleAsReviewed } = useUser();
-  const [courses, setCourses] = useState(initialCourses);
+  const { user, rejectScheduleEntry, markScheduleAsReviewed } = useUser();
+  const [hiddenCourses, setHiddenCourses] = React.useState<number[]>([]);
 
-  const handleRemoveCourse = (courseId: number) => {
-    removeScheduleEntry(courseId);
-    setCourses(courses.filter(c => c.id !== courseId));
+  const handleHideCourse = (courseId: number) => {
+    if (!user) return;
+    rejectScheduleEntry(user.id, courseId);
+    setHiddenCourses(prev => [...prev, courseId]);
   };
 
   const handleConfirm = () => {
@@ -43,33 +44,44 @@ export default function LecturerReviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Confirm Your Semester Courses</DialogTitle>
           <DialogDescription>
-            A new timetable has been uploaded. Please review the courses assigned to you below.
-            Remove any that are incorrect. This action cannot be undone for this timetable version.
+            A new timetable has been uploaded. Please review the courses assigned to you.
+            You can hide any that are incorrect. This can be changed later.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] my-4 pr-6 border-b border-t">
+        <ScrollArea className="max-h-[60vh] my-4 pr-6">
           <div className="space-y-3 py-4">
-            {courses.map(course => (
-              <div key={course.id} className="flex items-center justify-between p-3 rounded-md border bg-muted/50">
-                <div>
-                  <p className="font-semibold">{course.courseCode}</p>
-                  <p className="text-sm text-muted-foreground">{course.departments.join(', ')} - Level {course.level}</p>
-                </div>
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleRemoveCourse(course.id)}
+            {courses.map(course => {
+              const isHidden = hiddenCourses.includes(course.id);
+              return (
+                <div 
+                  key={course.id} 
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border bg-card transition-opacity",
+                    isHidden && "opacity-50"
+                  )}
                 >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="sr-only">Remove course</span>
-                </Button>
-              </div>
-            ))}
+                  <div>
+                    <p className="font-semibold">{course.courseCode}</p>
+                    <p className="text-sm text-muted-foreground">{course.departments.join(', ')} - Level {course.level}</p>
+                  </div>
+                  {!isHidden && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleHideCourse(course.id)}
+                    >
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      Hide
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </ScrollArea>
         <DialogFooter>

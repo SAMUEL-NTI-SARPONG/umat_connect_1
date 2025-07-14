@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -157,12 +159,13 @@ function LecturerTimetableView({
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
-  const { user, reviewedSchedules } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, unrejectScheduleEntry } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
   const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
@@ -182,16 +185,17 @@ function LecturerTimetableView({
     // Return unique courses
     return Array.from(new Map(courses.map(c => [c.courseCode, c])).values());
   }, [masterSchedule, user]);
+
+  const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
   // Logic to show the review modal
   useEffect(() => {
     if (user && masterSchedule && masterSchedule.length > 0 && lecturerCourses.length > 0) {
-      const hasReviewed = reviewedSchedules.includes(user.id);
       if (!hasReviewed) {
         setIsReviewModalOpen(true);
       }
     }
-  }, [user, masterSchedule, lecturerCourses, reviewedSchedules]);
+  }, [user, masterSchedule, lecturerCourses, reviewedSchedules, hasReviewed]);
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
     setSchedule(
@@ -277,6 +281,7 @@ function LecturerTimetableView({
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
     setIsCreateModalOpen(false);
+    setIsManageModalOpen(false);
     setSelectedEntry(null);
     setEditedFormData(null);
     setCreateFormData(initialCreateFormState);
@@ -333,7 +338,8 @@ function LecturerTimetableView({
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
   }, [emptySlots, createFormData, createStartTime]);
-
+  
+  const userRejectedEntryIds = (user && rejectedEntries[user.id]) || [];
 
   return (
     <>
@@ -343,7 +349,13 @@ function LecturerTimetableView({
         courses={lecturerCourses}
       />
 
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end gap-2 mb-4">
+        {hasReviewed && (
+             <Button variant="outline" onClick={() => setIsManageModalOpen(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Manage My Courses
+            </Button>
+        )}
         <Button onClick={() => setIsCreateModalOpen(true)}>
             <PlusCircle className="w-4 h-4 mr-2" />
             Create Schedule
@@ -552,6 +564,52 @@ function LecturerTimetableView({
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
             <Button type="submit" onClick={handleSaveCreate}>Add Class</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Courses Modal */}
+      <Dialog open={isManageModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manage My Assigned Courses</DialogTitle>
+            <DialogDescription>
+              Here are all courses officially assigned to you. You can hide or show them in your personal timetable.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] my-4 pr-6">
+            <div className="space-y-2 py-4">
+              {lecturerCourses.map((course) => {
+                const isRejected = userRejectedEntryIds.includes(course.id);
+                return (
+                  <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
+                    <div>
+                      <p className="font-semibold">{course.courseCode}</p>
+                      <p className="text-sm text-muted-foreground">{course.departments.join(', ')} - Level {course.level}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`switch-${course.id}`} className="text-sm">
+                        {isRejected ? 'Hidden' : 'Visible'}
+                      </Label>
+                      <Switch
+                        id={`switch-${course.id}`}
+                        checked={!isRejected}
+                        onCheckedChange={(checked) => {
+                          if (user) {
+                            checked ? unrejectScheduleEntry(user.id, course.id) : unrejectScheduleEntry(user.id, course.id);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Close</Button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1070,7 +1128,8 @@ export default function TimetablePage() {
     emptySlots, 
     setEmptySlots,
     lecturerSchedules,
-    addLecturerSchedule
+    addLecturerSchedule,
+    rejectedEntries
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
@@ -1082,10 +1141,13 @@ export default function TimetablePage() {
     if (!combinedSchedule || !user || user.role !== 'lecturer') return [];
     
     const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+    const userRejectedIds = rejectedEntries[user.id] || [];
+
     return combinedSchedule.filter(entry => 
+      !userRejectedIds.includes(entry.id) &&
       currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
-  }, [combinedSchedule, user]);
+  }, [combinedSchedule, user, rejectedEntries]);
 
   const studentSchedule = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
