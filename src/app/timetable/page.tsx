@@ -102,15 +102,15 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                       <div className="flex">
                         <div className={cn("w-2 flex-shrink-0", status.color)}></div>
                         <div className="flex-grow p-3">
-                           <div className="flex justify-between items-start">
+                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                 <div>
-                                    <p className="font-semibold text-sm">{event.courseCode}</p>
-                                    <p className="text-xs text-muted-foreground">{event.room} &bull; {event.time}</p>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                    <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                       <BookUser className="w-3 h-3"/> {event.lecturer}
                                     </p>
                                 </div>
-                                <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0">{status.text}</Badge>
+                                <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0 self-start">{status.text}</Badge>
                            </div>
                         </div>
                       </div>
@@ -368,15 +368,15 @@ function LecturerTimetableView({
                         <div className="flex">
                           <div className={cn("w-2", status.color)}></div>
                            <div className="flex-grow p-3">
-                              <div className="flex justify-between items-start">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                   <div>
-                                      <p className="font-semibold text-sm">{event.courseCode}</p>
-                                      <p className="text-xs text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                      <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
+                                      <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
                                       <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
                                   </div>
                                   <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
-                                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 self-start sm:self-center">
                                               <MoreHorizontal className="h-4 w-4" />
                                               <span className="sr-only">More options</span>
                                           </Button>
