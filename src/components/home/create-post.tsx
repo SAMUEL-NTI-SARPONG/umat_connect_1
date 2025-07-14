@@ -75,8 +75,15 @@ export default function CreatePost({ children }: { children: ReactNode }) {
           <DialogTitle>Create a new post</DialogTitle>
         </DialogHeader>
         <div className="flex-grow grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <Textarea
+            placeholder="What's on your mind?"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base"
+            rows={1}
+          />
           {attachedFile && (
-            <div className="relative mb-4">
+            <div className="relative mt-2">
               <Button
                 variant="destructive"
                 size="icon"
@@ -102,13 +109,6 @@ export default function CreatePost({ children }: { children: ReactNode }) {
               )}
             </div>
           )}
-           <Textarea
-            placeholder="What's on your mind?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base"
-            rows={1}
-          />
         </div>
          <DialogFooter className="mt-auto flex-row items-center border-t pt-4">
           <input

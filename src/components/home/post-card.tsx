@@ -84,23 +84,24 @@ export default function PostCard({ post }: { post: Post }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-2">
-        {post.content && <p className="text-sm whitespace-pre-line mb-4">{post.content}</p>}
+      <CardContent className="px-4 pb-2 space-y-4">
+        {post.content && <p className="text-sm whitespace-pre-line">{post.content}</p>}
+        
         {post.attachedFile && (
-          <div className="mt-2 -mx-4">
+          <div className="rounded-lg overflow-hidden border">
             {isImage ? (
                 <Image
                   src={post.attachedFile.url}
                   alt="Post attachment"
                   width={600}
                   height={400}
-                  className="object-cover w-full"
+                  className="object-cover w-full aspect-video"
                   data-ai-hint="university campus"
                 />
             ) : (
-               <a href={post.attachedFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 mx-4 rounded-lg border bg-muted hover:bg-muted/80 transition-colors">
-                  <FileText className="w-8 h-8 text-muted-foreground" />
-                  <div className="flex flex-col">
+               <a href={post.attachedFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-muted hover:bg-muted/80 transition-colors">
+                  <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />
+                  <div className="flex flex-col overflow-hidden">
                     <span className="text-sm font-medium text-foreground truncate">{post.attachedFile.name}</span>
                     <span className="text-xs text-muted-foreground">Click to view file</span>
                   </div>
@@ -121,7 +122,7 @@ export default function PostCard({ post }: { post: Post }) {
             variant="ghost"
             onClick={() => setIsCommentSectionOpen(!isCommentSectionOpen)}
             aria-expanded={isCommentSectionOpen}
-            className="text-muted-foreground font-medium"
+            className="text-muted-foreground font-medium justify-start"
           >
             <MessageSquare className="mr-2 h-5 w-5" />
             <span>Comment</span>
