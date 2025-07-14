@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { handleFileUpload, findEmptyClassrooms } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -161,7 +167,6 @@ function LecturerTimetableView({
 }) {
   const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
-  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -203,19 +208,12 @@ function LecturerTimetableView({
     );
   };
 
-  const handleCancelClick = (entry: TimetableEntry) => {
+  const handleRescheduleClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
-    setIsActionModalOpen(true);
-  };
-
-  const handleRescheduleClick = () => {
-    setEditedFormData(selectedEntry);
-    if (selectedEntry) {
-      const [start, end] = selectedEntry.time.split('-');
-      setStartTime(start?.trim() || '');
-      setEndTime(end?.trim() || '');
-    }
-    setIsActionModalOpen(false);
+    setEditedFormData(entry);
+    const [start, end] = entry.time.split('-');
+    setStartTime(start?.trim() || '');
+    setEndTime(end?.trim() || '');
     setIsEditModalOpen(true);
   };
 
@@ -278,7 +276,6 @@ function LecturerTimetableView({
   };
 
   const closeAllModals = () => {
-    setIsActionModalOpen(false);
     setIsEditModalOpen(false);
     setIsCreateModalOpen(false);
     setIsManageModalOpen(false);
@@ -380,31 +377,33 @@ function LecturerTimetableView({
                       <Card key={event.id} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
                         <div className="flex">
                           <div className={cn("w-2", status.color)}></div>
-                          <div className="flex-grow p-3 md:p-4">
-                            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
-                              <div>
-                                <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.courseCode}</CardTitle>
-                                <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
+                           <div className="flex-grow p-3">
+                              <div className="flex justify-between items-start">
+                                  <div>
+                                      <p className="font-semibold text-sm">{event.courseCode}</p>
+                                      <p className="text-xs text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                      <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
+                                  </div>
+                                  <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                              <MoreHorizontal className="h-4 w-4" />
+                                              <span className="sr-only">More options</span>
+                                          </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                              <Check className="mr-2 h-4 w-4" /> Confirm Class
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
+                                              <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
+                                              <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                                          </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                  </DropdownMenu>
                               </div>
-                              <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
-                                <Clock className="w-3 h-3" />
-                                <span>{event.time}</span>
-                              </div>
-                            </div>
-                            <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-3.5 h-3.5 text-primary/70" />
-                                <span>{event.room}</span>
-                              </div>
-                            </div>
-                            <div className="mt-4 flex gap-2">
-                              <Button size="sm" variant="outline" onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                <Check className="h-4 w-4 mr-1" /> Confirm
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleCancelClick(event)}>
-                                <Ban className="h-4 w-4 mr-1" /> Cancel / Reschedule
-                              </Button>
-                            </div>
                           </div>
                         </div>
                       </Card>
@@ -423,29 +422,6 @@ function LecturerTimetableView({
           ))}
         </div>
       </Tabs>
-
-      {/* Action Modal */}
-      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel or Reschedule Class</DialogTitle>
-            <DialogDescription>
-              Would you like to cancel this class or reschedule it for another time/location?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-around py-4">
-            <Button variant="destructive" onClick={() => {
-              if(selectedEntry) handleStatusChange(selectedEntry.id, 'canceled');
-              closeAllModals();
-            }}>
-              <XCircle className="mr-2 h-4 w-4" /> Just Cancel
-            </Button>
-            <Button variant="outline" onClick={handleRescheduleClick}>
-              <CalendarClock className="mr-2 h-4 w-4" /> Reschedule
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
