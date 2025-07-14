@@ -106,7 +106,8 @@ export default function CreatePost({ children }: { children: ReactNode }) {
             placeholder="What's on your mind?"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base min-h-[100px]"
+            className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base"
+            rows={1}
           />
         </div>
          <DialogFooter className="mt-auto flex-row items-center border-t pt-4">
