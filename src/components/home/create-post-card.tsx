@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Image as ImageIcon, X, Paperclip, FileText, Send } from 'lucide-react';
+import { Image as ImageIcon, FileText, Send, Paperclip } from 'lucide-react';
 import { useUser } from '@/app/providers/user-provider';
 import Image from 'next/image';
 import { Card } from '../ui/card';
@@ -26,15 +26,14 @@ interface AttachedFile {
 }
 
 export default function CreatePostCard() {
-  const { user } = useUser();
+  const { user, addPost } = useUser();
   const [content, setContent] = useState('');
   const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePost = () => {
-    // Logic to create a new post with content and file would go here
-    console.log('New post created:', { content, file: attachedFile });
+    addPost({ content, attachedFile });
     handleDialogClose();
   };
 
@@ -99,78 +98,72 @@ export default function CreatePostCard() {
         </DialogTrigger>
       </Card>
 
-      <DialogContent className="sm:max-w-[525px]" onInteractOutside={handleDialogClose}>
+      <DialogContent className="sm:max-w-[525px] flex flex-col" onInteractOutside={handleDialogClose}>
         <DialogHeader>
           <DialogTitle>Create a new post</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="max-h-96 overflow-y-auto pr-2">
-            {attachedFile && (
-              <div className="relative mb-4">
-                {isImage ? (
-                  <Image
-                    src={attachedFile.url}
-                    alt="Image preview"
-                    width={525}
-                    height={300}
-                    className="rounded-lg object-cover w-full aspect-video"
-                    data-ai-hint="post preview"
-                  />
-                ) : (
-                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted">
-                    <FileText className="w-8 h-8 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground truncate">{attachedFile.name}</span>
-                  </div>
-                )}
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 rounded-full h-8 w-8"
-                  onClick={removeFile}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-             <Textarea
-              placeholder="What's on your mind?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base"
-              rows={1}
-            />
-          </div>
+        <div className="flex-grow grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          {attachedFile && (
+            <div className="relative mb-4">
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 rounded-full h-8 w-8 z-10"
+                onClick={removeFile}
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              {isImage ? (
+                <Image
+                  src={attachedFile.url}
+                  alt="Image preview"
+                  width={525}
+                  height={300}
+                  className="rounded-lg object-cover w-full aspect-video"
+                  data-ai-hint="post preview"
+                />
+              ) : (
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground truncate">{attachedFile.name}</span>
+                </div>
+              )}
+            </div>
+          )}
+           <Textarea
+            placeholder="What's on your mind?"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 resize-none shadow-none text-base min-h-[100px]"
+          />
         </div>
-        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center border-t pt-4">
-          <div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Paperclip className="h-5 w-5" />
-               <span className="sr-only">Attach file</span>
-            </Button>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <DialogClose asChild>
-                <Button variant="ghost" onClick={handleDialogClose}>Cancel</Button>
-            </DialogClose>
-            <Button
-              onClick={handlePost}
-              disabled={!content.trim() && !attachedFile}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Post
-            </Button>
-          </div>
+         <DialogFooter className="mt-auto flex-row items-center border-t pt-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => fileInput.current?.click()}
+          >
+            <Paperclip className="h-5 w-5 text-muted-foreground" />
+             <span className="sr-only">Attach file</span>
+          </Button>
+
+          <div className="flex-grow" />
+
+          <Button
+            onClick={handlePost}
+            disabled={!content.trim() && !attachedFile}
+            className="rounded-full"
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Post
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -12,25 +12,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { MessageCircle, Send } from 'lucide-react';
+import { MessageCircle, Send, FileText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useState } from 'react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
-import { useUser } from '@/app/providers/user-provider';
+import { useUser, type Post } from '@/app/providers/user-provider';
 import { users } from '@/lib/data';
 
 type Comment = {
   author: string;
   text: string;
-};
-
-type Post = {
-  id: number;
-  authorId: number;
-  timestamp: string;
-  content: string;
-  imageUrl?: string;
-  comments: Comment[];
 };
 
 export default function PostCard({ post }: { post: Post }) {
@@ -54,6 +45,8 @@ export default function PostCard({ post }: { post: Post }) {
       setNewComment('');
     }
   };
+  
+  const isImage = post.attachedFile?.type.startsWith('image/');
 
   return (
     <Card className="mb-4 rounded-xl shadow-sm">
@@ -74,17 +67,27 @@ export default function PostCard({ post }: { post: Post }) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm">{post.content}</p>
-        {post.imageUrl && (
+        {post.content && <p className="text-sm mb-4">{post.content}</p>}
+        {post.attachedFile && (
           <div className="mt-4">
-            <Image
-              src={post.imageUrl}
-              alt="Post image"
-              width={600}
-              height={400}
-              className="rounded-lg object-cover w-full"
-              data-ai-hint="university campus"
-            />
+            {isImage ? (
+                <Image
+                  src={post.attachedFile.url}
+                  alt="Post image"
+                  width={600}
+                  height={400}
+                  className="rounded-lg object-cover w-full"
+                  data-ai-hint="university campus"
+                />
+            ) : (
+               <a href={post.attachedFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-lg border bg-muted hover:bg-muted/80 transition-colors">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground truncate">{post.attachedFile.name}</span>
+                    <span className="text-xs text-muted-foreground">Click to view file</span>
+                  </div>
+              </a>
+            )}
           </div>
         )}
       </CardContent>

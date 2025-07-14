@@ -33,6 +33,26 @@ export interface EmptySlot {
   time: string;
 }
 
+export interface AttachedFile {
+  name: string;
+  type: string;
+  url: string;
+}
+
+export type Comment = {
+  author: string;
+  text: string;
+};
+
+export type Post = {
+  id: number;
+  authorId: number;
+  timestamp: string;
+  content: string;
+  attachedFile?: AttachedFile | null;
+  comments: Comment[];
+};
+
 interface UserContextType {
   user: User | null;
   allUsers: User[];
@@ -44,6 +64,8 @@ interface UserContextType {
   setMasterSchedule: (data: TimetableEntry[] | null) => void;
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
+  posts: Post[];
+  addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -78,12 +100,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
 
   // Initialize state from localStorage on mount
   useEffect(() => {
     setAllUsers(getFromStorage('allUsers', defaultUsers));
     setMasterScheduleState(getFromStorage('masterSchedule', null));
     setEmptySlotsState(getFromStorage('emptySlots', []));
+    setPosts(getFromStorage('posts', []));
 
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -129,6 +153,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
     saveToStorage('emptySlots', slots);
   }, []);
 
+  const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null }) => {
+    if (!user) return;
+    const newPost: Post = {
+      id: Date.now(),
+      authorId: user.id,
+      timestamp: new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+      content: postData.content,
+      attachedFile: postData.attachedFile,
+      comments: [],
+    };
+    
+    setPosts(prevPosts => {
+        const updatedPosts = [newPost, ...prevPosts];
+        saveToStorage('posts', updatedPosts);
+        return updatedPosts;
+    });
+
+    toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
+
+  }, [user, toast]);
+
   const resetState = () => {
     logout(); // Log out current user
     
@@ -136,11 +185,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem('allUsers');
     window.localStorage.removeItem('masterSchedule');
     window.localStorage.removeItem('emptySlots');
+    window.localStorage.removeItem('posts');
     
     // Reset state to defaults
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
     setEmptySlotsState([]);
+    setPosts([]);
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     
@@ -159,7 +210,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setMasterSchedule,
     emptySlots,
     setEmptySlots,
-  }), [user, allUsers, masterSchedule, emptySlots, setMasterSchedule, setEmptySlots]);
+    posts,
+    addPost,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
