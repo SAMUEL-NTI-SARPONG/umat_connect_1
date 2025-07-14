@@ -104,13 +104,13 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         <div className="flex-grow p-3">
                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                 <div>
-                                    <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
+                                    <p className="font-semibold text-sm sm:text-base break-words">{event.courseCode}</p>
                                     <div className="text-xs sm:text-sm text-muted-foreground mt-1 space-y-0.5">
                                       <p>{event.room}</p>
                                       <p>{event.time}</p>
                                     </div>
-                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-1.5">
-                                      <BookUser className="w-3 h-3"/> {event.lecturer}
+                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-1.5 break-words">
+                                      <BookUser className="w-3 h-3 flex-shrink-0"/> <span>{event.lecturer}</span>
                                     </p>
                                 </div>
                                 <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0 self-start">{status.text}</Badge>
@@ -173,17 +173,70 @@ function LecturerTimetableView({
   const [createStartTime, setCreateStartTime] = useState('');
   const [createEndTime, setCreateEndTime] = useState('');
 
+  const normalizeCourse = (entry: TimetableEntry): { normalizedId: string; displayCode: string, originalId: number } => {
+    const courseCode = entry.courseCode || '';
+    const deptParts = courseCode.match(/[A-Za-z]+/g) || [];
+    const numPart = courseCode.match(/\d+(?=\s*$)/)?.[0] || courseCode.match(/\d+/g)?.pop();
+
+    if (deptParts.length > 0 && numPart) {
+      const displayCode = `${deptParts.join(' ')} ${numPart}`;
+      const normalizedId = `${deptParts.join('')}-${numPart}`;
+      return { normalizedId, displayCode, originalId: entry.id };
+    }
+
+    const fallbackId = courseCode.replace(/\s+/g, '-');
+    return { normalizedId: fallbackId, displayCode: courseCode, originalId: entry.id };
+  };
+
   const lecturerCourses = useMemo(() => {
-    if (!masterSchedule || !user) return [];
-    
-    const lecturerNameParts = user.name.toLowerCase().split(' ');
-    const courses = masterSchedule.filter(entry => 
-      lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
-    );
-    // Return unique courses
-    return Array.from(new Map(courses.map(c => [c.id, c])).values());
+      if (!masterSchedule || !user) return [];
+      
+      const lecturerNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
+      const allEntriesForLecturer = masterSchedule.filter(entry =>
+          lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+      );
+      
+      const groupedByNormalizedId = allEntriesForLecturer.reduce((acc, entry) => {
+          const { normalizedId, displayCode } = normalizeCourse(entry);
+          if (!acc[normalizedId]) {
+              acc[normalizedId] = {
+                  ...entry,
+                  courseCode: displayCode, 
+                  originalIds: new Set([entry.id]),
+              };
+          } else {
+              acc[normalizedId].originalIds.add(entry.id);
+          }
+          return acc;
+      }, {} as Record<string, TimetableEntry & { originalIds: Set<number> }>);
+
+      return Object.values(groupedByNormalizedId);
   }, [masterSchedule, user]);
 
+  const allRejectedIds = useMemo(() => {
+    if (!user || !rejectedEntries[user.id]) return new Set<number>();
+    const rejectedCourseGroups = lecturerCourses.filter(course =>
+        rejectedEntries[user.id]?.includes(course.id)
+    );
+    const rejectedIds = new Set<number>();
+    rejectedCourseGroups.forEach(group => {
+        group.originalIds.forEach(id => rejectedIds.add(id));
+    });
+    return rejectedIds;
+  }, [user, rejectedEntries, lecturerCourses]);
+
+  const handleReviewToggle = (courseGroupId: number, shouldReject: boolean) => {
+      if (!user) return;
+      const courseGroup = lecturerCourses.find(c => c.id === courseGroupId);
+      if (!courseGroup) return;
+
+      if (shouldReject) {
+          rejectScheduleEntry(user.id, courseGroupId);
+      } else {
+          unrejectScheduleEntry(user.id, courseGroupId);
+      }
+  };
+  
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
   // Logic to show the review modal
@@ -364,7 +417,7 @@ function LecturerTimetableView({
             <TabsContent key={day} value={day}>
               <div className="space-y-4">
                 {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                  dailySchedule[day].map((event) => {
+                  dailySchedule[day].filter(event => !allRejectedIds.has(event.id)).map((event) => {
                     const status = statusConfig[event.status as EventStatus];
                     return (
                       <Card key={event.id} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
@@ -373,7 +426,7 @@ function LecturerTimetableView({
                           <div className="flex-grow p-3">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                 <div>
-                                    <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
+                                    <p className="font-semibold text-sm sm:text-base break-words">{event.courseCode}</p>
                                     <div className="text-xs sm:text-sm text-muted-foreground mt-1 space-y-0.5">
                                       <p>{event.room}</p>
                                       <p>{event.time}</p>
@@ -566,11 +619,7 @@ function LecturerTimetableView({
                       <Switch
                         id={`switch-${course.id}`}
                         checked={!isRejected}
-                        onCheckedChange={(checked) => {
-                          if (user) {
-                            checked ? unrejectScheduleEntry(user.id, course.id) : rejectScheduleEntry(user.id, course.id);
-                          }
-                        }}
+                        onCheckedChange={(checked) => handleReviewToggle(course.id, !checked)}
                       />
                     </div>
                   </div>
@@ -1113,13 +1162,11 @@ export default function TimetablePage() {
     if (!combinedSchedule || !user || user.role !== 'lecturer') return [];
     
     const currentLecturerNameParts = user.name.toLowerCase().split(' ');
-    const userRejectedIds = rejectedEntries[user.id] || [];
 
     return combinedSchedule.filter(entry => 
-      !userRejectedIds.includes(entry.id) &&
       currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
-  }, [combinedSchedule, user, rejectedEntries]);
+  }, [combinedSchedule, user]);
 
   const studentSchedule = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
@@ -1163,3 +1210,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
