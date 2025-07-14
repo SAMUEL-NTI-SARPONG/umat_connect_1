@@ -146,14 +146,17 @@ const initialCreateFormState = {
 function LecturerTimetableView({
   schedule,
   setSchedule,
+  masterSchedule,
   emptySlots,
   addLecturerSchedule,
 }: {
   schedule: TimetableEntry[];
   setSchedule: (schedule: TimetableEntry[]) => void;
+  masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
+  const { user } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -166,6 +169,17 @@ function LecturerTimetableView({
   const [endTime, setEndTime] = useState('');
   const [createStartTime, setCreateStartTime] = useState('');
   const [createEndTime, setCreateEndTime] = useState('');
+
+  const lecturerCourses = useMemo(() => {
+    if (!masterSchedule || !user) return [];
+    
+    const lecturerNameParts = user.name.toLowerCase().split(' ');
+    const courses = masterSchedule.filter(entry => 
+      lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+    );
+    // Return unique courses
+    return Array.from(new Map(courses.map(c => [c.courseCode, c])).values());
+  }, [masterSchedule, user]);
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
     setSchedule(
@@ -233,6 +247,18 @@ function LecturerTimetableView({
         }
         return newState;
     });
+  };
+
+  const handleCourseSelection = (courseCode: string) => {
+    const selectedCourse = lecturerCourses.find(c => c.courseCode === courseCode);
+    if (selectedCourse) {
+      setCreateFormData((prev: any) => ({
+        ...prev,
+        courseCode: selectedCourse.courseCode,
+        level: selectedCourse.level,
+        departments: selectedCourse.departments,
+      }));
+    }
   };
 
   const closeAllModals = () => {
@@ -449,29 +475,25 @@ function LecturerTimetableView({
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="courseCode-create" className="text-right">Course Code</Label>
-              <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
+              <Label htmlFor="courseCode-create" className="text-right">Course</Label>
+              <Select onValueChange={handleCourseSelection}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lecturerCourses.map(course => (
+                    <SelectItem key={course.id} value={course.courseCode}>{course.courseCode}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="level-create" className="text-right">Level</Label>
-              <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', Number(value))}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="100">100</SelectItem>
-                  <SelectItem value="200">200</SelectItem>
-                  <SelectItem value="300">300</SelectItem>
-                  <SelectItem value="400">400</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input id="level-create" value={createFormData.level || ''} className="col-span-3" readOnly disabled />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="departments-create" className="text-right">Department</Label>
-              <Select value={createFormData.departments[0] || ''} onValueChange={(value) => handleCreateInputChange('departments', [value])}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a department" /></SelectTrigger>
-                <SelectContent>
-                  {allDepartments.map(dept => <SelectItem key={dept} value={dept}>{dept}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Input id="departments-create" value={createFormData.departments.join(', ') || ''} className="col-span-3" readOnly disabled />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="day-create" className="text-right">Day</Label>
@@ -1067,6 +1089,7 @@ export default function TimetablePage() {
         return <LecturerTimetableView 
                   schedule={lecturerSchedule} 
                   setSchedule={setMasterSchedule as any} 
+                  masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
                   addLecturerSchedule={addLecturerSchedule}
                />;
