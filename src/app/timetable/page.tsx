@@ -432,14 +432,14 @@ function LecturerTimetableView({
                         <div className="flex">
                           <div className={cn("w-2 flex-shrink-0", status.color)}></div>
                           <div className="flex-grow p-2">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
                                 <div>
                                     <p className="font-semibold text-sm break-words">{event.courseCode}</p>
                                     <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                                       <p>{event.room}</p>
                                       <p>{event.time}</p>
                                     </div>
-                                    <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
+                                    <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
                                 </div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
