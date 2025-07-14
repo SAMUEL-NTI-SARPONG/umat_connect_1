@@ -159,7 +159,7 @@ function LecturerTimetableView({
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
-  const { user, reviewedSchedules, rejectedEntries, unrejectScheduleEntry } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -596,7 +596,7 @@ function LecturerTimetableView({
                         checked={!isRejected}
                         onCheckedChange={(checked) => {
                           if (user) {
-                            checked ? unrejectScheduleEntry(user.id, course.id) : unrejectScheduleEntry(user.id, course.id);
+                            checked ? unrejectScheduleEntry(user.id, course.id) : rejectScheduleEntry(user.id, course.id);
                           }
                         }}
                       />
