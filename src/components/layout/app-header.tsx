@@ -3,9 +3,11 @@
 
 import { usePathname } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@/app/providers/user-provider';
+import CreatePost from '../home/create-post';
+import { Button } from '../ui/button';
 
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
@@ -36,8 +38,16 @@ export default function AppHeader() {
         </Link>
       </div>
 
-      <div className="flex-1 text-center">
+      <div className="flex-1 text-center flex items-center justify-center gap-2">
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
+        {pathname === '/' && user && (user.role === 'lecturer' || user.role === 'administrator') && (
+            <CreatePost>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                    <PlusCircle className="w-6 h-6" />
+                    <span className="sr-only">Create Post</span>
+                </Button>
+            </CreatePost>
+        )}
       </div>
 
       <div className="flex-1 flex justify-end">

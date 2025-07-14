@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, type ReactNode } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,14 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Image as ImageIcon, FileText, Send, Paperclip } from 'lucide-react';
+import { Image as ImageIcon, FileText, Send, Paperclip, X } from 'lucide-react';
 import { useUser, type AttachedFile } from '@/app/providers/user-provider';
 import Image from 'next/image';
-import { Card } from '../ui/card';
-import { ProfileAvatar } from '../ui/profile-avatar';
 
-export default function CreatePostCard() {
-  const { user, addPost } = useUser();
+export default function CreatePost({ children }: { children: ReactNode }) {
+  const { addPost } = useUser();
   const [content, setContent] = useState('');
   const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -61,10 +59,6 @@ export default function CreatePostCard() {
     setIsDialogOpen(false);
   };
 
-  if (!user || user.role === 'student') {
-    return null;
-  }
-
   const isImage = attachedFile?.type.startsWith('image/');
 
   return (
@@ -72,24 +66,9 @@ export default function CreatePostCard() {
       if (!isOpen) handleDialogClose();
       else setIsDialogOpen(true);
     }}>
-      <Card className="mb-4 p-3 rounded-xl shadow-sm cursor-pointer hover:bg-muted transition-colors">
-        <DialogTrigger asChild>
-            <div className="flex items-center gap-4">
-                <ProfileAvatar
-                    src={user.profileImage}
-                    fallback={user.name.charAt(0)}
-                    alt={`${user.name}'s profile picture`}
-                    imageHint="profile picture"
-                    className="w-10 h-10"
-                />
-                <div className="flex-grow text-left">
-                    <div className="w-full text-muted-foreground p-2 rounded-lg">
-                        What's on your mind?
-                    </div>
-                </div>
-            </div>
-        </DialogTrigger>
-      </Card>
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
 
       <DialogContent className="sm:max-w-[525px] flex flex-col" onInteractOutside={handleDialogClose}>
         <DialogHeader>
@@ -104,7 +83,7 @@ export default function CreatePostCard() {
                 className="absolute top-2 right-2 rounded-full h-8 w-8 z-10"
                 onClick={removeFile}
               >
-                <ImageIcon className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </Button>
               {isImage ? (
                 <Image

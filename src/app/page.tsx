@@ -1,7 +1,6 @@
 
 'use client';
 
-import CreatePostCard from '@/components/home/create-post-card';
 import PostCard from '@/components/home/post-card';
 import { useUser } from './providers/user-provider';
 
@@ -16,7 +15,6 @@ export default function Home() {
 
   return (
     <div className="py-4 md:py-6 max-w-2xl mx-auto">
-      <CreatePostCard />
       {sortedPosts.length > 0 ? (
         sortedPosts.map(post => (
           <PostCard key={post.id} post={post} />
