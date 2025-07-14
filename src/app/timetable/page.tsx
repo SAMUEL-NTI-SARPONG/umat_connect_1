@@ -105,8 +105,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                 <div>
                                     <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
-                                    <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
-                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                                    <div className="text-xs sm:text-sm text-muted-foreground mt-1 space-y-0.5">
+                                      <p>{event.room}</p>
+                                      <p>{event.time}</p>
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-1.5">
                                       <BookUser className="w-3 h-3"/> {event.lecturer}
                                     </p>
                                 </div>
@@ -371,7 +374,10 @@ function LecturerTimetableView({
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                                 <div>
                                     <p className="font-semibold text-sm sm:text-base">{event.courseCode}</p>
-                                    <p className="text-xs sm:text-sm text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                    <div className="text-xs sm:text-sm text-muted-foreground mt-1 space-y-0.5">
+                                      <p>{event.room}</p>
+                                      <p>{event.time}</p>
+                                    </div>
                                     <Badge variant="outline" className="mt-2 capitalize font-normal text-xs">{status.text}</Badge>
                                 </div>
                                 <DropdownMenu>
