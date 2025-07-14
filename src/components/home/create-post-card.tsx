@@ -12,11 +12,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Image as ImageIcon, X, PenSquare } from 'lucide-react';
+import { PlusCircle, Image as ImageIcon, X } from 'lucide-react';
 import { useUser } from '@/app/providers/user-provider';
-import { ProfileAvatar } from '../ui/profile-avatar';
 import Image from 'next/image';
 
 export default function CreatePostCard() {
@@ -59,47 +57,18 @@ export default function CreatePostCard() {
     setIsDialogOpen(false);
   };
 
-  const openDialogAndTriggerFileInput = () => {
-    setIsDialogOpen(true);
-    // We need to wait for the dialog to be mounted before we can click the input
-    setTimeout(() => {
-        fileInputRef.current?.click();
-    }, 100);
-  }
-
   if (!user || user.role === 'student') {
     return null;
   }
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <Card className="p-4 mb-4 rounded-xl shadow-sm">
-            <div className="flex items-center gap-4">
-                <ProfileAvatar
-                    src={user.profileImage}
-                    fallback={user.name.charAt(0)}
-                    alt={`${user.name}'s profile picture`}
-                    imageHint="profile picture"
-                />
-                <DialogTrigger asChild>
-                    <div className="flex-grow text-left text-muted-foreground cursor-pointer hover:text-foreground">
-                        What's on your mind?
-                    </div>
-                </DialogTrigger>
-            </div>
-            <div className="mt-4 flex justify-around">
-                <DialogTrigger asChild>
-                    <Button variant="ghost" className="flex-1">
-                        <PenSquare className="mr-2 h-5 w-5 text-primary" />
-                        Text
-                    </Button>
-                </DialogTrigger>
-                <Button variant="ghost" className="flex-1" onClick={openDialogAndTriggerFileInput}>
-                    <ImageIcon className="mr-2 h-5 w-5 text-primary" />
-                    Image
-                </Button>
-            </div>
-        </Card>
+        <DialogTrigger asChild>
+            <Button className="w-full mb-4">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Post
+            </Button>
+        </DialogTrigger>
 
       <DialogContent className="sm:max-w-[525px]" onInteractOutside={handleDialogClose}>
         <DialogHeader>
