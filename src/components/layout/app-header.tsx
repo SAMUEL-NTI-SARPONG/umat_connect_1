@@ -43,7 +43,7 @@ export default function AppHeader() {
         {pathname === '/' && user && (user.role === 'lecturer' || user.role === 'administrator') && (
             <CreatePost>
                 <Button variant="ghost" size="icon" className="rounded-full">
-                    <PlusCircle className="w-6 h-6" />
+                    <PlusCircle className="w-8 h-8" />
                     <span className="sr-only">Create Post</span>
                 </Button>
             </CreatePost>
