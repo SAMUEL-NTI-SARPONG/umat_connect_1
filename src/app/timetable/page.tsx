@@ -100,28 +100,18 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                   return (
                     <Card key={index} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
                       <div className="flex">
-                        <div className={cn("w-2", status.color)}></div>
-                        <div className="flex-grow p-3 md:p-4">
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-1">
-                              <div>
-                                  <CardTitle className="text-sm md:text-base font-medium tracking-tight">{event.courseCode}</CardTitle>
-                                  <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
-                              </div>
-                              <div className="text-xs sm:text-right font-medium text-muted-foreground flex items-center gap-1.5 pt-1">
-                                  <Clock className="w-3 h-3"/>
-                                  <span>{event.time}</span>
-                              </div>
-                          </div>
-                          <div className="mt-3 space-y-1.5 text-muted-foreground text-xs">
-                              <div className="flex items-center gap-2">
-                                  <MapPin className="w-3.5 h-3.5 text-primary/70"/>
-                                  <span>{event.room}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                  <BookUser className="w-3.5 h-3.5 text-primary/70"/>
-                                  <span>{event.lecturer}</span>
-                              </div>
-                          </div>
+                        <div className={cn("w-2 flex-shrink-0", status.color)}></div>
+                        <div className="flex-grow p-3">
+                           <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-semibold text-sm">{event.courseCode}</p>
+                                    <p className="text-xs text-muted-foreground">{event.room} &bull; {event.time}</p>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                      <BookUser className="w-3 h-3"/> {event.lecturer}
+                                    </p>
+                                </div>
+                                <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0">{status.text}</Badge>
+                           </div>
                         </div>
                       </div>
                     </Card>
@@ -188,7 +178,7 @@ function LecturerTimetableView({
       lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
     // Return unique courses
-    return Array.from(new Map(courses.map(c => [c.courseCode, c])).values());
+    return Array.from(new Map(courses.map(c => [c.id, c])).values());
   }, [masterSchedule, user]);
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
