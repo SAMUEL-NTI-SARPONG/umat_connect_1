@@ -40,7 +40,7 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { user, masterSchedule } = useUser();
+  const { user, masterSchedule, rejectedEntries } = useUser();
 
   const todaysSchedule = useMemo(() => {
     if (!masterSchedule || !user) return [];
@@ -56,15 +56,18 @@ export default function ScheduleSidebar() {
     }
     
     if (user.role === 'lecturer') {
+        const userRejectedIds = rejectedEntries[user.id] || [];
         const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+        
         return masterSchedule.filter(entry => 
+            !userRejectedIds.includes(entry.id) &&
             entry.day === today &&
             currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
         );
     }
 
     return []; // No schedule view for admin on this sidebar
-  }, [masterSchedule, user]);
+  }, [masterSchedule, user, rejectedEntries]);
 
   const hasSchedule = todaysSchedule.length > 0;
 
