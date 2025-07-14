@@ -40,8 +40,9 @@ export interface AttachedFile {
 }
 
 export type Comment = {
-  author: string;
+  authorId: number;
   text: string;
+  timestamp: string;
 };
 
 export type Post = {
@@ -66,6 +67,7 @@ interface UserContextType {
   setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
+  addComment: (postId: number, text: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -173,6 +175,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
 
   }, [user, toast]);
+  
+  const addComment = useCallback((postId: number, text: string) => {
+    if (!user) return;
+    
+    const newComment: Comment = {
+      authorId: user.id,
+      text,
+      timestamp: new Date().toISOString()
+    };
+    
+    setPosts(prevPosts => {
+      const updatedPosts = prevPosts.map(p => {
+        if (p.id === postId) {
+          return { ...p, comments: [...p.comments, newComment] };
+        }
+        return p;
+      });
+      saveToStorage('posts', updatedPosts);
+      return updatedPosts;
+    });
+
+  }, [user]);
 
   const resetState = () => {
     logout(); // Log out current user
@@ -208,7 +232,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setEmptySlots,
     posts,
     addPost,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost]);
+    addComment,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, setMasterSchedule, setEmptySlots, addPost, addComment]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
