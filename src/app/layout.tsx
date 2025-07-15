@@ -30,13 +30,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
         <AppHeader />
-        <div className="flex flex-1">
+        <div className="flex w-full">
           <Sidebar variant="floating" collapsible="icon">
             <AppSidebar />
           </Sidebar>
-          <SidebarInset className="flex flex-1 flex-col">
+          <SidebarInset className="flex flex-1 flex-col overflow-y-auto">
             <TopScheduleBar />
-            <main className="flex-1 overflow-y-auto px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
+            <main className="flex-1 px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
               {children}
             </main>
           </SidebarInset>
