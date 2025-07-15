@@ -616,12 +616,16 @@ function LecturerTimetableView({
                 const isRejected = userRejectedEntryIds.includes(course.id);
                 return (
                   <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
-                    <div>
-                      <p className="font-semibold">{course.courseCode}</p>
-                      <p className="text-sm text-muted-foreground">{course.departments.join(', ')} - Level {course.level}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold break-words">{course.courseCode}</p>
+                      <div className="flex flex-wrap items-center text-sm text-muted-foreground">
+                        <span>{course.departments.join(', ')}</span>
+                        <span className="mx-1.5">&middot;</span>
+                        <span>Level {course.level}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`switch-${course.id}`} className="text-sm">
+                    <div className="flex items-center gap-2 pl-4">
+                      <Label htmlFor={`switch-${course.id}`} className="text-sm shrink-0">
                         {isRejected ? 'Hidden' : 'Visible'}
                       </Label>
                       <Switch
