@@ -655,11 +655,6 @@ function LecturerTimetableView({
                 </DialogContent>
             </Dialog>
         </div>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500" /> Confirmed</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500" /> Undecided</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /> Canceled</div>
-        </div>
       </div>
       <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
         <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
@@ -1530,3 +1525,4 @@ export default function TimetablePage() {
     
 
     
+
