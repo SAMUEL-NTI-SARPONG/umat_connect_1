@@ -105,9 +105,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         </TableHeader>
                         <TableBody>
                             {dailySchedule[day].map((event, index) => (
-                                <TableRow key={index} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0">
-                                    <TableCell className="block md:table-cell p-0 md:p-4 w-full">
-                                      <div className="border md:border-0 rounded-lg p-4 space-y-2">
+                                <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0">
+                                    <TableCell className="block md:hidden p-0 w-full">
+                                      <div className="border rounded-lg p-4 space-y-2 m-2">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                           <div>
                                             <div className="font-bold text-xs text-muted-foreground">Time</div>
@@ -466,10 +466,10 @@ function LecturerTimetableView({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {dailySchedule[day].map((event) => (
-                            <TableRow key={event.id} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0 cursor-pointer">
-                                <TableCell className="block md:hidden p-0 md:p-4 w-full">
-                                  <div className="border rounded-lg p-4 space-y-4">
+                        {dailySchedule[day].map((event, index) => (
+                            <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0 cursor-pointer">
+                                <TableCell className="block md:hidden p-0 w-full">
+                                  <div className="border rounded-lg p-4 space-y-4 m-2">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                       <div>
                                         <div className="font-bold text-xs text-muted-foreground">Time</div>
@@ -1303,5 +1303,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    
