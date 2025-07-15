@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         {days.map(day => (
           <TabsContent key={day} value={day}>
             {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border-t md:border md:rounded-lg md:overflow-hidden">
+                <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
                     <Table>
                         <TableHeader className="hidden md:table-header-group">
                             <TableRow>
@@ -105,10 +105,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         </TableHeader>
                         <TableBody>
                             {dailySchedule[day].map((event, index) => (
-                                <TableRow key={index} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0">
-                                    {/* Mobile View */}
-                                    <td className="block md:hidden p-4 w-full">
-                                      <div className="border rounded-lg p-4 space-y-2">
+                                <TableRow key={index} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0">
+                                    <TableCell className="block md:table-cell p-0 md:p-4 w-full">
+                                      <div className="border md:border-0 rounded-lg p-4 space-y-2">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                           <div>
                                             <div className="font-bold text-xs text-muted-foreground">Time</div>
@@ -128,8 +127,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                           </div>
                                         </div>
                                       </div>
-                                    </td>
-                                    {/* Desktop View */}
+                                    </TableCell>
                                     <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
                                     <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
                                     <TableCell className="hidden md:table-cell">{event.room}</TableCell>
@@ -182,6 +180,7 @@ function LecturerTimetableView({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
 
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
   const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
@@ -263,7 +262,6 @@ function LecturerTimetableView({
   
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
-  // Logic to show the review modal
   useEffect(() => {
     if (user && masterSchedule && masterSchedule.length > 0 && lecturerCourses.length > 0) {
       if (!hasReviewed) {
@@ -271,11 +269,17 @@ function LecturerTimetableView({
       }
     }
   }, [user, masterSchedule, lecturerCourses, reviewedSchedules, hasReviewed]);
+  
+  const handleRowClick = (entry: TimetableEntry) => {
+    setSelectedEntry(entry);
+    setIsActionModalOpen(true);
+  };
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
     setSchedule(
       schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
     );
+    closeAllModals();
   };
 
   const handleRescheduleClick = (entry: TimetableEntry) => {
@@ -284,6 +288,7 @@ function LecturerTimetableView({
     const [start, end] = entry.time.split('-');
     setStartTime(start?.trim() || '');
     setEndTime(end?.trim() || '');
+    setIsActionModalOpen(false);
     setIsEditModalOpen(true);
   };
 
@@ -349,6 +354,7 @@ function LecturerTimetableView({
     setIsEditModalOpen(false);
     setIsCreateModalOpen(false);
     setIsManageModalOpen(false);
+    setIsActionModalOpen(false);
     setSelectedEntry(null);
     setEditedFormData(null);
     setCreateFormData(initialCreateFormState);
@@ -448,7 +454,7 @@ function LecturerTimetableView({
           {days.map((day) => (
             <TabsContent key={day} value={day}>
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border-t md:border md:rounded-lg md:overflow-hidden">
+                <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
                     <Table>
                         <TableHeader className="hidden md:table-header-group">
                             <TableRow>
@@ -461,9 +467,8 @@ function LecturerTimetableView({
                         </TableHeader>
                         <TableBody>
                         {dailySchedule[day].map((event) => (
-                            <TableRow key={event.id} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0">
-                                {/* Mobile View */}
-                                <td className="block md:hidden p-4 w-full">
+                            <TableRow key={event.id} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0 cursor-pointer">
+                                <TableCell className="block md:hidden p-0 md:p-4 w-full">
                                   <div className="border rounded-lg p-4 space-y-4">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                       <div>
@@ -485,31 +490,8 @@ function LecturerTimetableView({
                                         </Badge>
                                       </div>
                                     </div>
-                                    <div className="col-span-2 pt-2">
-                                      <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button variant="outline" size="sm" className="w-full">
-                                                  Actions
-                                                  <MoreHorizontal className="h-4 w-4 ml-2" />
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)]">
-                                              <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                                  <Check className="mr-2 h-4 w-4" /> Confirm Class
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
-                                                  <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
-                                                  <Ban className="mr-2 h-4 w-4" /> Cancel Class
-                                              </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </div>
                                   </div>
-                                </td>
-                                
-                                {/* Desktop View */}
+                                </TableCell>
                                 <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
                                 <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
                                 <TableCell className="hidden md:table-cell">{event.room}</TableCell>
@@ -518,27 +500,7 @@ function LecturerTimetableView({
                                         {statusConfig[event.status].text}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">More options</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                                <Check className="mr-2 h-4 w-4" /> Confirm Class
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
-                                                <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
-                                                <Ban className="mr-2 h-4 w-4" /> Cancel Class
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                                <TableCell className="hidden md:table-cell"></TableCell>
                             </TableRow>
                         ))}
                         </TableBody>
@@ -556,6 +518,48 @@ function LecturerTimetableView({
           ))}
         </div>
       </Tabs>
+      
+      {/* Action Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Class Actions</DialogTitle>
+            {selectedEntry && (
+              <DialogDescription>
+                Manage your class: {selectedEntry.courseCode} at {selectedEntry.time}.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <div className="flex flex-col gap-3 py-4">
+             <Button
+                variant="outline"
+                onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'confirmed')}
+                disabled={selectedEntry?.status === 'confirmed'}
+                className="w-full justify-start"
+            >
+                <ShieldCheck className="mr-2 h-4 w-4 text-green-500" /> Confirm Class
+            </Button>
+            <Button
+                variant="outline"
+                onClick={() => selectedEntry && handleRescheduleClick(selectedEntry)}
+                className="w-full justify-start"
+            >
+                <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+            </Button>
+            <Button
+                variant="outline"
+                onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'canceled')}
+                disabled={selectedEntry?.status === 'canceled'}
+                className="w-full justify-start text-destructive hover:text-destructive"
+            >
+                <Ban className="mr-2 h-4 w-4" /> Cancel Class
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeAllModals}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
