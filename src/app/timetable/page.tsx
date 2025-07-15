@@ -102,6 +102,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                     <TableHead>Course</TableHead>
                                     <TableHead className="w-1/4">Location</TableHead>
                                     <TableHead className="hidden lg:table-cell w-1/4">Lecturer</TableHead>
+                                    <TableHead className="w-1/4">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -123,8 +124,10 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                                 <div className="font-medium break-words">{event.room}</div>
                                               </div>
                                               <div>
-                                                <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
-                                                <div className="font-medium break-words">{event.lecturer}</div>
+                                                <div className="font-bold text-xs text-muted-foreground">Status</div>
+                                                <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                    {statusConfig[event.status].text}
+                                                </Badge>
                                               </div>
                                             </div>
                                           </div>
@@ -133,6 +136,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                         <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
                                         <TableCell className="hidden md:table-cell">{event.room}</TableCell>
                                         <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                {statusConfig[event.status].text}
+                                            </Badge>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -1306,4 +1314,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
