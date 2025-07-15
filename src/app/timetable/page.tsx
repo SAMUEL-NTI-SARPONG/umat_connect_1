@@ -104,20 +104,20 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
       if (!time) return 0;
       let [hours, minutes] = time.split(':').map(Number);
       if (modifier === 'PM' && hours !== 12) hours += 12;
-      if (modifier === 'AM' && hours === 12) hours = 0;
+      if (modifier === 'AM' && hours === 12) hours = 0; // 12 AM is 00:00
       return hours * 60 + (minutes || 0);
     };
-
+    
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
-          if (!time || !time.includes(' - ')) return null;
+          if (!time || !time.includes('-')) return null;
           const [start, end] = time.split(' - ');
           return { start, end };
       }).filter(Boolean) as { start: string; end: string }[];
       
-      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      if (slots.length === 0) continue;
       
-      if (!slots || slots.length === 0) continue;
+      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
       
       const ranges: string[] = [];
       let currentRangeStart = slots[0].start;
@@ -386,21 +386,21 @@ function LecturerTimetableView({
       if (!time) return 0;
       let [hours, minutes] = time.split(':').map(Number);
       if (modifier === 'PM' && hours !== 12) hours += 12;
-      if (modifier === 'AM' && hours === 12) hours = 0;
+      if (modifier === 'AM' && hours === 12) hours = 0; // 12 AM is 00:00
       return hours * 60 + (minutes || 0);
     };
 
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
-          if (!time || !time.includes(' - ')) return null;
+          if (!time || !time.includes('-')) return null;
           const [start, end] = time.split(' - ');
           return { start, end };
       }).filter(Boolean) as { start: string; end: string }[];
 
+      if (slots.length === 0) continue;
+      
       slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-      
-      if (!slots || slots.length === 0) continue;
-      
+
       const ranges: string[] = [];
       let currentRangeStart = slots[0].start;
       let currentRangeEnd = slots[0].end;
@@ -1524,5 +1524,7 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
 
     
