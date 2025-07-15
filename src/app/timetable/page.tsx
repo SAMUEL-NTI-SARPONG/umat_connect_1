@@ -101,7 +101,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                     <TableHead className="w-1/4">Time</TableHead>
                                     <TableHead>Course</TableHead>
                                     <TableHead className="w-1/4">Location</TableHead>
-                                    <TableHead className="w-1/4">Lecturer</TableHead>
+                                    <TableHead className="hidden lg:table-cell w-1/4">Lecturer</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -132,7 +132,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                         <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
                                         <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
                                         <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{event.lecturer}</TableCell>
+                                        <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -465,7 +465,6 @@ function LecturerTimetableView({
                                     <TableHead>Course</TableHead>
                                     <TableHead className="w-1/4">Location</TableHead>
                                     <TableHead className="w-1/4">Status</TableHead>
-                                    <TableHead className="w-12"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -503,7 +502,6 @@ function LecturerTimetableView({
                                             {statusConfig[event.status].text}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell"></TableCell>
                                 </TableRow>
                             ))}
                             </TableBody>
