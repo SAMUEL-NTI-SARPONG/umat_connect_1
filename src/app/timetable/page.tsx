@@ -99,7 +99,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
 
     const timeToMinutes = (timeStr: string) => {
+      if (!timeStr) return 0;
       const [time, modifier] = timeStr.split(' ');
+      if (!time) return 0;
       let [hours, minutes] = time.split(':').map(Number);
       if (modifier === 'PM' && hours !== 12) hours += 12;
       if (modifier === 'AM' && hours === 12) hours = 0;
@@ -108,9 +110,12 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
+          if (!time || !time.includes(' - ')) return null;
           const [start, end] = time.split(' - ');
           return { start, end };
-      }).sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      }).filter(Boolean) as { start: string; end: string }[];
+      
+      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
       
       if (!slots || slots.length === 0) continue;
       
@@ -376,7 +381,9 @@ function LecturerTimetableView({
     const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
 
     const timeToMinutes = (timeStr: string) => {
+      if (!timeStr) return 0;
       const [time, modifier] = timeStr.split(' ');
+      if (!time) return 0;
       let [hours, minutes] = time.split(':').map(Number);
       if (modifier === 'PM' && hours !== 12) hours += 12;
       if (modifier === 'AM' && hours === 12) hours = 0;
@@ -385,9 +392,12 @@ function LecturerTimetableView({
 
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
+          if (!time || !time.includes(' - ')) return null;
           const [start, end] = time.split(' - ');
           return { start, end };
-      }).sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      }).filter(Boolean) as { start: string; end: string }[];
+
+      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
       
       if (!slots || slots.length === 0) continue;
       
