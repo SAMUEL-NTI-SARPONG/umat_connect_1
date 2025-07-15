@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -87,61 +87,44 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
     if (daySlots.length === 0) return [];
-
-    const rooms: Record<string, { start: number; end: number, startSuffix: string, endSuffix: string }[]> = {};
+    
+    const rooms: Record<string, string[]> = {};
 
     daySlots.forEach(slot => {
-        const timeParts = slot.time.split(' - ');
-        const startTimeStr = timeParts[0];
-        const endTimeStr = timeParts[1];
-
-        const startMatch = startTimeStr.match(/(\d+:\d+)\s*(AM|PM)/);
-        const endMatch = endTimeStr.match(/(\d+:\d+)\s*(AM|PM)/);
-
-        if (!startMatch || !endMatch) return;
-
-        let start = parseFloat(startMatch[1].replace(':', '.'));
-        const end = parseFloat(endMatch[1].replace(':', '.'));
-
-        const startSuffix = startMatch[2];
-        const endSuffix = endMatch[2];
-        
-        if (startSuffix === 'PM' && start < 12) start += 12;
-        if (startSuffix === 'AM' && start === 12) start = 0; // Midnight case
-
         if (!rooms[slot.location]) {
             rooms[slot.location] = [];
         }
-        rooms[slot.location].push({ start, end, startSuffix, endSuffix });
+        rooms[slot.location].push(slot.time);
     });
-
-    Object.values(rooms).forEach(slots => slots.sort((a, b) => a.start - b.start));
-
+    
     const consolidatedRooms: { room: string, freeRanges: string[] }[] = [];
     
-    const formatTime = (time: number, suffix: string) => {
-      const hour = Math.floor(time);
-      const minute = Math.round((time % 1) * 60);
-      return `${hour}:${minute.toString().padStart(2, '0')} ${suffix}`;
-    };
-    
     for (const room in rooms) {
-        const slots = rooms[room];
+        const slots = rooms[room].sort((a, b) => {
+            const timeA = parseInt(a.split(':')[0], 10) + (a.includes('PM') && parseInt(a.split(':')[0], 10) !== 12 ? 12 : 0);
+            const timeB = parseInt(b.split(':')[0], 10) + (b.includes('PM') && parseInt(b.split(':')[0], 10) !== 12 ? 12 : 0);
+            return timeA - timeB;
+        });
+
         if (!slots || slots.length === 0) continue;
 
         const ranges: string[] = [];
-        let currentRange = { ...slots[0] };
+        let currentRangeStart = slots[0].split(' - ')[0];
+        let currentRangeEnd = slots[0].split(' - ')[1];
 
         for (let i = 1; i < slots.length; i++) {
-            if (slots[i].start.toFixed(2) === currentRange.end.toFixed(2) && slots[i].startSuffix === currentRange.endSuffix) {
-                currentRange.end = slots[i].end;
-                currentRange.endSuffix = slots[i].endSuffix;
+            const prevEnd = currentRangeEnd;
+            const [nextStart, nextEnd] = slots[i].split(' - ');
+            
+            if (prevEnd === nextStart) {
+                currentRangeEnd = nextEnd;
             } else {
-                ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)} - ${formatTime(currentRange.end, currentRange.endSuffix)}`);
-                currentRange = { ...slots[i] };
+                ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+                currentRangeStart = nextStart;
+                currentRangeEnd = nextEnd;
             }
         }
-        ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)} - ${formatTime(currentRange.end, currentRange.endSuffix)}`);
+        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
         consolidatedRooms.push({ room, freeRanges: ranges });
     }
     
@@ -181,9 +164,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                             <CardTitle className="text-base">{room}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4 pt-0">
-                                            <div className="space-y-1 text-sm">
+                                            <div className="space-y-1">
                                                 {freeRanges.map((range, idx) => (
-                                                   <Badge key={idx} variant="secondary" className="font-normal">{range}</Badge>
+                                                   <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
                                                 ))}
                                             </div>
                                         </CardContent>
@@ -212,11 +195,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         <Table>
                             <TableHeader className="hidden md:table-header-group">
                                 <TableRow>
-                                    <TableHead className="w-1/4">Time</TableHead>
+                                    <TableHead className="w-[20%]">Time</TableHead>
                                     <TableHead>Course</TableHead>
-                                    <TableHead className="w-1/4">Location</TableHead>
-                                    <TableHead className="hidden lg:table-cell w-1/4">Lecturer</TableHead>
-                                    <TableHead className="w-1/4">Status</TableHead>
+                                    <TableHead className="w-[20%]">Location</TableHead>
+                                    <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
+                                    <TableHead className="w-[15%]">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -226,22 +209,24 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                           <div className="border rounded-lg p-4 space-y-2 m-2">
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                               <div>
-                                                <div className="font-bold text-xs text-muted-foreground">Time</div>
-                                                <div className="font-medium break-words">{event.time}</div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
+                                                <div className="font-medium break-words pl-5">{event.time}</div>
                                               </div>
                                               <div>
-                                                <div className="font-bold text-xs text-muted-foreground">Course</div>
-                                                <div className="font-medium break-words">{event.courseCode}</div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
+                                                <div className="font-medium break-words pl-5">{event.courseCode}</div>
                                               </div>
                                               <div>
-                                                <div className="font-bold text-xs text-muted-foreground">Location</div>
-                                                <div className="font-medium break-words">{event.room}</div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
+                                                <div className="font-medium break-words pl-5">{event.room}</div>
                                               </div>
                                               <div>
-                                                <div className="font-bold text-xs text-muted-foreground">Status</div>
-                                                <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                    {statusConfig[event.status].text}
-                                                </Badge>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
+                                                 <div className="pl-5">
+                                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                        {statusConfig[event.status].text}
+                                                    </Badge>
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
@@ -409,7 +394,7 @@ function LecturerTimetableView({
   const handleRescheduleClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
     setEditedFormData(entry);
-    const [start, end] = entry.time.split('-');
+    const [start, end] = entry.time.split(' - ');
     setStartTime(start?.trim() || '');
     setEndTime(end?.trim() || '');
     setIsActionModalOpen(false);
@@ -503,7 +488,7 @@ function LecturerTimetableView({
     const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
     const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0].trim()))];
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
     
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
@@ -511,8 +496,8 @@ function LecturerTimetableView({
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.split('-')[1].trim() !== currentSlot.split('-')[0].trim()) break;
-        endTimes.push(currentSlot.split('-')[1].trim());
+        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -522,7 +507,7 @@ function LecturerTimetableView({
     const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
     const roomDaySlots = daySlots.filter(slot => slot.location === createFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0].trim()))];
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
 
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(createStartTime));
@@ -530,8 +515,8 @@ function LecturerTimetableView({
         for (let i = startIndex; i < roomDaySlots.length; i++) {
             const currentSlot = roomDaySlots[i];
             const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-            if (prevSlot && prevSlot.split('-')[1].trim() !== currentSlot.split('-')[0].trim()) break;
-            endTimes.push(currentSlot.split('-')[1].trim());
+            if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+            endTimes.push(currentSlot.split(' - ')[1].trim());
         }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -545,7 +530,9 @@ function LecturerTimetableView({
         isOpen={isReviewModalOpen}
         onClose={() => {
             setIsReviewModalOpen(false);
-            if (user) markScheduleAsReviewed(user.id);
+            if (user && !hasReviewed) {
+              markScheduleAsReviewed(user.id);
+            }
         }}
         courses={lecturerCourses}
       />
@@ -596,22 +583,24 @@ function LecturerTimetableView({
                                       <div className="border rounded-lg p-4 space-y-4 m-2">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                           <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Time</div>
-                                            <div className="font-medium break-words">{event.time}</div>
+                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
+                                            <div className="font-medium break-words pl-5">{event.time}</div>
                                           </div>
                                           <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Course</div>
-                                            <div className="font-medium break-words">{event.courseCode}</div>
+                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
+                                            <div className="font-medium break-words pl-5">{event.courseCode}</div>
                                           </div>
                                           <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Location</div>
-                                            <div className="font-medium break-words">{event.room}</div>
+                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
+                                            <div className="font-medium break-words pl-5">{event.room}</div>
                                           </div>
                                           <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Status</div>
-                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                              {statusConfig[event.status].text}
-                                            </Badge>
+                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
+                                            <div className="pl-5">
+                                              <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                {statusConfig[event.status].text}
+                                              </Badge>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -918,7 +907,7 @@ function AdminTimetableView({
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
       setEditedFormData(selectedEntry);
-      const [start, end] = selectedEntry.time.split('-');
+      const [start, end] = selectedEntry.time.split(' - ');
       setStartTime(start?.trim() || '');
       setEndTime(end?.trim() || '');
     }
@@ -1025,7 +1014,7 @@ function AdminTimetableView({
   }, [emptySlots, editedFormData]);
 
   const availableStartTimes = useMemo(() => {
-    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split('-')[0].trim()))];
+    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split(' - ')[0].trim()))];
   }, [availableSlotsForRoomAndDay]);
 
   const availableEndTimes = useMemo(() => {
@@ -1040,13 +1029,13 @@ function AdminTimetableView({
         const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
 
         if (prevSlot) {
-            const prevEndTime = prevSlot.split('-')[1].trim();
-            const currentStartTime = currentSlot.split('-')[0].trim();
+            const prevEndTime = prevSlot.split(' - ')[1].trim();
+            const currentStartTime = currentSlot.split(' - ')[0].trim();
             if (prevEndTime !== currentStartTime) {
                 break; // Break if not continuous
             }
         }
-        continuousEndTimes.push(currentSlot.split('-')[1].trim());
+        continuousEndTimes.push(currentSlot.split(' - ')[1].trim());
     }
     
     return continuousEndTimes;

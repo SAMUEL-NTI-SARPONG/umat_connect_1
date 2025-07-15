@@ -27,7 +27,7 @@ export default function LecturerReviewModal({
   onClose,
   courses,
 }: LecturerReviewModalProps) {
-  const { user, rejectScheduleEntry, markScheduleAsReviewed } = useUser();
+  const { user, rejectScheduleEntry } = useUser();
   const [hiddenCourses, setHiddenCourses] = React.useState<number[]>([]);
 
   const handleHideCourse = (courseId: number) => {
@@ -36,18 +36,8 @@ export default function LecturerReviewModal({
     setHiddenCourses(prev => [...prev, courseId]);
   };
 
-  const handleConfirm = () => {
-    if (user) {
-      markScheduleAsReviewed(user.id);
-    }
-    onClose();
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={(isOpen) => {
-      if (!isOpen) handleConfirm();
-      else onClose();
-    }}>
+    <Dialog open={isOpen} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Confirm Your Semester Courses</DialogTitle>
@@ -89,7 +79,7 @@ export default function LecturerReviewModal({
           </div>
         </ScrollArea>
         <DialogFooter>
-          <Button onClick={handleConfirm} className="w-full">
+          <Button onClick={onClose} className="w-full">
             Confirm My Schedule
           </Button>
         </DialogFooter>
