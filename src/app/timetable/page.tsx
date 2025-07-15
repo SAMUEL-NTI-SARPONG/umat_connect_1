@@ -265,12 +265,14 @@ function LecturerTimetableView({
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
   useEffect(() => {
-    if (user && masterSchedule && masterSchedule.length > 0 && lecturerCourses.length > 0) {
-      if (!hasReviewed) {
+    // This effect should only run when the master schedule is first loaded for a user
+    // who has not yet reviewed it.
+    if (user && masterSchedule && masterSchedule.length > 0 && !hasReviewed) {
+      if (lecturerCourses.length > 0) {
         setIsReviewModalOpen(true);
       }
     }
-  }, [user, masterSchedule, lecturerCourses, reviewedSchedules, hasReviewed]);
+  }, [masterSchedule, user, hasReviewed]); // More specific dependency array
   
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -281,6 +283,7 @@ function LecturerTimetableView({
     setSchedule(
       schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
     );
+    // Only close the action modal, don't trigger other state changes.
     setIsActionModalOpen(false);
   };
 
@@ -1303,3 +1306,4 @@ export default function TimetablePage() {
     </div>
   );
 }
+
