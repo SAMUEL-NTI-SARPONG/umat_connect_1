@@ -427,12 +427,10 @@ function LecturerTimetableView({
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
         <div className="flex justify-end sm:justify-start gap-2">
-            {hasReviewed && (
-                 <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Manage Courses
-                </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
+                <Settings className="w-4 h-4 mr-2" />
+                Manage Courses
+            </Button>
             <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Create Schedule
