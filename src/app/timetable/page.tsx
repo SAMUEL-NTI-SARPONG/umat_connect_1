@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,10 @@ const statusConfig = {
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
+  const { emptySlots } = useUser();
+  const [activeDay, setActiveDay] = useState("Monday");
+  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
+
   const dailySchedule = useMemo(() => {
     return schedule.reduce((acc, event) => {
       const day = event.day || "Monday"; 
@@ -80,14 +84,100 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, typeof schedule>);
   }, [schedule]);
 
+  const freeRoomsForDay = useMemo(() => {
+    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
+    if (daySlots.length === 0) return [];
+
+    const rooms: Record<string, { start: number; end: number }[]> = {};
+
+    daySlots.forEach(slot => {
+        const [start, end] = slot.time.split('-').map(t => parseFloat(t.replace(':', '.')));
+        if (!rooms[slot.location]) {
+            rooms[slot.location] = [];
+        }
+        rooms[slot.location].push({ start, end });
+    });
+
+    Object.values(rooms).forEach(slots => slots.sort((a, b) => a.start - b.start));
+
+    const consolidatedRooms: { room: string, freeRanges: string[] }[] = [];
+
+    for (const room in rooms) {
+        const slots = rooms[room];
+        if (!slots || slots.length === 0) continue;
+
+        const ranges: string[] = [];
+        let currentRange = { ...slots[0] };
+
+        for (let i = 1; i < slots.length; i++) {
+            if (slots[i].start === currentRange.end) {
+                currentRange.end = slots[i].end;
+            } else {
+                ranges.push(`${currentRange.start.toFixed(2).replace('.', ':')}-${currentRange.end.toFixed(2).replace('.', ':')}`);
+                currentRange = { ...slots[i] };
+            }
+        }
+        ranges.push(`${currentRange.start.toFixed(2).replace('.', ':')}-${currentRange.end.toFixed(2).replace('.', ':')}`);
+        consolidatedRooms.push({ room, freeRanges: ranges });
+    }
+    
+    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
+
+  }, [emptySlots, activeDay]);
+
   return (
-    <Tabs defaultValue="Monday" className="w-full">
+    <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
       <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-        <TabsList className="grid w-full grid-cols-7 h-12">
-          {days.map(day => (
-            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <TabsList className="grid w-full grid-cols-7 h-12 flex-grow">
+              {days.map(day => (
+                <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
+              ))}
+            </TabsList>
+            <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        <SearchIcon className="mr-2 h-4 w-4" />
+                        Find Free Rooms
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
+                        <DialogDescription>
+                            Here are the classrooms that are available and their free time slots.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                        {freeRoomsForDay.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {freeRoomsForDay.map(({ room, freeRanges }) => (
+                                    <Card key={room}>
+                                        <CardHeader className="p-4">
+                                            <CardTitle className="text-base">{room}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0">
+                                            <div className="space-y-1 text-sm">
+                                                {freeRanges.map((range, idx) => (
+                                                   <Badge key={idx} variant="secondary" className="font-normal">{range}</Badge>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center p-12 text-muted-foreground">
+                                <p>No free classrooms found for {activeDay}.</p>
+                            </div>
+                        )}
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
       </div>
       <div className="py-6">
         {days.map(day => (
@@ -184,7 +274,7 @@ function LecturerTimetableView({
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
 }) {
-  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -273,14 +363,12 @@ function LecturerTimetableView({
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
   useEffect(() => {
-    // This effect should only run when the master schedule is first loaded for a user
-    // who has not yet reviewed it.
     if (user && masterSchedule && masterSchedule.length > 0 && !hasReviewed) {
       if (lecturerCourses.length > 0) {
         setIsReviewModalOpen(true);
       }
     }
-  }, [masterSchedule, user, hasReviewed]); // More specific dependency array
+  }, [masterSchedule, user, hasReviewed]);
   
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -291,7 +379,6 @@ function LecturerTimetableView({
     setSchedule(
       schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
     );
-    // Only close the action modal, don't trigger other state changes.
     setIsActionModalOpen(false);
   };
 
@@ -315,7 +402,6 @@ function LecturerTimetableView({
   const handleSaveCreate = () => {
     const { courseCode, day, level, departments, room } = createFormData;
     if (!courseCode || !day || !level || !departments.length || !room || !createStartTime || !createEndTime) {
-      // Basic validation
       alert("Please fill all fields");
       return;
     }
@@ -433,7 +519,10 @@ function LecturerTimetableView({
     <>
       <LecturerReviewModal
         isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
+        onClose={() => {
+            setIsReviewModalOpen(false);
+            if (user) markScheduleAsReviewed(user.id);
+        }}
         courses={lecturerCourses}
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
@@ -1314,3 +1403,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
