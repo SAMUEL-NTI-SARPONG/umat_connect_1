@@ -93,7 +93,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         {days.map(day => (
           <TabsContent key={day} value={day}>
             {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border-t md:border md:rounded-lg md:overflow-hidden">
                     <Table>
                         <TableHeader className="hidden md:table-header-group">
                             <TableRow>
@@ -105,25 +105,27 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         </TableHeader>
                         <TableBody>
                             {dailySchedule[day].map((event, index) => (
-                                <TableRow key={index} className="flex flex-col md:table-row p-0 md:p-0 border-b w-full">
+                                <TableRow key={index} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0">
                                     {/* Mobile View */}
-                                    <td className="md:hidden p-4 w-full">
-                                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                        <div>
-                                          <div className="font-bold text-xs text-muted-foreground">Time</div>
-                                          <div className="font-medium break-words">{event.time}</div>
-                                        </div>
-                                        <div>
-                                          <div className="font-bold text-xs text-muted-foreground">Course</div>
-                                          <div className="font-medium break-words">{event.courseCode}</div>
-                                        </div>
-                                        <div>
-                                          <div className="font-bold text-xs text-muted-foreground">Location</div>
-                                          <div className="font-medium break-words">{event.room}</div>
-                                        </div>
-                                        <div>
-                                          <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
-                                          <div className="font-medium break-words">{event.lecturer}</div>
+                                    <td className="block md:hidden p-4 w-full">
+                                      <div className="border rounded-lg p-4 space-y-2">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Time</div>
+                                            <div className="font-medium break-words">{event.time}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Course</div>
+                                            <div className="font-medium break-words">{event.courseCode}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Location</div>
+                                            <div className="font-medium break-words">{event.room}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
+                                            <div className="font-medium break-words">{event.lecturer}</div>
+                                          </div>
                                         </div>
                                       </div>
                                     </td>
@@ -446,7 +448,7 @@ function LecturerTimetableView({
           {days.map((day) => (
             <TabsContent key={day} value={day}>
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border-t md:border md:rounded-lg md:overflow-hidden">
                     <Table>
                         <TableHeader className="hidden md:table-header-group">
                             <TableRow>
@@ -459,9 +461,10 @@ function LecturerTimetableView({
                         </TableHeader>
                         <TableBody>
                         {dailySchedule[day].map((event) => (
-                            <TableRow key={event.id} className="flex flex-col md:table-row p-0 md:p-0 border-b w-full">
+                            <TableRow key={event.id} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0">
                                 {/* Mobile View */}
-                                <td className="md:hidden p-4 w-full">
+                                <td className="block md:hidden p-4 w-full">
+                                  <div className="border rounded-lg p-4 space-y-4">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                       <div>
                                         <div className="font-bold text-xs text-muted-foreground">Time</div>
@@ -481,28 +484,29 @@ function LecturerTimetableView({
                                           {statusConfig[event.status].text}
                                         </Badge>
                                       </div>
-                                      <div className="col-span-2 pt-2">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" size="sm" className="w-full">
-                                                    Actions
-                                                    <MoreHorizontal className="h-4 w-4 ml-2" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)]">
-                                                <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                                    <Check className="mr-2 h-4 w-4" /> Confirm Class
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
-                                                    <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
-                                                    <Ban className="mr-2 h-4 w-4" /> Cancel Class
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </div>
                                     </div>
+                                    <div className="col-span-2 pt-2">
+                                      <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                              <Button variant="outline" size="sm" className="w-full">
+                                                  Actions
+                                                  <MoreHorizontal className="h-4 w-4 ml-2" />
+                                              </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)]">
+                                              <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                                  <Check className="mr-2 h-4 w-4" /> Confirm Class
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
+                                                  <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
+                                                  <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                                              </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </div>
                                 </td>
                                 
                                 {/* Desktop View */}
@@ -1295,3 +1299,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
