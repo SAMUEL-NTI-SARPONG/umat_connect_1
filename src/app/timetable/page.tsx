@@ -92,43 +92,45 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
       <div className="py-6">
         {days.map(day => (
           <TabsContent key={day} value={day}>
-            <div className="space-y-4">
-              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                dailySchedule[day].map((event, index) => {
-                  const status = statusConfig[event.status as EventStatus];
-
-                  return (
-                    <Card key={index} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
-                      <div className="flex">
-                        <div className={cn("w-2 flex-shrink-0", status.color)}></div>
-                        <div className="flex-grow p-2">
-                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                                <div>
-                                    <p className="font-semibold text-sm break-words">{event.courseCode}</p>
-                                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                      <p>{event.room}</p>
-                                      <p>{event.time}</p>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1.5 break-words">
-                                      <BookUser className="w-3 h-3 flex-shrink-0"/> <span>{event.lecturer}</span>
-                                    </p>
-                                </div>
-                                <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0 self-start">{status.text}</Badge>
-                           </div>
-                        </div>
-                      </div>
-                    </Card>
-                  )
-                })
-              ) : (
+            {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                        <TableHeader className="hidden md:table-header-group">
+                            <TableRow>
+                                <TableHead className="w-1/4">Time</TableHead>
+                                <TableHead>Course</TableHead>
+                                <TableHead className="w-1/4">Location</TableHead>
+                                <TableHead className="w-1/4">Lecturer</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {dailySchedule[day].map((event, index) => (
+                                <TableRow key={index} className="flex flex-col md:table-row p-4 md:p-0 border-b">
+                                    <TableCell className="font-medium p-0 md:p-4">
+                                        <span className="font-bold md:hidden">Time: </span>{event.time}
+                                    </TableCell>
+                                    <TableCell className="p-0 md:p-4">
+                                        <span className="font-bold md:hidden">Course: </span>{event.courseCode}
+                                    </TableCell>
+                                    <TableCell className="p-0 md:p-4">
+                                        <span className="font-bold md:hidden">Location: </span>{event.room}
+                                    </TableCell>
+                                    <TableCell className="p-0 md:p-4">
+                                        <span className="font-bold md:hidden">Lecturer: </span>{event.lecturer}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : (
                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                    <CardContent className="text-center text-muted-foreground">
                        <p className="font-medium">No classes scheduled for {day}.</p>
                        <p className="text-sm">Enjoy your day off!</p>
                    </CardContent>
                 </Card>
-              )}
-            </div>
+            )}
           </TabsContent>
         ))}
       </div>
@@ -175,9 +177,9 @@ function LecturerTimetableView({
 
   const normalizeCourse = (entry: TimetableEntry): { normalizedId: string; displayCode: string, originalId: number } => {
     const courseCode = entry.courseCode || '';
-    const deptParts = (courseCode.match(/[a-zA-Z]+/g) || []).filter(p => !/^[ivxlcdm]+$/i.test(p)); // Filter out roman numerals
+    const deptParts = (courseCode.match(/[a-zA-Z]+/g) || []).filter(p => !/^[ivxlcdm]+$/i.test(p));
     const numParts = courseCode.match(/\d+/g) || [];
-    const numPart = numParts.pop(); // Get the last number
+    const numPart = numParts.pop();
 
     if (deptParts.length > 0 && numPart) {
       const displayCode = `${deptParts.join(' ')} ${numPart}`;
@@ -423,58 +425,68 @@ function LecturerTimetableView({
         <div className="py-6">
           {days.map((day) => (
             <TabsContent key={day} value={day}>
-              <div className="space-y-4">
-                {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                  dailySchedule[day].map((event) => {
-                    const status = statusConfig[event.status as EventStatus];
-                    return (
-                      <Card key={event.id} className="overflow-hidden shadow-sm transition-all hover:shadow-md border border-border/80 rounded-xl">
-                        <div className="flex">
-                          <div className={cn("w-2 flex-shrink-0", status.color)}></div>
-                          <div className="flex-grow p-2">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                                <div>
-                                    <p className="font-semibold text-sm break-words">{event.courseCode}</p>
-                                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                                      <p>{event.room}</p>
-                                      <p>{event.time}</p>
-                                    </div>
-                                    <Badge variant="outline" className="mt-1.5 capitalize font-normal text-xs">{status.text}</Badge>
-                                </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 self-start sm:self-center">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            <span className="sr-only">More options</span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
-                                            <Check className="mr-2 h-4 w-4" /> Confirm Class
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
-                                            <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
-                                            <Ban className="mr-2 h-4 w-4" /> Cancel Class
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })
-                ) : (
-                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                        <TableHeader className="hidden md:table-header-group">
+                            <TableRow>
+                                <TableHead className="w-1/4">Time</TableHead>
+                                <TableHead>Course</TableHead>
+                                <TableHead className="w-1/4">Location</TableHead>
+                                <TableHead className="w-1/4">Status</TableHead>
+                                <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {dailySchedule[day].map((event) => (
+                            <TableRow key={event.id} className="flex flex-col md:table-row p-4 md:p-0 border-b">
+                                <TableCell className="font-medium p-0 md:p-4">
+                                    <span className="font-bold md:hidden">Time: </span>{event.time}
+                                </TableCell>
+                                <TableCell className="p-0 md:p-4">
+                                    <span className="font-bold md:hidden">Course: </span>{event.courseCode}
+                                </TableCell>
+                                <TableCell className="p-0 md:p-4">
+                                    <span className="font-bold md:hidden">Location: </span>{event.room}
+                                </TableCell>
+                                <TableCell className="p-0 md:p-4">
+                                    <span className="font-bold md:hidden">Status: </span>
+                                    <Badge variant="outline" className="capitalize font-normal text-xs">{statusConfig[event.status].text}</Badge>
+                                </TableCell>
+                                <TableCell className="p-0 pt-2 md:p-4 text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">More options</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                                <Check className="mr-2 h-4 w-4" /> Confirm Class
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
+                                                <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
+                                                <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                </div>
+              ) : (
+                <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                     <CardContent className="text-center text-muted-foreground">
                       <p className="font-medium">No classes scheduled for {day}.</p>
                       <p className="text-sm">Enjoy your day off!</p>
                     </CardContent>
-                  </Card>
-                )}
-              </div>
+                </Card>
+              )}
             </TabsContent>
           ))}
         </div>
@@ -1222,5 +1234,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    
