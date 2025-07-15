@@ -91,16 +91,24 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     const rooms: Record<string, { start: number; end: number, startSuffix: string, endSuffix: string }[]> = {};
 
     daySlots.forEach(slot => {
-        const parts = slot.time.replace(':', '.').split('-');
-        const startStr = parts[0];
-        const endStr = parts[1];
+        const timeParts = slot.time.split(' - ');
+        const startTimeStr = timeParts[0];
+        const endTimeStr = timeParts[1];
+
+        const startMatch = startTimeStr.match(/(\d+:\d+)\s*(AM|PM)/);
+        const endMatch = endTimeStr.match(/(\d+:\d+)\s*(AM|PM)/);
+
+        if (!startMatch || !endMatch) return;
+
+        let start = parseFloat(startMatch[1].replace(':', '.'));
+        const end = parseFloat(endMatch[1].replace(':', '.'));
+
+        const startSuffix = startMatch[2];
+        const endSuffix = endMatch[2];
         
-        const start = parseFloat(startStr);
-        const end = parseFloat(endStr);
-        
-        const startSuffix = startStr.includes('PM') ? 'PM' : 'AM';
-        const endSuffix = endStr.includes('PM') ? 'PM' : 'AM';
-        
+        if (startSuffix === 'PM' && start < 12) start += 12;
+        if (startSuffix === 'AM' && start === 12) start = 0; // Midnight case
+
         if (!rooms[slot.location]) {
             rooms[slot.location] = [];
         }
@@ -112,10 +120,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     const consolidatedRooms: { room: string, freeRanges: string[] }[] = [];
     
     const formatTime = (time: number, suffix: string) => {
-        const timeStr = time.toFixed(2).replace('.', ':');
-        return `${timeStr} ${suffix}`;
+      const hour = Math.floor(time);
+      const minute = Math.round((time % 1) * 60);
+      return `${hour}:${minute.toString().padStart(2, '0')} ${suffix}`;
     };
-
+    
     for (const room in rooms) {
         const slots = rooms[room];
         if (!slots || slots.length === 0) continue;
@@ -124,15 +133,15 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         let currentRange = { ...slots[0] };
 
         for (let i = 1; i < slots.length; i++) {
-            if (slots[i].start === currentRange.end) {
+            if (slots[i].start.toFixed(2) === currentRange.end.toFixed(2) && slots[i].startSuffix === currentRange.endSuffix) {
                 currentRange.end = slots[i].end;
                 currentRange.endSuffix = slots[i].endSuffix;
             } else {
-                ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)}-${formatTime(currentRange.end, currentRange.endSuffix)}`);
+                ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)} - ${formatTime(currentRange.end, currentRange.endSuffix)}`);
                 currentRange = { ...slots[i] };
             }
         }
-        ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)}-${formatTime(currentRange.end, currentRange.endSuffix)}`);
+        ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)} - ${formatTime(currentRange.end, currentRange.endSuffix)}`);
         consolidatedRooms.push({ room, freeRanges: ranges });
     }
     

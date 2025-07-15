@@ -44,7 +44,10 @@ export default function LecturerReviewModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(isOpen) => {
+      if (!isOpen) handleConfirm();
+      else onClose();
+    }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Confirm Your Semester Courses</DialogTitle>
