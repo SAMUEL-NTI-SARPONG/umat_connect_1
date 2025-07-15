@@ -442,7 +442,7 @@ function LecturerTimetableView({
         setIsReviewModalOpen(true);
       }
     }
-  }, [masterSchedule, user, hasReviewed]);
+  }, [masterSchedule, user, hasReviewed, lecturerCourses.length]);
   
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -595,7 +595,7 @@ function LecturerTimetableView({
         isOpen={isReviewModalOpen}
         onClose={() => {
             setIsReviewModalOpen(false);
-            if (user) {
+            if (user && !reviewedSchedules.includes(user.id)) {
               markScheduleAsReviewed(user.id);
             }
         }}
@@ -1524,6 +1524,8 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
 
     
 
