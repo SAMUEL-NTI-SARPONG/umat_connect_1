@@ -87,50 +87,53 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
     if (daySlots.length === 0) return [];
-    
-    const rooms: Record<string, string[]> = {};
 
-    daySlots.forEach(slot => {
-        if (!rooms[slot.location]) {
-            rooms[slot.location] = [];
-        }
-        rooms[slot.location].push(slot.time);
-    });
-    
-    const consolidatedRooms: { room: string, freeRanges: string[] }[] = [];
-    
+    const rooms: Record<string, string[]> = daySlots.reduce((acc, slot) => {
+      if (!acc[slot.location]) {
+        acc[slot.location] = [];
+      }
+      acc[slot.location].push(slot.time);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
+
+    const timeToMinutes = (timeStr: string) => {
+      const [time, modifier] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+      if (modifier === 'PM' && hours !== 12) hours += 12;
+      if (modifier === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + (minutes || 0);
+    };
+
     for (const room in rooms) {
-        const slots = rooms[room].sort((a, b) => {
-            const timeA = parseInt(a.split(':')[0], 10) + (a.includes('PM') && parseInt(a.split(':')[0], 10) !== 12 ? 12 : 0);
-            const timeB = parseInt(b.split(':')[0], 10) + (b.includes('PM') && parseInt(b.split(':')[0], 10) !== 12 ? 12 : 0);
-            return timeA - timeB;
-        });
+      const slots = (rooms[room] || []).map(time => {
+          const [start, end] = time.split(' - ');
+          return { start, end };
+      }).sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      
+      if (!slots || slots.length === 0) continue;
+      
+      const ranges: string[] = [];
+      let currentRangeStart = slots[0].start;
+      let currentRangeEnd = slots[0].end;
 
-        if (!slots || slots.length === 0) continue;
-
-        const ranges: string[] = [];
-        let currentRangeStart = slots[0].split(' - ')[0];
-        let currentRangeEnd = slots[0].split(' - ')[1];
-
-        for (let i = 1; i < slots.length; i++) {
-            const prevEnd = currentRangeEnd;
-            const [nextStart, nextEnd] = slots[i].split(' - ');
-            
-            if (prevEnd === nextStart) {
-                currentRangeEnd = nextEnd;
-            } else {
-                ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-                currentRangeStart = nextStart;
-                currentRangeEnd = nextEnd;
-            }
+      for (let i = 1; i < slots.length; i++) {
+        if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
+          currentRangeEnd = slots[i].end;
+        } else {
+          ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+          currentRangeStart = slots[i].start;
+          currentRangeEnd = slots[i].end;
         }
-        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-        consolidatedRooms.push({ room, freeRanges: ranges });
+      }
+      ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+      consolidatedRooms.push({ room, freeRanges: ranges });
     }
-    
-    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
 
+    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
   }, [emptySlots, activeDay]);
+
 
   return (
     <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
@@ -290,6 +293,8 @@ function LecturerTimetableView({
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [activeDay, setActiveDay] = useState("Monday");
+  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
   const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
@@ -355,6 +360,56 @@ function LecturerTimetableView({
     
     return rejectedIds;
   }, [user, rejectedEntries, lecturerCourses]);
+
+  const freeRoomsForDay = useMemo(() => {
+    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
+    if (daySlots.length === 0) return [];
+
+    const rooms: Record<string, string[]> = daySlots.reduce((acc, slot) => {
+      if (!acc[slot.location]) {
+        acc[slot.location] = [];
+      }
+      acc[slot.location].push(slot.time);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
+
+    const timeToMinutes = (timeStr: string) => {
+      const [time, modifier] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+      if (modifier === 'PM' && hours !== 12) hours += 12;
+      if (modifier === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + (minutes || 0);
+    };
+
+    for (const room in rooms) {
+      const slots = (rooms[room] || []).map(time => {
+          const [start, end] = time.split(' - ');
+          return { start, end };
+      }).sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      
+      if (!slots || slots.length === 0) continue;
+      
+      const ranges: string[] = [];
+      let currentRangeStart = slots[0].start;
+      let currentRangeEnd = slots[0].end;
+
+      for (let i = 1; i < slots.length; i++) {
+        if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
+          currentRangeEnd = slots[i].end;
+        } else {
+          ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+          currentRangeStart = slots[i].start;
+          currentRangeEnd = slots[i].end;
+        }
+      }
+      ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+      consolidatedRooms.push({ room, freeRanges: ranges });
+    }
+
+    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
+  }, [emptySlots, activeDay]);
 
 
   const handleReviewToggle = (courseGroupId: number, shouldReject: boolean) => {
@@ -530,7 +585,7 @@ function LecturerTimetableView({
         isOpen={isReviewModalOpen}
         onClose={() => {
             setIsReviewModalOpen(false);
-            if (user && !hasReviewed) {
+            if (user) {
               markScheduleAsReviewed(user.id);
             }
         }}
@@ -546,6 +601,49 @@ function LecturerTimetableView({
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Create Schedule
             </Button>
+             <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                        <SearchIcon className="mr-2 h-4 w-4" />
+                        Find Free Rooms
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
+                        <DialogDescription>
+                            Here are the classrooms that are available and their free time slots.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                        {freeRoomsForDay.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {freeRoomsForDay.map(({ room, freeRanges }) => (
+                                    <Card key={room}>
+                                        <CardHeader className="p-4">
+                                            <CardTitle className="text-base">{room}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0">
+                                            <div className="space-y-1">
+                                                {freeRanges.map((range, idx) => (
+                                                   <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center p-12 text-muted-foreground">
+                                <p>No free classrooms found for {activeDay}.</p>
+                            </div>
+                        )}
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500" /> Confirmed</div>
@@ -553,7 +651,7 @@ function LecturerTimetableView({
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /> Canceled</div>
         </div>
       </div>
-      <Tabs defaultValue="Monday" className="w-full">
+      <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
         <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
           <TabsList className="grid w-full grid-cols-7 h-12">
             {days.map((day) => (
@@ -1416,3 +1514,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
