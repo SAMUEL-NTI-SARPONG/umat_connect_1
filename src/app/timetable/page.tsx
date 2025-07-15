@@ -93,7 +93,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         {days.map(day => (
           <TabsContent key={day} value={day}>
             {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
+                <div className="md:border md:rounded-lg md:overflow-hidden">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader className="hidden md:table-header-group">
@@ -281,7 +281,7 @@ function LecturerTimetableView({
     setSchedule(
       schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
     );
-    closeAllModals();
+    setIsActionModalOpen(false);
   };
 
   const handleRescheduleClick = (entry: TimetableEntry) => {
@@ -454,7 +454,7 @@ function LecturerTimetableView({
           {days.map((day) => (
             <TabsContent key={day} value={day}>
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
+                <div className="md:border md:rounded-lg md:overflow-hidden">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader className="hidden md:table-header-group">
@@ -468,7 +468,7 @@ function LecturerTimetableView({
                             <TableBody>
                             {dailySchedule[day].map((event, index) => (
                                 <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0 cursor-pointer">
-                                    <TableCell className="block md:hidden p-0 md:p-4 w-full">
+                                    <TableCell className="block md:hidden p-0 w-full">
                                       <div className="border rounded-lg p-4 space-y-4 m-2">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
                                           <div>
