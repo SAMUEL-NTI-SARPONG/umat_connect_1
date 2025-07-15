@@ -105,11 +105,33 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         </TableHeader>
                         <TableBody>
                             {dailySchedule[day].map((event, index) => (
-                                <TableRow key={index} className="flex flex-col md:table-row p-4 md:p-0 border-b w-full">
-                                    <TableCell className="p-1 md:p-4 font-medium"><div className="md:hidden font-bold">Time</div>{event.time}</TableCell>
-                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Course</div>{event.courseCode}</TableCell>
-                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Location</div>{event.room}</TableCell>
-                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Lecturer</div>{event.lecturer}</TableCell>
+                                <TableRow key={index} className="flex flex-col md:table-row p-0 md:p-0 border-b w-full">
+                                    {/* Mobile View */}
+                                    <td className="md:hidden p-4 w-full">
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                        <div>
+                                          <div className="font-bold text-xs text-muted-foreground">Time</div>
+                                          <div className="font-medium break-words">{event.time}</div>
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-xs text-muted-foreground">Course</div>
+                                          <div className="font-medium break-words">{event.courseCode}</div>
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-xs text-muted-foreground">Location</div>
+                                          <div className="font-medium break-words">{event.room}</div>
+                                        </div>
+                                        <div>
+                                          <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
+                                          <div className="font-medium break-words">{event.lecturer}</div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    {/* Desktop View */}
+                                    <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{event.lecturer}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -437,17 +459,62 @@ function LecturerTimetableView({
                         </TableHeader>
                         <TableBody>
                         {dailySchedule[day].map((event) => (
-                            <TableRow key={event.id} className="flex flex-col md:table-row p-4 md:p-0 border-b w-full">
-                                <TableCell className="p-1 md:p-4 font-medium"><div className="md:hidden font-bold">Time</div>{event.time}</TableCell>
-                                <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Course</div>{event.courseCode}</TableCell>
-                                <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Location</div>{event.room}</TableCell>
-                                <TableCell className="p-1 md:p-4">
-                                    <div className="md:hidden font-bold mb-1">Status</div>
+                            <TableRow key={event.id} className="flex flex-col md:table-row p-0 md:p-0 border-b w-full">
+                                {/* Mobile View */}
+                                <td className="md:hidden p-4 w-full">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                      <div>
+                                        <div className="font-bold text-xs text-muted-foreground">Time</div>
+                                        <div className="font-medium break-words">{event.time}</div>
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-xs text-muted-foreground">Course</div>
+                                        <div className="font-medium break-words">{event.courseCode}</div>
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-xs text-muted-foreground">Location</div>
+                                        <div className="font-medium break-words">{event.room}</div>
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-xs text-muted-foreground">Status</div>
+                                        <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                          {statusConfig[event.status].text}
+                                        </Badge>
+                                      </div>
+                                      <div className="col-span-2 pt-2">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="w-full">
+                                                    Actions
+                                                    <MoreHorizontal className="h-4 w-4 ml-2" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)]">
+                                                <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'confirmed')} disabled={event.status === 'confirmed'}>
+                                                    <Check className="mr-2 h-4 w-4" /> Confirm Class
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleRescheduleClick(event)}>
+                                                    <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleStatusChange(event.id, 'canceled')} className="text-destructive" disabled={event.status === 'canceled'}>
+                                                    <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </div>
+                                </td>
+                                
+                                {/* Desktop View */}
+                                <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                <TableCell className="hidden md:table-cell">
                                     <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
                                         {statusConfig[event.status].text}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="p-1 pt-2 md:p-4 text-left md:text-right">
+                                <TableCell className="hidden md:table-cell text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-8 w-8">
