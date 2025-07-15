@@ -105,19 +105,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                         </TableHeader>
                         <TableBody>
                             {dailySchedule[day].map((event, index) => (
-                                <TableRow key={index} className="flex flex-col md:table-row p-4 md:p-0 border-b">
-                                    <TableCell className="font-medium p-0 md:p-4">
-                                        <span className="font-bold md:hidden">Time: </span>{event.time}
-                                    </TableCell>
-                                    <TableCell className="p-0 md:p-4">
-                                        <span className="font-bold md:hidden">Course: </span>{event.courseCode}
-                                    </TableCell>
-                                    <TableCell className="p-0 md:p-4">
-                                        <span className="font-bold md:hidden">Location: </span>{event.room}
-                                    </TableCell>
-                                    <TableCell className="p-0 md:p-4">
-                                        <span className="font-bold md:hidden">Lecturer: </span>{event.lecturer}
-                                    </TableCell>
+                                <TableRow key={index} className="flex flex-col md:table-row p-4 md:p-0 border-b w-full">
+                                    <TableCell className="p-1 md:p-4 font-medium"><div className="md:hidden font-bold">Time</div>{event.time}</TableCell>
+                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Course</div>{event.courseCode}</TableCell>
+                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Location</div>{event.room}</TableCell>
+                                    <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Lecturer</div>{event.lecturer}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -401,18 +393,24 @@ function LecturerTimetableView({
         onClose={() => setIsReviewModalOpen(false)}
         courses={lecturerCourses}
       />
-
-      <div className="flex justify-end gap-2 mb-4">
-        {hasReviewed && (
-             <Button variant="outline" onClick={() => setIsManageModalOpen(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                Manage My Courses
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+        <div className="flex justify-end sm:justify-start gap-2">
+            {hasReviewed && (
+                 <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Courses
+                </Button>
+            )}
+            <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Create Schedule
             </Button>
-        )}
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Create Schedule
-        </Button>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500" /> Confirmed</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-yellow-500" /> Undecided</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500" /> Canceled</div>
+        </div>
       </div>
       <Tabs defaultValue="Monday" className="w-full">
         <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
@@ -439,21 +437,17 @@ function LecturerTimetableView({
                         </TableHeader>
                         <TableBody>
                         {dailySchedule[day].map((event) => (
-                            <TableRow key={event.id} className="flex flex-col md:table-row p-4 md:p-0 border-b">
-                                <TableCell className="font-medium p-0 md:p-4">
-                                    <span className="font-bold md:hidden">Time: </span>{event.time}
+                            <TableRow key={event.id} className="flex flex-col md:table-row p-4 md:p-0 border-b w-full">
+                                <TableCell className="p-1 md:p-4 font-medium"><div className="md:hidden font-bold">Time</div>{event.time}</TableCell>
+                                <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Course</div>{event.courseCode}</TableCell>
+                                <TableCell className="p-1 md:p-4"><div className="md:hidden font-bold">Location</div>{event.room}</TableCell>
+                                <TableCell className="p-1 md:p-4">
+                                    <div className="md:hidden font-bold mb-1">Status</div>
+                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                        {statusConfig[event.status].text}
+                                    </Badge>
                                 </TableCell>
-                                <TableCell className="p-0 md:p-4">
-                                    <span className="font-bold md:hidden">Course: </span>{event.courseCode}
-                                </TableCell>
-                                <TableCell className="p-0 md:p-4">
-                                    <span className="font-bold md:hidden">Location: </span>{event.room}
-                                </TableCell>
-                                <TableCell className="p-0 md:p-4">
-                                    <span className="font-bold md:hidden">Status: </span>
-                                    <Badge variant="outline" className="capitalize font-normal text-xs">{statusConfig[event.status].text}</Badge>
-                                </TableCell>
-                                <TableCell className="p-0 pt-2 md:p-4 text-right">
+                                <TableCell className="p-1 pt-2 md:p-4 text-left md:text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-8 w-8">
