@@ -88,19 +88,33 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
     if (daySlots.length === 0) return [];
 
-    const rooms: Record<string, { start: number; end: number }[]> = {};
+    const rooms: Record<string, { start: number; end: number, startSuffix: string, endSuffix: string }[]> = {};
 
     daySlots.forEach(slot => {
-        const [start, end] = slot.time.split('-').map(t => parseFloat(t.replace(':', '.')));
+        const parts = slot.time.replace(':', '.').split('-');
+        const startStr = parts[0];
+        const endStr = parts[1];
+        
+        const start = parseFloat(startStr);
+        const end = parseFloat(endStr);
+        
+        const startSuffix = startStr.includes('PM') ? 'PM' : 'AM';
+        const endSuffix = endStr.includes('PM') ? 'PM' : 'AM';
+        
         if (!rooms[slot.location]) {
             rooms[slot.location] = [];
         }
-        rooms[slot.location].push({ start, end });
+        rooms[slot.location].push({ start, end, startSuffix, endSuffix });
     });
 
     Object.values(rooms).forEach(slots => slots.sort((a, b) => a.start - b.start));
 
     const consolidatedRooms: { room: string, freeRanges: string[] }[] = [];
+    
+    const formatTime = (time: number, suffix: string) => {
+        const timeStr = time.toFixed(2).replace('.', ':');
+        return `${timeStr} ${suffix}`;
+    };
 
     for (const room in rooms) {
         const slots = rooms[room];
@@ -112,12 +126,13 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         for (let i = 1; i < slots.length; i++) {
             if (slots[i].start === currentRange.end) {
                 currentRange.end = slots[i].end;
+                currentRange.endSuffix = slots[i].endSuffix;
             } else {
-                ranges.push(`${currentRange.start.toFixed(2).replace('.', ':')}-${currentRange.end.toFixed(2).replace('.', ':')}`);
+                ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)}-${formatTime(currentRange.end, currentRange.endSuffix)}`);
                 currentRange = { ...slots[i] };
             }
         }
-        ranges.push(`${currentRange.start.toFixed(2).replace('.', ':')}-${currentRange.end.toFixed(2).replace('.', ':')}`);
+        ranges.push(`${formatTime(currentRange.start, currentRange.startSuffix)}-${formatTime(currentRange.end, currentRange.endSuffix)}`);
         consolidatedRooms.push({ room, freeRanges: ranges });
     }
     
@@ -394,7 +409,7 @@ function LecturerTimetableView({
 
   const handleSaveEdit = () => {
     if (!editedFormData) return;
-    const updatedEntry = { ...editedFormData, time: `${startTime}-${endTime}` };
+    const updatedEntry = { ...editedFormData, time: `${startTime} - ${endTime}` };
     setSchedule(schedule.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
     closeAllModals();
   };
@@ -411,7 +426,7 @@ function LecturerTimetableView({
       level,
       departments,
       room,
-      time: `${createStartTime}-${createEndTime}`,
+      time: `${createStartTime} - ${createEndTime}`,
     });
     closeAllModals();
   };
@@ -479,7 +494,7 @@ function LecturerTimetableView({
     const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
     const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0]))];
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0].trim()))];
     
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
@@ -487,8 +502,8 @@ function LecturerTimetableView({
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
-        endTimes.push(currentSlot.split('-')[1]);
+        if (prevSlot && prevSlot.split('-')[1].trim() !== currentSlot.split('-')[0].trim()) break;
+        endTimes.push(currentSlot.split('-')[1].trim());
       }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -498,7 +513,7 @@ function LecturerTimetableView({
     const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
     const roomDaySlots = daySlots.filter(slot => slot.location === createFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0]))];
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split('-')[0].trim()))];
 
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(createStartTime));
@@ -506,8 +521,8 @@ function LecturerTimetableView({
         for (let i = startIndex; i < roomDaySlots.length; i++) {
             const currentSlot = roomDaySlots[i];
             const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-            if (prevSlot && prevSlot.split('-')[1] !== currentSlot.split('-')[0]) break;
-            endTimes.push(currentSlot.split('-')[1]);
+            if (prevSlot && prevSlot.split('-')[1].trim() !== currentSlot.split('-')[0].trim()) break;
+            endTimes.push(currentSlot.split('-')[1].trim());
         }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -925,7 +940,7 @@ function AdminTimetableView({
   
   const handleSaveEdit = () => {
      if (!editedFormData || !parsedData || !startTime || !endTime) return;
-     const updatedEntry = { ...editedFormData, time: `${startTime}-${endTime}` };
+     const updatedEntry = { ...editedFormData, time: `${startTime} - ${endTime}` };
      setParsedData(parsedData.map(item => item.id === updatedEntry.id ? updatedEntry : item));
      closeAllModals();
   };
@@ -1001,7 +1016,7 @@ function AdminTimetableView({
   }, [emptySlots, editedFormData]);
 
   const availableStartTimes = useMemo(() => {
-    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split('-')[0]))];
+    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split('-')[0].trim()))];
   }, [availableSlotsForRoomAndDay]);
 
   const availableEndTimes = useMemo(() => {
@@ -1016,13 +1031,13 @@ function AdminTimetableView({
         const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
 
         if (prevSlot) {
-            const prevEndTime = prevSlot.split('-')[1];
-            const currentStartTime = currentSlot.split('-')[0];
+            const prevEndTime = prevSlot.split('-')[1].trim();
+            const currentStartTime = currentSlot.split('-')[0].trim();
             if (prevEndTime !== currentStartTime) {
                 break; // Break if not continuous
             }
         }
-        continuousEndTimes.push(currentSlot.split('-')[1]);
+        continuousEndTimes.push(currentSlot.split('-')[1].trim());
     }
     
     return continuousEndTimes;
@@ -1403,5 +1418,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    

@@ -11,8 +11,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 
   // Define time slots, excluding break column (1:00-1:30)
   const timeSlots = [
-    '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
-    '12:00-1:00', '1:30-2:30', '2:30-3:30', '3:30-4:30', '4:30-5:30', '5:30-6:30', '6:30-7:30'
+    '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
+    '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
   ];
 
     // Helper function to combine time slots into a range
@@ -23,9 +23,13 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     if (startIndex > endIndex) return timeSlots[startIndex] || '';
     if (startIndex === endIndex) return timeSlots[startIndex] || '';
 
-    const startTime = (timeSlots[startIndex] || '').split('-')[0];
-    const endTime = (timeSlots[endIndex] || '').split('-')[1];
-    return `${startTime}-${endTime}`;
+    const startTimeFull = timeSlots[startIndex] || '';
+    const endTimeFull = timeSlots[endIndex] || '';
+    
+    const startTime = startTimeFull.split('-')[0].trim();
+    const endTime = endTimeFull.split('-')[1].trim();
+
+    return `${startTime} - ${endTime}`;
   }
 
 
@@ -176,8 +180,8 @@ export async function findEmptyClassrooms(fileData: string) {
 
   // Define time slots, excluding break column (1:00-1:30)
   const timeSlots = [
-    '7:00-8:00', '8:00-9:00', '9:00-10:00', '10:00-11:00', '11:00-12:00',
-    '12:00-1:00', '1:30-2:30', '2:30-3:30', '3:30-4:30', '4:30-5:30', '5:30-6:30', '6:30-7:30'
+    '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
+    '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
   ];
   
   const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
