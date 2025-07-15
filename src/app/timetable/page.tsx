@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -94,48 +94,50 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
           <TabsContent key={day} value={day}>
             {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                 <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
-                    <Table>
-                        <TableHeader className="hidden md:table-header-group">
-                            <TableRow>
-                                <TableHead className="w-1/4">Time</TableHead>
-                                <TableHead>Course</TableHead>
-                                <TableHead className="w-1/4">Location</TableHead>
-                                <TableHead className="w-1/4">Lecturer</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {dailySchedule[day].map((event, index) => (
-                                <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0">
-                                    <TableCell className="block md:hidden p-0 w-full">
-                                      <div className="border rounded-lg p-4 space-y-2 m-2">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Time</div>
-                                            <div className="font-medium break-words">{event.time}</div>
-                                          </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Course</div>
-                                            <div className="font-medium break-words">{event.courseCode}</div>
-                                          </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Location</div>
-                                            <div className="font-medium break-words">{event.room}</div>
-                                          </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
-                                            <div className="font-medium break-words">{event.lecturer}</div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{event.lecturer}</TableCell>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="hidden md:table-header-group">
+                                <TableRow>
+                                    <TableHead className="w-1/4">Time</TableHead>
+                                    <TableHead>Course</TableHead>
+                                    <TableHead className="w-1/4">Location</TableHead>
+                                    <TableHead className="w-1/4">Lecturer</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {dailySchedule[day].map((event, index) => (
+                                    <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
+                                        <TableCell className="block md:hidden p-0 w-full">
+                                          <div className="border rounded-lg p-4 space-y-2 m-2">
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground">Time</div>
+                                                <div className="font-medium break-words">{event.time}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground">Course</div>
+                                                <div className="font-medium break-words">{event.courseCode}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground">Location</div>
+                                                <div className="font-medium break-words">{event.room}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground">Lecturer</div>
+                                                <div className="font-medium break-words">{event.lecturer}</div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{event.lecturer}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             ) : (
                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -455,56 +457,58 @@ function LecturerTimetableView({
             <TabsContent key={day} value={day}>
               {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                 <div className="border-t md:border-t-0 md:rounded-lg md:overflow-hidden">
-                    <Table>
-                        <TableHeader className="hidden md:table-header-group">
-                            <TableRow>
-                                <TableHead className="w-1/4">Time</TableHead>
-                                <TableHead>Course</TableHead>
-                                <TableHead className="w-1/4">Location</TableHead>
-                                <TableHead className="w-1/4">Status</TableHead>
-                                <TableHead className="w-12"></TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {dailySchedule[day].map((event, index) => (
-                            <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 border-b md:border-b-0 mb-4 md:mb-0 cursor-pointer">
-                                <TableCell className="block md:hidden p-0 w-full">
-                                  <div className="border rounded-lg p-4 space-y-4 m-2">
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                      <div>
-                                        <div className="font-bold text-xs text-muted-foreground">Time</div>
-                                        <div className="font-medium break-words">{event.time}</div>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="hidden md:table-header-group">
+                                <TableRow>
+                                    <TableHead className="w-1/4">Time</TableHead>
+                                    <TableHead>Course</TableHead>
+                                    <TableHead className="w-1/4">Location</TableHead>
+                                    <TableHead className="w-1/4">Status</TableHead>
+                                    <TableHead className="w-12"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {dailySchedule[day].map((event, index) => (
+                                <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0 cursor-pointer">
+                                    <TableCell className="block md:hidden p-0 md:p-4 w-full">
+                                      <div className="border rounded-lg p-4 space-y-4 m-2">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Time</div>
+                                            <div className="font-medium break-words">{event.time}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Course</div>
+                                            <div className="font-medium break-words">{event.courseCode}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Location</div>
+                                            <div className="font-medium break-words">{event.room}</div>
+                                          </div>
+                                          <div>
+                                            <div className="font-bold text-xs text-muted-foreground">Status</div>
+                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                              {statusConfig[event.status].text}
+                                            </Badge>
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div>
-                                        <div className="font-bold text-xs text-muted-foreground">Course</div>
-                                        <div className="font-medium break-words">{event.courseCode}</div>
-                                      </div>
-                                      <div>
-                                        <div className="font-bold text-xs text-muted-foreground">Location</div>
-                                        <div className="font-medium break-words">{event.room}</div>
-                                      </div>
-                                      <div>
-                                        <div className="font-bold text-xs text-muted-foreground">Status</div>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                    <TableCell className="hidden md:table-cell">
                                         <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                          {statusConfig[event.status].text}
+                                            {statusConfig[event.status].text}
                                         </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                        {statusConfig[event.status].text}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell"></TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell"></TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
               ) : (
                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -700,7 +704,7 @@ function LecturerTimetableView({
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold break-words">{course.courseCode}</p>
                       <div className="flex flex-wrap items-center text-sm text-muted-foreground">
-                        <span>{course.departments.join(', ')}</span>
+                        <span className="break-all">{course.departments.join(', ')}</span>
                         <span className="mx-1.5">&middot;</span>
                         <span>Level {course.level}</span>
                       </div>
