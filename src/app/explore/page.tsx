@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 
 const chats = [
   {
@@ -89,8 +88,8 @@ export default function ExplorePage() {
             </div>
             <ScrollArea className="flex-grow">
                 {chats.map((chat) => (
-                    <div 
-                        key={chat.id} 
+                    <div
+                        key={chat.id}
                         className={cn(
                             "flex items-center p-3 cursor-pointer transition-colors",
                             selectedChat?.id === chat.id ? 'bg-muted/80' : 'hover:bg-muted/50'
