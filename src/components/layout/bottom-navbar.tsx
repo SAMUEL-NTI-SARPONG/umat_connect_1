@@ -3,14 +3,14 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Calendar, User, PanelLeft, LogOut } from 'lucide-react';
+import { Home, Calendar, User, MessageSquare, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useUser } from '@/app/providers/user-provider';
 
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/timetable', icon: Calendar, label: 'Timetable' },
+  { href: '/sms', icon: MessageSquare, label: 'SMS' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
 
@@ -27,7 +27,7 @@ export default function BottomNavbar() {
             <Link href={item.href} key={item.label}>
               <div
                 className={cn(
-                  'flex flex-col items-center gap-1 p-2 rounded-md',
+                  'flex flex-col items-center gap-1 p-2 rounded-md w-16',
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
@@ -39,23 +39,13 @@ export default function BottomNavbar() {
         })}
         <div
           className={cn(
-            'flex flex-col items-center gap-1 p-2 rounded-md text-muted-foreground'
+            'flex flex-col items-center gap-1 p-2 rounded-md text-muted-foreground w-16'
           )}
           onClick={logout}
         >
           <LogOut className="h-6 w-6" />
           <span className="text-xs font-medium">Logout</span>
         </div>
-        <SidebarTrigger>
-           <div
-                className={cn(
-                  'flex flex-col items-center gap-1 p-2 rounded-md text-muted-foreground'
-                )}
-              >
-                <PanelLeft className="h-6 w-6" />
-                <span className="text-xs font-medium">More</span>
-              </div>
-        </SidebarTrigger>
       </div>
     </div>
   );

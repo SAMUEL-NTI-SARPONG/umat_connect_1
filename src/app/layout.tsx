@@ -18,31 +18,37 @@ import { ThemeProvider } from './providers/theme-provider';
 import LoginPage from './login/page';
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
+import { usePathname } from 'next/navigation';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
+  const pathname = usePathname();
 
   if (!user) {
     return <LoginPage />;
   }
+  
+  const isSmsPage = pathname === '/sms';
 
   return (
     <SidebarProvider>
-      <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
+       <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
         <AppHeader />
-        <div className="w-full">
+        <div className="flex-1 w-full flex">
           <Sidebar variant="floating" collapsible="icon">
             <AppSidebar />
           </Sidebar>
-          <SidebarInset className="flex flex-1 flex-col">
-            <TopScheduleBar />
-            <main className="flex-1 px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
+          <SidebarInset className={`flex flex-1 flex-col ${isSmsPage ? 'p-0' : ''}`}>
+             {!isSmsPage && <TopScheduleBar />}
+            <main className={`flex-1 ${isSmsPage ? '' : 'px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0'}`}>
               {children}
             </main>
           </SidebarInset>
-          <Sidebar side="right" variant="floating" collapsible="icon">
-            <ScheduleSidebar />
-          </Sidebar>
+          {!isSmsPage && (
+            <Sidebar side="right" variant="floating" collapsible="icon">
+                <ScheduleSidebar />
+            </Sidebar>
+          )}
         </div>
         <BottomNavbar />
       </div>
@@ -80,7 +86,7 @@ export default function RootLayout({
         >
           <UserProvider>
             <AppLayout>{children}</AppLayout>
-          </UserProvider>
+          </User-provider>
           <Toaster />
         </ThemeProvider>
       </body>

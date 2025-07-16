@@ -14,6 +14,7 @@ const pageTitles: { [key: string]: string } = {
   '/timetable': 'Timetable',
   '/profile': 'My Profile',
   '/explore': 'Explore',
+  '/sms': 'SMS Service',
 };
 
 export default function AppHeader() {
@@ -32,6 +33,7 @@ export default function AppHeader() {
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-4 p-4 border-b bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 flex-1">
+        <SidebarTrigger side="left" className="md:hidden" />
         <Link href="/" className="flex items-center gap-2">
             <GraduationCap className="w-8 h-8 text-primary" />
             <h2 className="text-lg font-semibold hidden sm:block">UMaT Connect</h2>
@@ -43,7 +45,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-        <SidebarTrigger side="right" className="md:hidden" />
+        {pathname !== '/sms' && <SidebarTrigger side="right" className="md:hidden" />}
       </div>
     </header>
   );
