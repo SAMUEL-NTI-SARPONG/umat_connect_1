@@ -104,8 +104,8 @@ export default function ExplorePage() {
                             imageHint={chat.imageHint}
                         />
                         <div className="flex-grow overflow-hidden">
-                            <p className="font-semibold truncate">{chat.name}</p>
-                            <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
+                            <p className="font-semibold truncate text-sm">{chat.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{chat.lastMessage}</p>
                         </div>
                         <div className="text-xs text-muted-foreground ml-4 self-start shrink-0">
                             {chat.timestamp}
