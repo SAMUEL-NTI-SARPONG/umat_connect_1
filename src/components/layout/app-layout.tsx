@@ -25,7 +25,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   
   const isSmsPage = pathname === '/sms';
-  const isExplorePage = pathname === '/explore';
 
   return (
     <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
@@ -35,13 +34,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Sidebar variant="floating" collapsible="icon">
             <AppSidebar />
           </Sidebar>
-          <SidebarInset className={`flex flex-col flex-1 ${isSmsPage || isExplorePage ? 'p-0 md:p-6 md:pt-0' : ''}`}>
-             {!isSmsPage && !isExplorePage && <TopScheduleBar />}
-            <main className={`flex-1 ${isSmsPage || isExplorePage ? '' : 'px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0'}`}>
+          <SidebarInset className={`flex flex-col flex-1 ${isSmsPage ? 'p-0 md:p-6 md:pt-0' : ''}`}>
+             {!isSmsPage && <TopScheduleBar />}
+            <main className={`flex-1 ${isSmsPage ? '' : 'px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0'}`}>
               {children}
             </main>
           </SidebarInset>
-          {!isSmsPage && !isExplorePage && (
+          {!isSmsPage && (
             <Sidebar side="right" variant="floating" collapsible="icon">
                 <ScheduleSidebar />
             </Sidebar>

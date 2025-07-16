@@ -13,7 +13,6 @@ const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
   '/timetable': 'Timetable',
   '/profile': 'My Profile',
-  '/explore': 'Groups and Chats',
   '/sms': 'SMS Service',
 };
 

@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, Users, MessageSquare } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -78,19 +78,6 @@ export default function AppSidebar() {
                     </SidebarMenuButton>
                 </Link>
             </SidebarMenuItem>
-           {user.role === 'lecturer' && (
-            <SidebarMenuItem>
-              <Link href="/explore" passHref>
-                <SidebarMenuButton
-                  tooltip="Groups and Chats"
-                  isActive={pathname === '/explore'}
-                >
-                  <Users />
-                  <span>Groups & Chats</span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-           )}
           <SidebarMenuItem>
             <Link href="/profile" passHref>
               <SidebarMenuButton
