@@ -40,9 +40,11 @@ export interface AttachedFile {
 }
 
 export type Comment = {
+  id: number;
   authorId: number;
   text: string;
   timestamp: string;
+  replies: Comment[];
 };
 
 export type Post = {
@@ -71,6 +73,7 @@ interface UserContextType {
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
   addComment: (postId: number, text: string) => void;
+  addReply: (postId: number, parentCommentId: number, text: string) => void;
   lecturerSchedules: TimetableEntry[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   reviewedSchedules: number[];
@@ -225,9 +228,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     
     const newComment: Comment = {
+      id: Date.now(),
       authorId: user.id,
       text,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      replies: [],
     };
     
     setPosts(prevPosts => {
@@ -241,6 +246,45 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return updatedPosts;
     });
 
+  }, [user]);
+
+  const addReply = useCallback((postId: number, parentCommentId: number, text: string) => {
+    if (!user) return;
+
+    const newReply: Comment = {
+      id: Date.now(),
+      authorId: user.id,
+      text,
+      timestamp: new Date().toISOString(),
+      replies: [],
+    };
+    
+    setPosts(prevPosts => {
+      const updatedPosts = JSON.parse(JSON.stringify(prevPosts)); // Deep copy
+      const post = updatedPosts.find((p: Post) => p.id === postId);
+
+      if (post) {
+        // Recursive function to find and update the parent comment
+        const findAndAddReply = (comments: Comment[]) => {
+          for (const comment of comments) {
+            if (comment.id === parentCommentId) {
+              comment.replies.push(newReply);
+              return true;
+            }
+            if (comment.replies && comment.replies.length > 0) {
+              if (findAndAddReply(comment.replies)) {
+                return true;
+              }
+            }
+          }
+          return false;
+        };
+        findAndAddReply(post.comments);
+      }
+      
+      saveToStorage('posts', updatedPosts);
+      return updatedPosts;
+    });
   }, [user]);
 
   const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
@@ -333,6 +377,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     posts,
     addPost,
     addComment,
+    addReply,
     lecturerSchedules,
     addLecturerSchedule,
     reviewedSchedules,
@@ -340,7 +385,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     rejectedEntries,
     rejectScheduleEntry,
     unrejectScheduleEntry,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, addComment, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
