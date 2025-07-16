@@ -86,7 +86,7 @@ export default function RootLayout({
         >
           <UserProvider>
             <AppLayout>{children}</AppLayout>
-          </User-provider>
+          </UserProvider>
           <Toaster />
         </ThemeProvider>
       </body>
