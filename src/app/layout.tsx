@@ -30,11 +30,11 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <div className="relative mx-auto flex min-h-svh w-full max-w-7xl flex-col">
         <AppHeader />
-        <div className="flex w-full">
+        <div className="w-full">
           <Sidebar variant="floating" collapsible="icon">
             <AppSidebar />
           </Sidebar>
-          <SidebarInset className="flex flex-1 flex-col overflow-y-auto">
+          <SidebarInset className="flex flex-1 flex-col">
             <TopScheduleBar />
             <main className="flex-1 px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
               {children}
@@ -58,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
