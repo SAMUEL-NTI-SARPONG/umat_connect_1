@@ -46,7 +46,8 @@ export default function ScheduleSidebar() {
   const todaysSchedule = useMemo(() => {
     if (!masterSchedule || !user) return [];
 
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const today = days[new Date().getDay()];
 
     if (user.role === 'student') {
         return masterSchedule.filter(entry =>
