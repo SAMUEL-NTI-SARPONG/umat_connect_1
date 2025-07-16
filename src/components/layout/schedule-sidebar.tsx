@@ -41,16 +41,19 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { user, masterSchedule, rejectedEntries } = useUser();
+  const { user, masterSchedule, lecturerSchedules, rejectedEntries } = useUser();
 
   const todaysSchedule = useMemo(() => {
-    if (!masterSchedule || !user) return [];
+    if (!user) return [];
+    
+    const combinedSchedule = [...(masterSchedule || []), ...lecturerSchedules];
+    if (combinedSchedule.length === 0) return [];
 
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const today = days[new Date().getDay()];
 
     if (user.role === 'student') {
-        return masterSchedule.filter(entry =>
+        return combinedSchedule.filter(entry =>
             entry.day === today &&
             entry.level === user.level &&
             entry.departments.includes(user.department)
@@ -61,15 +64,17 @@ export default function ScheduleSidebar() {
         const userRejectedIds = rejectedEntries[user.id] || [];
         const currentLecturerNameParts = user.name.toLowerCase().split(' ');
         
-        return masterSchedule.filter(entry => 
-            !userRejectedIds.includes(entry.id) &&
-            entry.day === today &&
-            currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
-        );
+        return combinedSchedule.filter(entry => {
+            const isRejected = masterSchedule?.some(ms => ms.id === entry.id) && userRejectedIds.includes(entry.id);
+            
+            return !isRejected &&
+                   entry.day === today &&
+                   currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part));
+        });
     }
 
     return []; // No personal schedule for admin
-  }, [masterSchedule, user, rejectedEntries]);
+  }, [masterSchedule, lecturerSchedules, user, rejectedEntries]);
 
   const hasSchedule = todaysSchedule.length > 0;
 
