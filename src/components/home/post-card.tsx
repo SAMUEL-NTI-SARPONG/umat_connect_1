@@ -39,6 +39,7 @@ export default function PostCard({ post }: { post: Post }) {
   if (!author || !user) return null;
 
   const isImage = post.attachedFile?.type.startsWith('image/');
+  const isValidUrl = post.attachedFile?.url.startsWith('data:');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
@@ -108,7 +109,7 @@ export default function PostCard({ post }: { post: Post }) {
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
         <p className="whitespace-pre-wrap">{post.content}</p>
-        {post.attachedFile && (
+        {post.attachedFile && isValidUrl && (
           <div className="rounded-lg overflow-hidden border">
             {isImage ? (
               <Image
