@@ -72,6 +72,7 @@ interface UserContextType {
   setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
+  deletePost: (postId: number) => void;
   addComment: (postId: number, text: string) => void;
   addReply: (postId: number, parentCommentId: number, text: string) => void;
   lecturerSchedules: TimetableEntry[];
@@ -223,6 +224,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
 
   }, [user, toast]);
+
+  const deletePost = useCallback((postId: number) => {
+    setPosts(prevPosts => {
+      const updatedPosts = prevPosts.filter(p => p.id !== postId);
+      saveToStorage('posts', updatedPosts);
+      return updatedPosts;
+    });
+    toast({ title: 'Post Deleted', description: 'Your post has been removed.' });
+  }, [toast]);
   
   const addComment = useCallback((postId: number, text: string) => {
     if (!user) return;
@@ -376,6 +386,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setEmptySlots,
     posts,
     addPost,
+    deletePost,
     addComment,
     addReply,
     lecturerSchedules,
@@ -385,7 +396,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     rejectedEntries,
     rejectScheduleEntry,
     unrejectScheduleEntry,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

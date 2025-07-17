@@ -4,11 +4,10 @@
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText, MoreHorizontal, Bookmark, MessageSquare, Trash2 } from 'lucide-react';
+import { FileText, MessageSquare, Trash2 } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { useUser, type Post } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
@@ -20,16 +19,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function PostCard({ post }: { post: Post }) {
-  const { user, allUsers } = useUser();
+  const { user, allUsers, deletePost } = useUser();
   const author = allUsers.find(u => u.id === post.authorId);
 
   if (!author || !user) return null;
@@ -59,10 +63,26 @@ export default function PostCard({ post }: { post: Post }) {
             </div>
             </div>
             {canDelete ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                     <Trash2 className="w-5 h-5" />
                     <span className="sr-only">Delete post</span>
-                </Button>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this post?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete your post and remove its content from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deletePost(post.id)}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             ) : user.role === 'student' ? (
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MessageSquare className="w-5 h-5" />
