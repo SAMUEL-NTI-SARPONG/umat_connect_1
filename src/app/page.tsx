@@ -6,15 +6,34 @@ import { useUser } from './providers/user-provider';
 import CreatePost from '@/components/home/create-post';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function Home() {
-  const { user, posts } = useUser();
+  const { user, posts, allUsers } = useUser();
+
+  const filteredPosts = useMemo(() => {
+    if (!user) return [];
+    
+    // Admins see all posts.
+    if (user.role === 'administrator') {
+      return posts;
+    }
+
+    return posts.filter(post => {
+      // If audience is not defined or empty, everyone sees it (legacy posts)
+      if (!post.audience || post.audience.length === 0) {
+        return true;
+      }
+      // Otherwise, check if the user is in the audience
+      return post.audience.includes(user.id);
+    });
+  }, [posts, user]);
 
   if (!user) {
     return null; // Or a loading spinner
   }
 
-  const sortedPosts = [...posts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const sortedPosts = [...filteredPosts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
     <div className="relative py-4 md:py-6 max-w-2xl mx-auto">
@@ -25,8 +44,8 @@ export default function Home() {
           ))
         ) : (
           <div className="text-center text-muted-foreground mt-12">
-            <p>No posts yet.</p>
-            <p className="text-sm">Be the first one to post something!</p>
+            <p>No posts for you yet.</p>
+            <p className="text-sm">When there's a new announcement for you, it will appear here.</p>
           </div>
         )}
       </div>

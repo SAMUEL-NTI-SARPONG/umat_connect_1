@@ -54,6 +54,7 @@ export type Post = {
   content: string;
   attachedFile?: AttachedFile | null;
   comments: Comment[];
+  audience?: number[]; // Audience is now optional
 };
 
 // Maps userId to an array of rejected entry IDs
