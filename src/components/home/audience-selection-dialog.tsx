@@ -21,6 +21,7 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Search, User as UserIcon, Building, GraduationCap, X, PlusCircle, Users } from 'lucide-react';
 import { ProfileAvatar } from '../ui/profile-avatar';
+import { Card, CardContent } from '../ui/card';
 
 interface AudienceSelectionDialogProps {
   isOpen: boolean;
@@ -168,7 +169,6 @@ export default function AudienceSelectionDialog({
   
   const handleConfirm = () => {
     onConfirm(Array.from(selectedIds));
-    onClose();
   };
 
   const clearStudentFilters = () => {
@@ -222,7 +222,7 @@ export default function AudienceSelectionDialog({
                         {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={studentDept} onValueChange={setStudentDept}>
+                  <Select value={studentDept} onValueChange={setStudentDept} disabled={!studentAvailableDepts.length}>
                     <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
                     <SelectContent>
                         {studentAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -253,7 +253,7 @@ export default function AudienceSelectionDialog({
                          {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
                       </SelectContent>
                    </Select>
-                   <Select value={lecturerDept} onValueChange={setLecturerDept}>
+                   <Select value={lecturerDept} onValueChange={setLecturerDept} disabled={!lecturerAvailableDepts.length}>
                       <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
                       <SelectContent>
                          {lecturerAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -274,36 +274,38 @@ export default function AudienceSelectionDialog({
           </div>
           
           {/* Right Side: Selected Audience */}
-          <div className="flex flex-col border rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold">Selected Audience ({selectedUsers.length})</h3>
-              <Button variant="ghost" size="sm" onClick={handleClearSelection} disabled={selectedUsers.length === 0} className="text-xs">
-                <X className="mr-1 h-3 w-3" /> Clear All
-              </Button>
-            </div>
-            <ScrollArea className="flex-grow -mr-4 pr-4">
-              {selectedUsers.length > 0 ? (
-                <div className="space-y-2">
-                  {selectedUsers.map(user => (
-                    <div key={user.id} className="flex items-center space-x-3 p-2 rounded-md border">
-                        <ProfileAvatar src={user.profileImage} fallback={user.name.charAt(0)} className="w-8 h-8"/>
-                        <div className="flex-grow">
-                            <p className="text-sm font-medium">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.department}</p>
-                        </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveFromSelection(user.id)}>
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm">
-                    <p>No users selected. <br /> Use the filters on the left to add recipients.</p>
-                </div>
-              )}
-            </ScrollArea>
-          </div>
+           <Card className="flex flex-col">
+              <CardContent className="p-4 flex flex-col flex-grow min-h-0">
+                  <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-semibold text-lg">Selected Audience ({selectedUsers.length})</h3>
+                      <Button variant="ghost" size="sm" onClick={handleClearSelection} disabled={selectedUsers.length === 0} className="text-xs">
+                          <X className="mr-1 h-3 w-3" /> Clear All
+                      </Button>
+                  </div>
+                  <ScrollArea className="flex-grow -mr-4 pr-4">
+                      {selectedUsers.length > 0 ? (
+                          <div className="space-y-2">
+                              {selectedUsers.map(user => (
+                                  <div key={user.id} className="flex items-center space-x-3 p-2 rounded-md border">
+                                      <ProfileAvatar src={user.profileImage} fallback={user.name.charAt(0)} className="w-8 h-8" />
+                                      <div className="flex-grow">
+                                          <p className="text-sm font-medium">{user.name}</p>
+                                          <p className="text-xs text-muted-foreground">{user.department}</p>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveFromSelection(user.id)}>
+                                          <X className="h-4 w-4" />
+                                      </Button>
+                                  </div>
+                              ))}
+                          </div>
+                      ) : (
+                          <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm">
+                              <p>No users selected. <br /> Use the filters on the left to add recipients.</p>
+                          </div>
+                      )}
+                  </ScrollArea>
+              </CardContent>
+           </Card>
         </div>
         
         <DialogFooter className="mt-4 pt-4 border-t">
@@ -326,5 +328,3 @@ export default function AudienceSelectionDialog({
     </Dialog>
   );
 }
-
-    
