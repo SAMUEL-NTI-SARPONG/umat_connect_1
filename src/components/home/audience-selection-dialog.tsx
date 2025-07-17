@@ -26,12 +26,14 @@ interface AudienceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (audience: number[]) => void;
+  initialPostData: { content: string; attachedFile: any | null };
 }
 
 export default function AudienceSelectionDialog({
   isOpen,
   onClose,
   onConfirm,
+  initialPostData,
 }: AudienceSelectionDialogProps) {
   const { allUsers } = useUser();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -133,15 +135,15 @@ export default function AudienceSelectionDialog({
     onClearFilters: () => void
   ) => (
     <>
-      {filterActive && 
-        <div className="flex justify-between items-center mb-2">
-            <Button variant="ghost" size="sm" onClick={onClearFilters} className="self-start text-xs"><X className="mr-1 h-3 w-3" />Clear Filters</Button>
-            <Button size="sm" onClick={onAdd} disabled={users.length === 0}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add {users.length} to Audience
-            </Button>
-        </div>
-      }
+      <div className="flex justify-between items-center mb-2 px-1">
+          <Button variant="ghost" size="sm" onClick={onClearFilters} disabled={!filterActive} className="self-start text-xs h-8">
+            <X className="mr-1 h-3 w-3" />Clear Filters
+          </Button>
+          <Button size="sm" onClick={onAdd} disabled={users.length === 0} className="h-8">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add {users.length} to Audience
+          </Button>
+      </div>
       <ScrollArea className="flex-grow pr-4 -mr-4 border rounded-md">
         <div className="p-2 space-y-2">
         {users.length > 0 ? (
@@ -324,3 +326,5 @@ export default function AudienceSelectionDialog({
     </Dialog>
   );
 }
+
+    
