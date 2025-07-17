@@ -15,7 +15,6 @@ import { formatRelativeTime } from '@/lib/time';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -40,7 +39,8 @@ export default function PostCard({ post }: { post: Post }) {
   if (!author || !user) return null;
 
   const isImage = post.attachedFile?.type.startsWith('image/');
-  const isValidUrl = post.attachedFile?.url;
+  // Add a more robust check to ensure the URL is a non-empty string.
+  const isValidUrl = typeof post.attachedFile?.url === 'string' && post.attachedFile.url.length > 0;
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
