@@ -42,7 +42,7 @@ export default function PostCard({ post }: { post: Post }) {
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
-  const canComment = user.role === 'student' || user.id !== post.authorId;
+  const canComment = true; // Everyone can comment
 
   return (
     <Card className="rounded-xl shadow-sm">
