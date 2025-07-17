@@ -194,32 +194,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       authorId: user.id,
       timestamp: new Date().toISOString(),
       content: postData.content,
-      attachedFile: postData.attachedFile, // Keep it for immediate UI update
+      attachedFile: postData.attachedFile,
       comments: [],
       audience: postData.audience,
     };
     
     setPosts(prevPosts => {
         const updatedPosts = [newPost, ...prevPosts];
-        
-        // Create a version of the post for storage without the large file data
-        const postForStorage = {
-            ...newPost,
-            attachedFile: newPost.attachedFile ? {
-                ...newPost.attachedFile,
-                url: 'file-data-omitted' // Replace large data URI
-            } : null
-        };
-
-        const postsForStorage = [postForStorage, ...prevPosts.map(p => ({
-            ...p,
-             attachedFile: p.attachedFile ? {
-                ...p.attachedFile,
-                url: 'file-data-omitted'
-            } : null
-        }))];
-        
-        saveToStorage('posts', postsForStorage);
+        saveToStorage('posts', updatedPosts);
         return updatedPosts;
     });
 
