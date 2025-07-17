@@ -54,7 +54,7 @@ export type Post = {
   content: string;
   attachedFile?: AttachedFile | null;
   comments: Comment[];
-  audience?: number[]; // Audience is now optional
+  audience: number[]; // Audience is now required
 };
 
 // Maps userId to an array of rejected entry IDs
@@ -72,7 +72,7 @@ interface UserContextType {
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
-  addPost: (postData: { content: string; attachedFile: AttachedFile | null }) => void;
+  addPost: (postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => void;
   deletePost: (postId: number) => void;
   addComment: (postId: number, text: string) => void;
   addReply: (postId: number, parentCommentId: number, text: string) => void;
@@ -187,7 +187,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     saveToStorage('emptySlots', slots);
   }, []);
 
-  const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null }) => {
+  const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => {
     if (!user) return;
     const newPost: Post = {
       id: Date.now(),
@@ -196,6 +196,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       content: postData.content,
       attachedFile: postData.attachedFile, // Keep it for immediate UI update
       comments: [],
+      audience: postData.audience,
     };
     
     setPosts(prevPosts => {

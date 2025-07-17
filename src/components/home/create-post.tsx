@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Paperclip, X } from 'lucide-react';
+import { FileText, Send, Paperclip, X, Users } from 'lucide-react';
 import { useUser, type AttachedFile } from '@/app/providers/user-provider';
 import Image from 'next/image';
+import AudienceSelectionDialog from './audience-selection-dialog';
 
 type PostData = {
   content: string;
@@ -30,6 +31,7 @@ export default function CreatePost({ children }: { children: ReactNode }) {
   const { addPost } = useUser();
   const [postData, setPostData] = useState<PostData>(initialPostData);
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
+  const [isAudienceDialogOpen, setIsAudienceDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePostDataChange = (field: keyof PostData, value: any) => {
@@ -58,8 +60,13 @@ export default function CreatePost({ children }: { children: ReactNode }) {
     }
   };
   
-  const handlePost = () => {
-    addPost(postData);
+  const handleProceedToAudience = () => {
+    setIsPostDialogOpen(false);
+    setIsAudienceDialogOpen(true);
+  };
+  
+  const handlePost = (audience: number[]) => {
+    addPost({ ...postData, audience });
     handleCloseAll();
   };
 
@@ -69,6 +76,7 @@ export default function CreatePost({ children }: { children: ReactNode }) {
       fileInputRef.current.value = '';
     }
     setIsPostDialogOpen(false);
+    setIsAudienceDialogOpen(false);
   };
 
   const isImage = postData.attachedFile?.type.startsWith('image/');
@@ -142,16 +150,27 @@ export default function CreatePost({ children }: { children: ReactNode }) {
             <div className="flex-grow" />
   
             <Button
-              onClick={handlePost}
+              onClick={handleProceedToAudience}
               disabled={!postData.content.trim() && !postData.attachedFile}
               className="rounded-full"
             >
-              <Send className="mr-2 h-4 w-4" />
-              Post
+              <Users className="mr-2 h-4 w-4" />
+              Choose Audience & Post
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {isAudienceDialogOpen && (
+        <AudienceSelectionDialog
+          isOpen={isAudienceDialogOpen}
+          onClose={() => {
+            setIsAudienceDialogOpen(false);
+            setIsPostDialogOpen(true); // Re-open post dialog if they cancel
+          }}
+          onConfirm={handlePost}
+        />
+      )}
     </>
   );
 }

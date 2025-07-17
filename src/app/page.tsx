@@ -9,7 +9,7 @@ import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
 
 export default function Home() {
-  const { user, posts, allUsers } = useUser();
+  const { user, posts } = useUser();
 
   const filteredPosts = useMemo(() => {
     if (!user) return [];
