@@ -36,7 +36,7 @@ export default function Home() {
   const sortedPosts = [...filteredPosts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
-    <div className="relative py-4 md:py-6 max-w-xl mx-auto">
+    <div className="relative py-4 md:py-6 max-w-xl mx-auto px-2">
       <div className="space-y-4">
         {sortedPosts.length > 0 ? (
           sortedPosts.map(post => (
