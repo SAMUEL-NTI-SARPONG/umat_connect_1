@@ -36,7 +36,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   const isImage = post.attachedFile?.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
-  const canModify = user?.id === post.authorId || user?.role === 'administrator';
+  const canDelete = user?.id === post.authorId;
 
   return (
     <Card className="rounded-xl shadow-sm">
@@ -58,7 +58,7 @@ export default function PostCard({ post }: { post: Post }) {
                 <p className="text-xs text-muted-foreground">{relativeTime}</p>
             </div>
             </div>
-            {canModify ? (
+            {canDelete ? (
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
                     <Trash2 className="w-5 h-5" />
                     <span className="sr-only">Delete post</span>
