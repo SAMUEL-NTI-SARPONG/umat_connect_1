@@ -38,12 +38,12 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
-  const isImage = hasAttachment && post.attachedFile.url.startsWith('data:image');
+  const hasAttachment = post.attachedFile && post.attachedFile.url;
+  const isImage = hasAttachment && typeof post.attachedFile.url === 'string' && post.attachedFile.url.startsWith('data:image');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
-  const canComment = true; // Everyone can comment
+  const canComment = true; 
 
   return (
     <Card className="rounded-xl shadow-sm flex flex-col">
@@ -68,14 +68,14 @@ export default function PostCard({ post }: { post: Post }) {
       <CardContent className="px-4 py-2 flex-grow space-y-4">
         <p className="whitespace-pre-wrap text-sm">{post.content}</p>
         {hasAttachment && (
-          <div className="rounded-lg overflow-hidden border aspect-video">
+          <div className="rounded-lg overflow-hidden border max-h-[70vh]">
             {isImage ? (
               <Image
                 src={post.attachedFile.url}
                 alt="Post attachment"
                 width={600}
                 height={400}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 data-ai-hint="post attachment"
               />
             ) : (
