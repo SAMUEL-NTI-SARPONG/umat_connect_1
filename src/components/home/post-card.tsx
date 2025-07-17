@@ -58,33 +58,25 @@ export default function PostCard({ post }: { post: Post }) {
                 <p className="text-xs text-muted-foreground">{relativeTime}</p>
             </div>
             </div>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="w-5 h-5" />
-                        <span className="sr-only">Post options</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    {canModify ? (
-                        <>
-                            <DropdownMenuItem>Edit</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                        </>
-                    ) : user.role === 'student' ? (
-                         <>
-                            <DropdownMenuItem>
-                                <Bookmark className="mr-2 h-4 w-4" />
-                                <span>Save</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                                <MessageSquare className="mr-2 h-4 w-4" />
-                                <span>Comment</span>
-                            </DropdownMenuItem>
-                        </>
-                    ) : null}
-                </DropdownMenuContent>
-            </DropdownMenu>
+            {canModify ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-5 h-5" />
+                            <span className="sr-only">Post options</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : user.role === 'student' ? (
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MessageSquare className="w-5 h-5" />
+                    <span className="sr-only">Comment on post</span>
+                </Button>
+            ) : null}
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
