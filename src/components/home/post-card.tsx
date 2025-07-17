@@ -8,7 +8,7 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText, MoreHorizontal, Bookmark, MessageSquare } from 'lucide-react';
+import { FileText, MoreHorizontal, Bookmark, MessageSquare, Trash2 } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { useUser, type Post } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
@@ -59,18 +59,10 @@ export default function PostCard({ post }: { post: Post }) {
             </div>
             </div>
             {canModify ? (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-5 h-5" />
-                            <span className="sr-only">Post options</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                    <Trash2 className="w-5 h-5" />
+                    <span className="sr-only">Delete post</span>
+                </Button>
             ) : user.role === 'student' ? (
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                     <MessageSquare className="w-5 h-5" />
