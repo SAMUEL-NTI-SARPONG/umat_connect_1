@@ -36,7 +36,7 @@ export default function Home() {
   const sortedPosts = [...filteredPosts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
-    <div className="relative py-4 md:py-6 max-w-2xl mx-auto">
+    <div className="relative py-4 md:py-6 max-w-xl mx-auto">
       <div className="space-y-4">
         {sortedPosts.length > 0 ? (
           sortedPosts.map(post => (
@@ -53,7 +53,7 @@ export default function Home() {
       {(user.role === 'lecturer' || user.role === 'administrator') && (
         <CreatePost>
           <Button
-            className="fixed bottom-20 right-6 md:bottom-8 md:right-[calc(50vw-21rem-4rem)] h-16 w-16 rounded-full shadow-lg"
+            className="fixed bottom-20 right-6 md:bottom-8 md:right-[calc(50vw-18rem-4rem)] h-16 w-16 rounded-full shadow-lg"
             size="icon"
           >
             <Plus className="h-8 w-8" />
