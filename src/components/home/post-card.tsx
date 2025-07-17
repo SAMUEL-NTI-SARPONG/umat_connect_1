@@ -55,10 +55,10 @@ export default function PostCard({ post }: { post: Post }) {
                 fallback={author.name.charAt(0)}
                 alt={`${author.name}'s profile picture`}
                 imageHint="profile picture"
-                className="w-12 h-12"
+                className="w-10 h-10"
             />
             <div className="grid gap-0.5">
-                <p className="font-semibold">{author.name}</p>
+                <p className="font-semibold text-sm">{author.name}</p>
                 <p className="text-xs text-muted-foreground">
                 {author.department}
                 </p>
