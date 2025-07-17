@@ -40,7 +40,9 @@ export default function PostCard({ post }: { post: Post }) {
 
   const isImage = post.attachedFile?.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
-  const canDelete = user?.id === post.authorId;
+
+  const canDelete = user.id === post.authorId;
+  const canComment = user.role === 'student' || user.id !== post.authorId;
 
   return (
     <Card className="rounded-xl shadow-sm">
@@ -62,84 +64,71 @@ export default function PostCard({ post }: { post: Post }) {
                 <p className="text-xs text-muted-foreground">{relativeTime}</p>
             </div>
             </div>
-            <div className="flex flex-col items-center">
-              {canDelete ? (
-                <>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                        <Trash2 className="w-5 h-5" />
-                        <span className="sr-only">Delete post</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to delete this post?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete your post and remove its content from our servers.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deletePost(post.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                   <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MessageSquare className="w-5 h-5" />
-                      <span className="sr-only">Comment on post</span>
-                   </Button>
-                </>
-              ) : user.role === 'student' ? (
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MessageSquare className="w-5 h-5" />
-                      <span className="sr-only">Comment on post</span>
-                  </Button>
-              ) : null}
+             <div className="flex flex-col items-center gap-1">
+              {canDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Trash2 className="w-5 h-5" />
+                      <span className="sr-only">Delete post</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure you want to delete this post?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete your post and remove its content from our servers.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deletePost(post.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              {canComment && (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MessageSquare className="w-5 h-5" />
+                            <span className="sr-only">Comment</span>
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>View Post</DialogTitle>
+                        </DialogHeader>
+                        {/* Comments section to be implemented */}
+                    </DialogContent>
+                </Dialog>
+              )}
             </div>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
-        {post.content && <p className="text-sm whitespace-pre-line">{post.content}</p>}
-        
+        <p className="whitespace-pre-wrap">{post.content}</p>
         {post.attachedFile && (
           <div className="rounded-lg overflow-hidden border">
             {isImage ? (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div className="bg-muted cursor-pointer">
-                      <Image
-                        src={post.attachedFile.url}
-                        alt="Post attachment"
-                        width={600}
-                        height={400}
-                        className="object-contain w-full max-h-[500px]"
-                        data-ai-hint="university campus"
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="p-0 w-auto max-w-[90vw] max-h-[90vh] bg-transparent border-none">
-                     <DialogHeader className="sr-only">
-                        <DialogTitle>Post Image</DialogTitle>
-                        <DialogDescription>Full view of the image attached to the post.</DialogDescription>
-                    </DialogHeader>
-                    <Image
-                        src={post.attachedFile.url}
-                        alt="Post attachment"
-                        width={1200}
-                        height={800}
-                        className="rounded-lg object-contain w-full h-full"
-                        data-ai-hint="university campus"
-                    />
-                  </DialogContent>
-                </Dialog>
+              <Image
+                src={post.attachedFile.url}
+                alt="Post attachment"
+                width={600}
+                height={400}
+                className="w-full h-auto object-cover"
+                data-ai-hint="post attachment"
+              />
             ) : (
-               <a href={post.attachedFile.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-muted hover:bg-muted/80 transition-colors">
-                  <FileText className="w-8 h-8 text-muted-foreground flex-shrink-0" />
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-medium text-foreground truncate">{post.attachedFile.name}</span>
-                    <span className="text-xs text-muted-foreground">Click to view file</span>
-                  </div>
+              <a
+                href={post.attachedFile.url}
+                download={post.attachedFile.name}
+                className="flex items-center gap-3 p-3 hover:bg-muted"
+              >
+                <FileText className="w-8 h-8 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground truncate">
+                  {post.attachedFile.name}
+                </span>
               </a>
             )}
           </div>
