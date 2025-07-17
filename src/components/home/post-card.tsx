@@ -38,8 +38,8 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  const isImage = post.attachedFile?.type.startsWith('image/');
-  const hasAttachment = post.attachedFile && post.attachedFile.url;
+  const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
+  const isImage = hasAttachment && post.attachedFile.url.startsWith('data:image');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
