@@ -65,9 +65,14 @@ export default function CreatePost({ children }: { children: ReactNode }) {
     setIsAudienceDialogOpen(true);
   };
   
-  const handlePost = (audience: number[]) => {
+  const handleConfirmAudience = (audience: number[]) => {
     addPost({ ...postData, audience });
     handleCloseAll();
+  };
+
+  const handleCancelAudience = () => {
+    setIsAudienceDialogOpen(false);
+    setIsPostDialogOpen(true); // Go back to the post dialog
   };
 
   const handleCloseAll = () => {
@@ -161,16 +166,12 @@ export default function CreatePost({ children }: { children: ReactNode }) {
         </DialogContent>
       </Dialog>
       
-      {isAudienceDialogOpen && (
-        <AudienceSelectionDialog
-          isOpen={isAudienceDialogOpen}
-          onClose={() => {
-            setIsAudienceDialogOpen(false);
-            setIsPostDialogOpen(true); // Re-open post dialog if they cancel
-          }}
-          onConfirm={handlePost}
-        />
-      )}
+      {/* This ensures the audience dialog can be controlled from here */}
+      <AudienceSelectionDialog
+        isOpen={isAudienceDialogOpen}
+        onClose={handleCancelAudience}
+        onConfirm={handleConfirmAudience}
+      />
     </>
   );
 }
