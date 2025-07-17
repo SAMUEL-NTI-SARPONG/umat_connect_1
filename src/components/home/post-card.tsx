@@ -8,7 +8,7 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText, MoreHorizontal } from 'lucide-react';
+import { FileText, MoreHorizontal, Bookmark, MessageSquare } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { useUser, type Post } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
@@ -32,7 +32,7 @@ export default function PostCard({ post }: { post: Post }) {
   const { user, allUsers } = useUser();
   const author = allUsers.find(u => u.id === post.authorId);
 
-  if (!author) return null;
+  if (!author || !user) return null;
 
   const isImage = post.attachedFile?.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
@@ -58,20 +58,33 @@ export default function PostCard({ post }: { post: Post }) {
                 <p className="text-xs text-muted-foreground">{relativeTime}</p>
             </div>
             </div>
-            {canModify && (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-5 h-5" />
-                            <span className="sr-only">Post options</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )}
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="w-5 h-5" />
+                        <span className="sr-only">Post options</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    {canModify ? (
+                        <>
+                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                        </>
+                    ) : user.role === 'student' ? (
+                         <>
+                            <DropdownMenuItem>
+                                <Bookmark className="mr-2 h-4 w-4" />
+                                <span>Save</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                <span>Comment</span>
+                            </DropdownMenuItem>
+                        </>
+                    ) : null}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
