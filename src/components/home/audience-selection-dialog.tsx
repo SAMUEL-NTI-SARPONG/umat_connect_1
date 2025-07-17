@@ -27,14 +27,12 @@ interface AudienceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (audience: number[]) => void;
-  initialPostData: { content: string; attachedFile: any | null };
 }
 
 export default function AudienceSelectionDialog({
   isOpen,
   onClose,
   onConfirm,
-  initialPostData,
 }: AudienceSelectionDialogProps) {
   const { allUsers } = useUser();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -133,7 +131,8 @@ export default function AudienceSelectionDialog({
     users: User[], 
     onAdd: () => void, 
     filterActive: boolean,
-    onClearFilters: () => void
+    onClearFilters: () => void,
+    userCount: number
   ) => (
     <>
       <div className="flex justify-between items-center mb-2 px-1">
@@ -142,7 +141,7 @@ export default function AudienceSelectionDialog({
           </Button>
           <Button size="sm" onClick={onAdd} disabled={users.length === 0} className="h-8">
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add {users.length} to Audience
+              Add {userCount} to Audience
           </Button>
       </div>
       <ScrollArea className="flex-grow pr-4 -mr-4 border rounded-md">
@@ -192,123 +191,125 @@ export default function AudienceSelectionDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle>Select Audience</DialogTitle>
           <DialogDescription>
             Build your audience by filtering and adding users. You can add multiple groups.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 min-h-0">
-          {/* Left Side: Filters and Results */}
-          <div className="flex flex-col min-h-0">
-            <Tabs defaultValue="students" className="flex-grow flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="students"><GraduationCap className="mr-2 h-4 w-4" />Students</TabsTrigger>
-                <TabsTrigger value="lecturers"><UserIcon className="mr-2 h-4 w-4" />Lecturers</TabsTrigger>
-                <TabsTrigger value="admins"><Building className="mr-2 h-4 w-4" />Admins</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="students" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
-                  <div className="relative col-span-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search by name..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="pl-10" />
-                  </div>
-                  <Select value={studentFaculty} onValueChange={setStudentFaculty}>
-                    <SelectTrigger><SelectValue placeholder="All Faculties" /></SelectTrigger>
-                    <SelectContent>
-                        {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select value={studentDept} onValueChange={setStudentDept} disabled={!studentAvailableDepts.length}>
-                    <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
-                    <SelectContent>
-                        {studentAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select value={studentLevel} onValueChange={setStudentLevel}>
-                    <SelectTrigger><SelectValue placeholder="All Levels" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="100">100</SelectItem>
-                      <SelectItem value="200">200</SelectItem>
-                      <SelectItem value="300">300</SelectItem>
-                      <SelectItem value="400">400</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {renderFilterControls(filteredStudents, () => handleAddFilteredToSelection(filteredStudents), isStudentFilterActive, clearStudentFilters)}
-              </TabsContent>
+        <ScrollArea className="flex-grow min-h-0">
+            <div className="p-6 flex flex-col md:flex-row gap-6">
+                {/* Left Side: Filters and Results */}
+                <div className="flex flex-col min-h-0 md:w-1/2">
+                    <Tabs defaultValue="students" className="flex-grow flex flex-col min-h-0">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="students"><GraduationCap className="mr-2 h-4 w-4" />Students</TabsTrigger>
+                        <TabsTrigger value="lecturers"><UserIcon className="mr-2 h-4 w-4" />Lecturers</TabsTrigger>
+                        <TabsTrigger value="admins"><Building className="mr-2 h-4 w-4" />Admins</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="students" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
+                        <div className="relative col-span-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search by name..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)} className="pl-10" />
+                        </div>
+                        <Select value={studentFaculty} onValueChange={setStudentFaculty}>
+                            <SelectTrigger><SelectValue placeholder="All Faculties" /></SelectTrigger>
+                            <SelectContent>
+                                {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={studentDept} onValueChange={setStudentDept} disabled={!studentAvailableDepts.length}>
+                            <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
+                            <SelectContent>
+                                {studentAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={studentLevel} onValueChange={setStudentLevel}>
+                            <SelectTrigger><SelectValue placeholder="All Levels" /></SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="100">100</SelectItem>
+                            <SelectItem value="200">200</SelectItem>
+                            <SelectItem value="300">300</SelectItem>
+                            <SelectItem value="400">400</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        </div>
+                        {renderFilterControls(filteredStudents, () => handleAddFilteredToSelection(filteredStudents), isStudentFilterActive, clearStudentFilters, filteredStudents.length)}
+                    </TabsContent>
 
-              <TabsContent value="lecturers" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                   <div className="relative md:col-span-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search by name..." value={lecturerSearch} onChange={e => setLecturerSearch(e.target.value)} className="pl-10"/>
-                   </div>
-                   <Select value={lecturerFaculty} onValueChange={setLecturerFaculty}>
-                      <SelectTrigger><SelectValue placeholder="All Faculties" /></SelectTrigger>
-                      <SelectContent>
-                         {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
-                      </SelectContent>
-                   </Select>
-                   <Select value={lecturerDept} onValueChange={setLecturerDept} disabled={!lecturerAvailableDepts.length}>
-                      <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
-                      <SelectContent>
-                         {lecturerAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                      </SelectContent>
-                   </Select>
-                </div>
-                {renderFilterControls(filteredLecturers, () => handleAddFilteredToSelection(filteredLecturers), isLecturerFilterActive, clearLecturerFilters)}
-              </TabsContent>
+                    <TabsContent value="lecturers" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="relative md:col-span-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search by name..." value={lecturerSearch} onChange={e => setLecturerSearch(e.target.value)} className="pl-10"/>
+                        </div>
+                        <Select value={lecturerFaculty} onValueChange={setLecturerFaculty}>
+                            <SelectTrigger><SelectValue placeholder="All Faculties" /></SelectTrigger>
+                            <SelectContent>
+                                {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={lecturerDept} onValueChange={setLecturerDept} disabled={!lecturerAvailableDepts.length}>
+                            <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
+                            <SelectContent>
+                                {lecturerAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        </div>
+                        {renderFilterControls(filteredLecturers, () => handleAddFilteredToSelection(filteredLecturers), isLecturerFilterActive, clearLecturerFilters, filteredLecturers.length)}
+                    </TabsContent>
 
-              <TabsContent value="admins" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
-                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search by name..." value={adminSearch} onChange={e => setAdminSearch(e.target.value)} className="pl-10"/>
-                 </div>
-                 {renderFilterControls(filteredAdmins, () => handleAddFilteredToSelection(filteredAdmins), isAdminFilterActive, clearAdminFilters)}
-              </TabsContent>
-            </Tabs>
-          </div>
-          
-          {/* Right Side: Selected Audience */}
-           <Card className="flex flex-col">
-              <CardContent className="p-4 flex flex-col flex-grow min-h-0">
-                  <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold text-lg">Selected Audience ({selectedUsers.length})</h3>
-                      <Button variant="ghost" size="sm" onClick={handleClearSelection} disabled={selectedUsers.length === 0} className="text-xs">
-                          <X className="mr-1 h-3 w-3" /> Clear All
-                      </Button>
-                  </div>
-                  <ScrollArea className="flex-grow -mr-4 pr-4">
-                      {selectedUsers.length > 0 ? (
-                          <div className="space-y-2">
-                              {selectedUsers.map(user => (
-                                  <div key={user.id} className="flex items-center space-x-3 p-2 rounded-md border">
-                                      <ProfileAvatar src={user.profileImage} fallback={user.name.charAt(0)} className="w-8 h-8" />
-                                      <div className="flex-grow">
-                                          <p className="text-sm font-medium">{user.name}</p>
-                                          <p className="text-xs text-muted-foreground">{user.department}</p>
-                                      </div>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveFromSelection(user.id)}>
-                                          <X className="h-4 w-4" />
-                                      </Button>
-                                  </div>
-                              ))}
-                          </div>
-                      ) : (
-                          <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm">
-                              <p>No users selected. <br /> Use the filters on the left to add recipients.</p>
-                          </div>
-                      )}
-                  </ScrollArea>
-              </CardContent>
-           </Card>
-        </div>
+                    <TabsContent value="admins" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search by name..." value={adminSearch} onChange={e => setAdminSearch(e.target.value)} className="pl-10"/>
+                        </div>
+                        {renderFilterControls(filteredAdmins, () => handleAddFilteredToSelection(filteredAdmins), isAdminFilterActive, clearAdminFilters, filteredAdmins.length)}
+                    </TabsContent>
+                    </Tabs>
+                </div>
+                
+                {/* Right Side: Selected Audience */}
+                <Card className="flex flex-col md:w-1/2">
+                    <CardContent className="p-4 flex flex-col flex-grow min-h-0">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold text-lg">Selected Audience ({selectedUsers.length})</h3>
+                            <Button variant="ghost" size="sm" onClick={handleClearSelection} disabled={selectedUsers.length === 0} className="text-xs">
+                                <X className="mr-1 h-3 w-3" /> Clear All
+                            </Button>
+                        </div>
+                        <ScrollArea className="flex-grow -mr-4 pr-4">
+                            {selectedUsers.length > 0 ? (
+                                <div className="space-y-2">
+                                    {selectedUsers.map(user => (
+                                        <div key={user.id} className="flex items-center space-x-3 p-2 rounded-md border">
+                                            <ProfileAvatar src={user.profileImage} fallback={user.name.charAt(0)} className="w-8 h-8" />
+                                            <div className="flex-grow">
+                                                <p className="text-sm font-medium">{user.name}</p>
+                                                <p className="text-xs text-muted-foreground">{user.department}</p>
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveFromSelection(user.id)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-center text-muted-foreground text-sm">
+                                    <p>No users selected. <br /> Use the filters on the left to add recipients.</p>
+                                </div>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
+        </ScrollArea>
         
-        <DialogFooter className="mt-4 pt-4 border-t">
+        <DialogFooter className="mt-auto p-6 pt-0 border-t">
           <div className="flex-grow">
             <Badge variant={selectedIds.size > 0 ? "default" : "secondary"}>
               {selectedIds.size} recipient{selectedIds.size !== 1 && 's'} selected
