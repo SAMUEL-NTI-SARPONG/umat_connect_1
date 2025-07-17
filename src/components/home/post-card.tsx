@@ -62,33 +62,41 @@ export default function PostCard({ post }: { post: Post }) {
                 <p className="text-xs text-muted-foreground">{relativeTime}</p>
             </div>
             </div>
-            {canDelete ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                    <Trash2 className="w-5 h-5" />
-                    <span className="sr-only">Delete post</span>
+            <div className="flex flex-col items-center">
+              {canDelete ? (
+                <>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                        <Trash2 className="w-5 h-5" />
+                        <span className="sr-only">Delete post</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this post?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your post and remove its content from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deletePost(post.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                   <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MessageSquare className="w-5 h-5" />
+                      <span className="sr-only">Comment on post</span>
+                   </Button>
+                </>
+              ) : user.role === 'student' ? (
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MessageSquare className="w-5 h-5" />
+                      <span className="sr-only">Comment on post</span>
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this post?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your post and remove its content from our servers.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deletePost(post.id)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : user.role === 'student' ? (
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MessageSquare className="w-5 h-5" />
-                    <span className="sr-only">Comment on post</span>
-                </Button>
-            ) : null}
+              ) : null}
+            </div>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
