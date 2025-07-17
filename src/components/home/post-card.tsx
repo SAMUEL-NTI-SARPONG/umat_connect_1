@@ -8,7 +8,7 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText } from 'lucide-react';
+import { FileText, MoreHorizontal } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { useUser, type Post } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
@@ -20,34 +20,58 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '../ui/button';
 
 export default function PostCard({ post }: { post: Post }) {
-  const { allUsers } = useUser();
+  const { user, allUsers } = useUser();
   const author = allUsers.find(u => u.id === post.authorId);
 
   if (!author) return null;
 
   const isImage = post.attachedFile?.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
+  const canModify = user?.id === post.authorId || user?.role === 'administrator';
 
   return (
     <Card className="rounded-xl shadow-sm">
       <CardHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <ProfileAvatar
-            src={author.profileImage}
-            fallback={author.name.charAt(0)}
-            alt={`${author.name}'s profile picture`}
-            imageHint="profile picture"
-            className="w-12 h-12"
-          />
-          <div className="grid gap-0.5">
-            <p className="font-semibold">{author.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {author.department}
-            </p>
-             <p className="text-xs text-muted-foreground">{relativeTime}</p>
-          </div>
+        <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+            <ProfileAvatar
+                src={author.profileImage}
+                fallback={author.name.charAt(0)}
+                alt={`${author.name}'s profile picture`}
+                imageHint="profile picture"
+                className="w-12 h-12"
+            />
+            <div className="grid gap-0.5">
+                <p className="font-semibold">{author.name}</p>
+                <p className="text-xs text-muted-foreground">
+                {author.department}
+                </p>
+                <p className="text-xs text-muted-foreground">{relativeTime}</p>
+            </div>
+            </div>
+            {canModify && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-5 h-5" />
+                            <span className="sr-only">Post options</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
