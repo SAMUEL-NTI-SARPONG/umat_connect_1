@@ -108,7 +108,7 @@ export default function PostCard({ post }: { post: Post }) {
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-4">
-        <p className="whitespace-pre-wrap">{post.content}</p>
+        <p className="whitespace-pre-wrap text-sm">{post.content}</p>
         {post.attachedFile && isValidUrl && (
           <div className="rounded-lg overflow-hidden border">
             {isImage ? (
