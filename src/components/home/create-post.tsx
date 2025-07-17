@@ -88,14 +88,11 @@ export default function CreatePost({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <Dialog open={isPostDialogOpen} onOpenChange={(isOpen) => {
-        if (!isOpen) handleCloseAll();
-        else setIsPostDialogOpen(true);
-      }}>
+      <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[525px] flex flex-col" onInteractOutside={handleCloseAll}>
+        <DialogContent className="sm:max-w-[525px] flex flex-col">
           <DialogHeader>
             <DialogTitle>Create a new post</DialogTitle>
           </DialogHeader>
@@ -166,12 +163,13 @@ export default function CreatePost({ children }: { children: ReactNode }) {
         </DialogContent>
       </Dialog>
       
-      {/* This ensures the audience dialog can be controlled from here */}
-      <AudienceSelectionDialog
-        isOpen={isAudienceDialogOpen}
-        onClose={handleCancelAudience}
-        onConfirm={handleConfirmAudience}
-      />
+      {isAudienceDialogOpen && (
+        <AudienceSelectionDialog
+          isOpen={isAudienceDialogOpen}
+          onClose={handleCancelAudience}
+          onConfirm={handleConfirmAudience}
+        />
+      )}
     </>
   );
 }
