@@ -64,7 +64,8 @@ export type Notification = {
     type: 'reply_to_post' | 'reply_to_comment';
     postId: number;
     commentId: number; // The new reply's ID
-    snippet: string;
+    replyContent: string; // The full text of the new reply
+    parentContent: string; // A snippet of the content being replied to
     isRead: boolean;
     timestamp: string;
 };
@@ -259,7 +260,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
               type: 'reply_to_post',
               postId: p.id,
               commentId: newComment.id,
-              snippet: p.content.substring(0, 50) + (p.content.length > 50 ? '...' : ''),
+              replyContent: text,
+              parentContent: p.content,
               isRead: false,
               timestamp: new Date().toISOString(),
             };
@@ -330,7 +332,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
                       type: 'reply_to_comment',
                       postId: post.id,
                       commentId: newReply.id,
-                      snippet: parentComment.text.substring(0, 50) + (parentComment.text.length > 50 ? '...' : ''),
+                      replyContent: text,
+                      parentContent: parentComment.text,
                       isRead: false,
                       timestamp: new Date().toISOString(),
                     };

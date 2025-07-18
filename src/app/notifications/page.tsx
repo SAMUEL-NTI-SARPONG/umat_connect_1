@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, Newspaper } from 'lucide-react';
+import { Bell, MessageSquare, Newspaper, CornerDownRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
-  const { user, notifications, allUsers, posts, markNotificationAsRead } = useUser();
+  const { user, notifications, allUsers, markNotificationAsRead } = useUser();
 
   if (!user) {
     return null;
@@ -35,19 +35,18 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent>
           {userNotifications.length > 0 ? (
-            <div className="space-y-2">
+            <div className="space-y-4">
               {userNotifications.map((notification) => {
                 const actor = allUsers.find((u) => u.id === notification.actorId);
-                const post = posts.find((p) => p.id === notification.postId);
-                if (!actor || !post) return null;
+                if (!actor) return null;
 
-                let message = '';
+                let actionText = '';
                 let icon = <MessageSquare className="h-4 w-4 text-blue-500" />;
                 if (notification.type === 'reply_to_post') {
-                  message = 'replied to your post';
+                  actionText = 'replied to your post:';
                   icon = <Newspaper className="h-4 w-4 text-green-500" />;
                 } else if (notification.type === 'reply_to_comment') {
-                  message = 'replied to your comment';
+                  actionText = 'replied to your comment:';
                 }
 
                 return (
@@ -74,16 +73,24 @@ export default function NotificationsPage() {
                            {icon}
                          </div>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 space-y-2">
                         <p className="text-sm">
-                          <span className="font-semibold">{actor.name}</span> {message}.
+                          <span className="font-semibold">{actor.name}</span> {actionText}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <div className="bg-muted p-3 rounded-md">
+                           <p className="text-sm">
+                              {notification.replyContent}
+                           </p>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                           <CornerDownRight className="w-3 h-3" />
+                           <blockquote className="italic truncate">
+                            "{notification.parentContent}"
+                           </blockquote>
+                        </div>
+                        <p className="text-xs text-muted-foreground pt-1">
                           {formatRelativeTime(new Date(notification.timestamp))}
                         </p>
-                        <blockquote className="text-xs italic text-muted-foreground mt-2 border-l-2 pl-2 truncate">
-                          "{notification.snippet}"
-                        </blockquote>
                       </div>
                     </div>
                   </Link>
