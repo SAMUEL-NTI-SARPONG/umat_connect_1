@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -9,9 +9,9 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText, MessageSquare, Trash2 } from 'lucide-react';
+import { FileText, MessageSquare, Trash2, CornerUpLeft, Send } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
-import { useUser, type Post } from '@/app/providers/user-provider';
+import { useUser, type Post, type Comment } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
 import { Button } from '../ui/button';
 import {
@@ -25,11 +25,162 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import CommentSheet from './comment-sheet';
+import { Textarea } from '../ui/textarea';
+import { AnimatePresence, motion } from 'framer-motion';
+
+// CommentEntry component for displaying a single comment and its replies
+function CommentEntry({
+  comment,
+  postId,
+  onReply,
+}: {
+  comment: Comment;
+  postId: number;
+  onReply: (commentId: number, authorName: string) => void;
+}) {
+  const { allUsers } = useUser();
+  const author = allUsers.find((u) => u.id === comment.authorId);
+
+  if (!author) return null;
+
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-start gap-3 py-2">
+        <ProfileAvatar
+          src={author.profileImage}
+          fallback={author.name.charAt(0)}
+          className="w-8 h-8"
+          alt={author.name}
+          imageHint="profile picture"
+        />
+        <div className="flex-1">
+          <div className="bg-muted rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-sm">{author.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatRelativeTime(new Date(comment.timestamp))}
+              </p>
+            </div>
+            <p className="text-sm break-words">{comment.text}</p>
+          </div>
+          <div className="pl-3">
+            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onReply(comment.id, author.name)}>
+              <CornerUpLeft className="w-3 h-3 mr-1" />
+              Reply
+            </Button>
+          </div>
+        </div>
+      </div>
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="border-l-2 ml-5">
+          {comment.replies.map((reply) => (
+            <div key={reply.id} className="pl-2">
+                 <CommentEntry
+                    key={reply.id}
+                    comment={reply}
+                    postId={postId}
+                    onReply={onReply}
+                />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// CommentSection component to be rendered inline
+function CommentSection({ post }: { post: Post }) {
+    const { user, addComment, addReply } = useUser();
+    const [commentText, setCommentText] = useState('');
+    const [replyingTo, setReplyingTo] = useState<{ id: number; name: string } | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (replyingTo && textareaRef.current) {
+            textareaRef.current.focus();
+        }
+    }, [replyingTo]);
+    
+    if (!user) return null;
+
+    const handleSubmit = () => {
+        if (!commentText.trim()) return;
+
+        if (replyingTo) {
+            addReply(post.id, replyingTo.id, commentText);
+            setReplyingTo(null);
+        } else {
+            addComment(post.id, commentText);
+        }
+        setCommentText('');
+    };
+
+    const handleCancelReply = () => {
+        setReplyingTo(null);
+        setCommentText('');
+    };
+    
+    return (
+      <div className="px-2 sm:px-4 pt-2 pb-4 border-t">
+        {/* List of comments */}
+        <div className="space-y-2 mb-4">
+            {post.comments.map(comment => (
+                <CommentEntry 
+                    key={comment.id}
+                    comment={comment}
+                    postId={post.id}
+                    onReply={(commentId, authorName) => setReplyingTo({ id: commentId, name: authorName })}
+                />
+            ))}
+        </div>
+
+        {/* Input for new comment/reply */}
+        <div className="relative flex items-center gap-2">
+          <ProfileAvatar 
+              src={user.profileImage}
+              fallback={user.name.charAt(0)}
+              className="w-8 h-8 self-start"
+              alt={user.name}
+          />
+          <div className="flex-1">
+            {replyingTo && (
+                <p className="text-xs text-muted-foreground mb-1">
+                    Replying to {replyingTo.name}...{' '}
+                    <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={handleCancelReply}>Cancel</Button>
+                </p>
+            )}
+            <Textarea
+                ref={textareaRef}
+                placeholder={replyingTo ? 'Write your reply...' : 'Write a comment...'}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="pr-12 min-h-[40px]"
+                rows={1}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit();
+                    }
+                }}
+            />
+             <Button 
+                size="icon" 
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" 
+                onClick={handleSubmit} 
+                disabled={!commentText.trim()}>
+                <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+}
 
 export default function PostCard({ post }: { post: Post }) {
   const { user, allUsers, deletePost } = useUser();
-  const [isCommentSheetOpen, setIsCommentSheetOpen] = useState(false);
+  const [isCommentSectionOpen, setIsCommentSectionOpen] = useState(false);
   const author = allUsers.find(u => u.id === post.authorId);
 
   if (!author || !user) return null;
@@ -41,11 +192,12 @@ export default function PostCard({ post }: { post: Post }) {
   const canDelete = user.id === post.authorId;
   const canComment = true; 
 
-  const totalComments = post.comments.reduce((acc, comment) => acc + 1 + comment.replies.length, 0);
+  const totalCommentsAndReplies = post.comments.reduce((acc, comment) => {
+    return acc + 1 + (comment.replies ? comment.replies.length : 0);
+  }, 0);
 
   return (
-    <>
-    <Card className="rounded-xl shadow-sm flex flex-col">
+    <Card className="rounded-xl shadow-sm flex flex-col overflow-hidden">
       <CardHeader className="p-2 sm:p-4 pb-2">
         <div className="flex items-start gap-3">
           <ProfileAvatar
@@ -96,7 +248,7 @@ export default function PostCard({ post }: { post: Post }) {
                 alt="Post attachment"
                 width={600}
                 height={400}
-                className="w-full h-full object-contain"
+                className="w-full h-auto object-contain"
                 data-ai-hint="post attachment"
               />
             ) : (
@@ -116,14 +268,30 @@ export default function PostCard({ post }: { post: Post }) {
       </CardContent>
       <CardFooter className="px-2 sm:px-4 pt-2 pb-3">
         {canComment && (
-          <Button variant="ghost" className="text-muted-foreground -ml-2" onClick={() => setIsCommentSheetOpen(true)}>
+          <Button variant="ghost" className="text-muted-foreground -ml-2" onClick={() => setIsCommentSectionOpen(prev => !prev)}>
               <MessageSquare className="w-5 h-5 mr-2" />
-              <span className="text-sm">{totalComments > 0 ? `${totalComments} Comment${totalComments > 1 ? 's' : ''}` : 'Comment'}</span>
+              <span className="text-sm">{totalCommentsAndReplies > 0 ? `${totalCommentsAndReplies} Comment${totalCommentsAndReplies > 1 ? 's' : ''}` : 'Comment'}</span>
           </Button>
         )}
       </CardFooter>
+
+      <AnimatePresence initial={false}>
+          {isCommentSectionOpen && (
+              <motion.section
+                key="content"
+                initial="collapsed"
+                animate="open"
+                exit="collapsed"
+                variants={{
+                  open: { opacity: 1, height: "auto" },
+                  collapsed: { opacity: 0, height: 0 }
+                }}
+                transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+              >
+                <CommentSection post={post} />
+              </motion.section>
+          )}
+      </AnimatePresence>
     </Card>
-    <CommentSheet post={post} isOpen={isCommentSheetOpen} onOpenChange={setIsCommentSheetOpen} />
-    </>
   );
 }
