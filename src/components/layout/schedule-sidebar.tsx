@@ -53,10 +53,11 @@ export default function ScheduleSidebar() {
     const today = days[new Date().getDay()];
 
     if (user.role === 'student') {
+        const userDepartments = Array.isArray(user.department) ? user.department : [user.department];
         return combinedSchedule.filter(entry =>
             entry.day === today &&
             entry.level === user.level &&
-            entry.departments.includes(user.department)
+            entry.departments.some(dep => userDepartments.includes(dep))
         );
     }
     
