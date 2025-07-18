@@ -34,8 +34,8 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  const hasAttachment = post.attachedFile && post.attachedFile.url;
-  const isImage = hasAttachment && typeof post.attachedFile.url === 'string' && post.attachedFile.url.startsWith('data:image');
+  const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
+  const isImage = hasAttachment && post.attachedFile.url.startsWith('data:image');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
@@ -46,7 +46,7 @@ export default function PostCard({ post }: { post: Post }) {
   return (
     <>
     <Card className="rounded-xl shadow-sm flex flex-col">
-      <CardHeader className="p-4 pb-2">
+      <CardHeader className="p-2 sm:p-4 pb-2">
         <div className="flex items-start gap-3">
           <ProfileAvatar
               src={author.profileImage}
@@ -86,7 +86,7 @@ export default function PostCard({ post }: { post: Post }) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-4 py-2 flex-grow space-y-4">
+      <CardContent className="px-2 sm:px-4 py-2 flex-grow space-y-4">
         <p className="whitespace-pre-wrap text-sm">{post.content}</p>
         {hasAttachment && (
           <div className="rounded-lg overflow-hidden border max-h-[70vh]">
@@ -114,7 +114,7 @@ export default function PostCard({ post }: { post: Post }) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="px-4 pt-2 pb-3">
+      <CardFooter className="px-2 sm:px-4 pt-2 pb-3">
         {canComment && (
           <Button variant="ghost" className="text-muted-foreground -ml-2" onClick={() => setIsCommentSheetOpen(true)}>
               <MessageSquare className="w-5 h-5 mr-2" />

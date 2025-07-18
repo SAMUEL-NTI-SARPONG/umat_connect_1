@@ -109,8 +109,8 @@ export default function CommentSheet({ post, isOpen, onOpenChange }: CommentShee
     setReplyingTo(null);
   };
 
-  const hasAttachment = post.attachedFile && post.attachedFile.url;
-  const isImage = hasAttachment && typeof post.attachedFile.url === 'string' && post.attachedFile.url.startsWith('data:image');
+  const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
+  const isImage = hasAttachment && post.attachedFile.url.startsWith('data:image');
   
   useEffect(() => {
     if (isOpen) {
