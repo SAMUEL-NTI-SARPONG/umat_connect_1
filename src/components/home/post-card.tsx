@@ -27,71 +27,84 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from '../ui/textarea';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // CommentEntry component for displaying a single comment and its replies
 function CommentEntry({
   comment,
   postId,
   onReply,
+  isHighlighted,
 }: {
   comment: Comment;
   postId: number;
   onReply: (commentId: number, authorName: string) => void;
+  isHighlighted: boolean;
 }) {
   const { allUsers } = useUser();
   const author = allUsers.find((u) => u.id === comment.authorId);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isHighlighted && ref.current) {
+        setTimeout(() => {
+            ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500); // Delay to allow animation to finish
+    }
+  }, [isHighlighted]);
 
   if (!author) return null;
 
   return (
-    <div className="flex flex-col">
-      <div className="flex items-start gap-3 py-2">
-        <ProfileAvatar
-          src={author.profileImage}
-          fallback={author.name.charAt(0)}
-          className="w-8 h-8"
-          alt={author.name}
-          imageHint="profile picture"
-        />
-        <div className="flex-1">
-          <div className="bg-muted rounded-lg px-3 py-2">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-sm">{author.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatRelativeTime(new Date(comment.timestamp))}
-              </p>
+    <div ref={ref} id={`comment-${comment.id}`}>
+      <div className="flex flex-col">
+        <div className="flex items-start gap-3 py-2">
+          <ProfileAvatar
+            src={author.profileImage}
+            fallback={author.name.charAt(0)}
+            className="w-8 h-8"
+            alt={author.name}
+            imageHint="profile picture"
+          />
+          <div className="flex-1">
+            <div className="bg-muted rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm">{author.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatRelativeTime(new Date(comment.timestamp))}
+                </p>
+              </div>
+              <p className="text-sm break-words">{comment.text}</p>
             </div>
-            <p className="text-sm break-words">{comment.text}</p>
-          </div>
-          <div className="pl-3">
-            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onReply(comment.id, author.name)}>
-              <CornerUpLeft className="w-3 h-3 mr-1" />
-              Reply
-            </Button>
+            <div className="pl-3">
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onReply(comment.id, author.name)}>
+                <CornerUpLeft className="w-3 h-3 mr-1" />
+                Reply
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-      {comment.replies && comment.replies.length > 0 && (
-        <div className="border-l-2 ml-5">
-          {comment.replies.map((reply) => (
-            <div key={reply.id} className="pl-2">
-                 <CommentEntry
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="border-l-2 ml-5 pl-2">
+            {comment.replies.map((reply) => (
+                <CommentEntry
                     key={reply.id}
                     comment={reply}
                     postId={postId}
                     onReply={onReply}
+                    isHighlighted={isHighlighted}
                 />
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 
 // CommentSection component to be rendered inline
-function CommentSection({ post }: { post: Post }) {
+function CommentSection({ post, highlightedCommentId }: { post: Post, highlightedCommentId: number | null }) {
     const { user, addComment, addReply } = useUser();
     const [commentText, setCommentText] = useState('');
     const [replyingTo, setReplyingTo] = useState<{ id: number; name: string } | null>(null);
@@ -132,6 +145,7 @@ function CommentSection({ post }: { post: Post }) {
                     comment={comment}
                     postId={post.id}
                     onReply={(commentId, authorName) => setReplyingTo({ id: commentId, name: authorName })}
+                    isHighlighted={comment.id === highlightedCommentId}
                 />
             ))}
         </div>
@@ -180,7 +194,25 @@ function CommentSection({ post }: { post: Post }) {
 
 export default function PostCard({ post }: { post: Post }) {
   const { user, allUsers, deletePost } = useUser();
-  const [isCommentSectionOpen, setIsCommentSectionOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const queryPostId = searchParams.get('postId');
+  const queryCommentId = searchParams.get('commentId');
+
+  const [isCommentSectionOpen, setIsCommentSectionOpen] = useState(
+    post.id === Number(queryPostId)
+  );
+
+  useEffect(() => {
+    if (post.id === Number(queryPostId)) {
+      setIsCommentSectionOpen(true);
+      // Clean up URL params after opening
+      const newUrl = window.location.pathname;
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [queryPostId, post.id, router]);
+
   const author = allUsers.find(u => u.id === post.authorId);
 
   if (!author || !user) return null;
@@ -193,7 +225,11 @@ export default function PostCard({ post }: { post: Post }) {
   const canComment = true; 
 
   const totalCommentsAndReplies = post.comments.reduce((acc, comment) => {
-    return acc + 1 + (comment.replies ? comment.replies.length : 0);
+    // Recursive count for replies
+    const countReplies = (c: Comment): number => {
+        return 1 + c.replies.reduce((sum, reply) => sum + countReplies(reply), 0);
+    };
+    return acc + countReplies(comment);
   }, 0);
 
   return (
@@ -288,7 +324,7 @@ export default function PostCard({ post }: { post: Post }) {
                 }}
                 transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
               >
-                <CommentSection post={post} />
+                <CommentSection post={post} highlightedCommentId={Number(queryCommentId)} />
               </motion.section>
           )}
       </AnimatePresence>

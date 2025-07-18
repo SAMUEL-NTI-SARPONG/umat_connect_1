@@ -10,15 +10,22 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
 import { ProfileAvatar } from '../ui/profile-avatar';
+import { Badge } from '../ui/badge';
+import { useMemo } from 'react';
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { user, logout } = useUser();
+  const { user, logout, notifications } = useUser();
+
+  const unreadCount = useMemo(() => {
+    if (!user) return 0;
+    return notifications.filter(n => n.recipientId === user.id && !n.isRead).length;
+  }, [notifications, user]);
 
   if (!user) {
     return null;
@@ -64,6 +71,20 @@ export default function AppSidebar() {
               >
                 <Calendar />
                 <span>{timetableLabel}</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <Link href="/notifications" passHref>
+              <SidebarMenuButton
+                tooltip="Notifications"
+                isActive={pathname === '/notifications'}
+              >
+                <Bell />
+                <span>Notifications</span>
+                 {unreadCount > 0 && (
+                    <Badge className="absolute top-1 right-1 h-5 w-5 p-0 flex items-center justify-center">{unreadCount}</Badge>
+                )}
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

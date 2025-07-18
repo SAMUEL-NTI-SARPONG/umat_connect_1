@@ -57,6 +57,18 @@ export type Post = {
   audience: number[]; // Audience is now required
 };
 
+export type Notification = {
+    id: string;
+    recipientId: number;
+    actorId: number;
+    type: 'reply_to_post' | 'reply_to_comment';
+    postId: number;
+    commentId: number; // The new reply's ID
+    snippet: string;
+    isRead: boolean;
+    timestamp: string;
+};
+
 // Maps userId to an array of rejected entry IDs
 export type RejectedEntries = Record<number, number[]>;
 
@@ -83,6 +95,8 @@ interface UserContextType {
   rejectedEntries: RejectedEntries;
   rejectScheduleEntry: (userId: number, entryId: number) => void;
   unrejectScheduleEntry: (userId: number, entryId: number) => void;
+  notifications: Notification[];
+  markNotificationAsRead: (notificationId: string) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -126,6 +140,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
   const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Initialize state from localStorage on mount
   useEffect(() => {
@@ -136,6 +151,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLecturerSchedules(getFromStorage('lecturerSchedules', []));
     setReviewedSchedules(getFromStorage('reviewedSchedules', []));
     setRejectedEntries(getFromStorage('rejectedEntries', {}));
+    setNotifications(getFromStorage('notifications', []));
 
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
@@ -229,9 +245,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
       replies: [],
     };
     
+    let newNotifications: Notification[] = [];
+
     setPosts(prevPosts => {
       const updatedPosts = prevPosts.map(p => {
         if (p.id === postId) {
+          // Notify post author if they are not the one commenting
+          if (p.authorId !== user.id) {
+            const notification: Notification = {
+              id: `${Date.now()}-post-${p.id}`,
+              recipientId: p.authorId,
+              actorId: user.id,
+              type: 'reply_to_post',
+              postId: p.id,
+              commentId: newComment.id,
+              snippet: p.content.substring(0, 50) + (p.content.length > 50 ? '...' : ''),
+              isRead: false,
+              timestamp: new Date().toISOString(),
+            };
+            newNotifications.push(notification);
+          }
           return { ...p, comments: [...p.comments, newComment] };
         }
         return p;
@@ -239,6 +272,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       saveToStorage('posts', updatedPosts);
       return updatedPosts;
     });
+    
+    if (newNotifications.length > 0) {
+        setNotifications(prev => {
+            const updatedNotifications = [...prev, ...newNotifications];
+            saveToStorage('notifications', updatedNotifications);
+            return updatedNotifications;
+        });
+    }
 
   }, [user]);
 
@@ -253,33 +294,72 @@ export function UserProvider({ children }: { children: ReactNode }) {
       replies: [],
     };
     
-    setPosts(prevPosts => {
-      const updatedPosts = JSON.parse(JSON.stringify(prevPosts)); // Deep copy
-      const post = updatedPosts.find((p: Post) => p.id === postId);
+    const newNotifications: Notification[] = [];
 
-      if (post) {
-        // Recursive function to find and update the parent comment
-        const findAndAddReply = (comments: Comment[]) => {
-          for (const comment of comments) {
-            if (comment.id === parentCommentId) {
-              comment.replies.push(newReply);
-              return true;
+    setPosts(prevPosts => {
+        const updatedPosts = JSON.parse(JSON.stringify(prevPosts)); // Deep copy
+        const post = updatedPosts.find((p: Post) => p.id === postId);
+
+        if (post) {
+            let parentComment: Comment | null = null;
+            // Recursive function to find the parent comment
+            const findParentComment = (comments: Comment[]): Comment | null => {
+                for (const comment of comments) {
+                    if (comment.id === parentCommentId) {
+                        return comment;
+                    }
+                    if (comment.replies && comment.replies.length > 0) {
+                        const found = findParentComment(comment.replies);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+
+            parentComment = findParentComment(post.comments);
+            
+            if (parentComment) {
+                parentComment.replies.push(newReply);
+
+                // Notify author of parent comment if they are not the one replying
+                if (parentComment.authorId !== user.id) {
+                    const notification: Notification = {
+                      id: `${Date.now()}-comment-${parentComment.id}`,
+                      recipientId: parentComment.authorId,
+                      actorId: user.id,
+                      type: 'reply_to_comment',
+                      postId: post.id,
+                      commentId: newReply.id,
+                      snippet: parentComment.text.substring(0, 50) + (parentComment.text.length > 50 ? '...' : ''),
+                      isRead: false,
+                      timestamp: new Date().toISOString(),
+                    };
+                    newNotifications.push(notification);
+                }
             }
-            if (comment.replies && comment.replies.length > 0) {
-              if (findAndAddReply(comment.replies)) {
-                return true;
-              }
-            }
-          }
-          return false;
-        };
-        findAndAddReply(post.comments);
-      }
-      
-      saveToStorage('posts', updatedPosts);
-      return updatedPosts;
+        }
+        
+        saveToStorage('posts', updatedPosts);
+        return updatedPosts;
     });
+
+    if (newNotifications.length > 0) {
+        setNotifications(prev => {
+            const updatedNotifications = [...prev, ...newNotifications];
+            saveToStorage('notifications', updatedNotifications);
+            return updatedNotifications;
+        });
+    }
+
   }, [user]);
+
+  const markNotificationAsRead = useCallback((notificationId: string) => {
+    setNotifications(prev => {
+        const updated = prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n);
+        saveToStorage('notifications', updated);
+        return updated;
+    });
+  }, []);
 
   const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
     if (!user || user.role !== 'lecturer') return;
@@ -340,6 +420,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem('lecturerSchedules');
     window.localStorage.removeItem('reviewedSchedules');
     window.localStorage.removeItem('rejectedEntries');
+    window.localStorage.removeItem('notifications');
 
     
     // Reset state to defaults
@@ -350,6 +431,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLecturerSchedules([]);
     setReviewedSchedules([]);
     setRejectedEntries({});
+    setNotifications([]);
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     
@@ -380,7 +462,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     rejectedEntries,
     rejectScheduleEntry,
     unrejectScheduleEntry,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry]);
+    notifications,
+    markNotificationAsRead,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, notifications, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, markNotificationAsRead]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

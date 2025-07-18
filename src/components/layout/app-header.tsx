@@ -14,6 +14,7 @@ const pageTitles: { [key: string]: string } = {
   '/timetable': 'Timetable',
   '/profile': 'My Profile',
   '/sms': 'SMS Service',
+  '/notifications': 'Notifications',
 };
 
 export default function AppHeader() {

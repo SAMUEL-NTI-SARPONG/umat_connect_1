@@ -6,9 +6,9 @@ import { useUser } from './providers/user-provider';
 import CreatePost from '@/components/home/create-post';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, Suspense } from 'react';
 
-export default function Home() {
+function HomePageContent() {
   const { user, posts } = useUser();
 
   const filteredPosts = useMemo(() => {
@@ -63,4 +63,12 @@ export default function Home() {
       )}
     </div>
   );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
+  )
 }
