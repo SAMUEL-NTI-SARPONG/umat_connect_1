@@ -57,11 +57,12 @@ export default function TopScheduleBar() {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const userDepartments = Array.isArray(user.department) ? user.department : [user.department];
 
     return combinedSchedule.filter(entry =>
         entry.level === user.level &&
-        entry.departments.includes(user.department) &&
-        entry.day === today
+        entry.day === today &&
+        entry.departments.some(dep => userDepartments.includes(dep))
       );
   }, [masterSchedule, lecturerSchedules, user]);
 
