@@ -55,8 +55,7 @@ function CommentEntry({
 
   if (!author) return null;
   
-  // Robust check for a valid attachment URL
-  const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url.trim() !== '';
+  const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url.trim().length > 0;
   const isImage = hasAttachment && comment.attachedFile!.type.startsWith('image/');
 
   return (
@@ -81,27 +80,27 @@ function CommentEntry({
               {comment.text && <p className="text-sm break-words">{comment.text}</p>}
                {hasAttachment && (
                   <div className="rounded-md overflow-hidden border">
-                    {isImage && comment.attachedFile?.url ? (
+                    {isImage ? (
                       <Image
-                        src={comment.attachedFile.url}
+                        src={comment.attachedFile!.url}
                         alt="Comment attachment"
                         width={200}
                         height={150}
                         className="w-full h-auto object-contain"
                         data-ai-hint="comment attachment"
                       />
-                    ) : comment.attachedFile?.url ? (
+                    ) : (
                       <a
-                        href={comment.attachedFile.url}
-                        download={comment.attachedFile.name}
+                        href={comment.attachedFile!.url}
+                        download={comment.attachedFile!.name}
                         className="flex items-center gap-2 p-2 hover:bg-background/50"
                       >
                         <FileText className="w-6 h-6 text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground truncate">
-                          {comment.attachedFile.name}
+                          {comment.attachedFile!.name}
                         </span>
                       </a>
-                    ) : null}
+                    )}
                   </div>
                 )}
             </div>
@@ -318,9 +317,8 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  // Robust check for a valid attachment URL
-  const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url.trim() !== '';
-  const isImage = hasAttachment && post.attachedFile.type.startsWith('image/');
+  const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url.trim().length > 0;
+  const isImage = hasAttachment && post.attachedFile!.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
@@ -380,27 +378,27 @@ export default function PostCard({ post }: { post: Post }) {
         <p className="whitespace-pre-wrap text-sm">{post.content}</p>
         {hasAttachment && (
           <div className="rounded-lg overflow-hidden border max-h-[70vh]">
-            {isImage && post.attachedFile?.url ? (
+            {isImage ? (
               <Image
-                src={post.attachedFile.url}
+                src={post.attachedFile!.url}
                 alt="Post attachment"
                 width={600}
                 height={400}
                 className="w-full h-auto object-contain"
                 data-ai-hint="post attachment"
               />
-            ) : post.attachedFile?.url ? (
+            ) : (
               <a
-                href={post.attachedFile.url}
-                download={post.attachedFile.name}
+                href={post.attachedFile!.url}
+                download={post.attachedFile!.name}
                 className="flex items-center gap-3 p-3 hover:bg-muted"
               >
                 <FileText className="w-8 h-8 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground truncate">
-                  {post.attachedFile.name}
+                  {post.attachedFile!.name}
                 </span>
               </a>
-            ) : null}
+            )}
           </div>
         )}
       </CardContent>
@@ -433,3 +431,5 @@ export default function PostCard({ post }: { post: Post }) {
     </Card>
   );
 }
+
+    
