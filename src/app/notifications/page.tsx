@@ -78,15 +78,14 @@ export default function NotificationsPage() {
                           <span className="font-semibold">{actor.name}</span> {actionText}
                         </p>
                         <div className="bg-muted p-3 rounded-md">
+                           <div className="bg-background/50 border-l-4 border-primary/50 rounded-r-sm px-2 py-1 mb-2">
+                               <blockquote className="italic text-sm text-muted-foreground truncate">
+                                "{notification.parentContent}"
+                               </blockquote>
+                           </div>
                            <p className="text-sm">
                               {notification.replyContent}
                            </p>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                           <CornerDownRight className="w-3 h-3" />
-                           <blockquote className="italic truncate">
-                            "{notification.parentContent}"
-                           </blockquote>
                         </div>
                         <p className="text-xs text-muted-foreground pt-1">
                           {formatRelativeTime(new Date(notification.timestamp))}
