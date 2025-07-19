@@ -379,7 +379,7 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="rounded-lg overflow-hidden border max-h-[70vh]">
             {isImage ? (
               <Image
-                src={post.attachedFile.url}
+                src={post.attachedFile!.url}
                 alt="Post attachment"
                 width={600}
                 height={400}
@@ -388,13 +388,13 @@ export default function PostCard({ post }: { post: Post }) {
               />
             ) : (
               <a
-                href={post.attachedFile.url}
-                download={post.attachedFile.name}
+                href={post.attachedFile!.url}
+                download={post.attachedFile!.name}
                 className="flex items-center gap-3 p-3 hover:bg-muted"
               >
                 <FileText className="w-8 h-8 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground truncate">
-                  {post.attachedFile.name}
+                  {post.attachedFile!.name}
                 </span>
               </a>
             )}
