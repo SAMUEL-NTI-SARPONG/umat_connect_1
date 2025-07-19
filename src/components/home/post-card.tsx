@@ -54,7 +54,7 @@ function CommentEntry({
   }, [isHighlighted]);
 
   if (!author) return null;
-  const hasAttachment = comment.attachedFile && comment.attachedFile.url;
+  const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url;
   const isImage = hasAttachment && comment.attachedFile.type.startsWith('image/');
 
   return (
@@ -81,7 +81,7 @@ function CommentEntry({
                   <div className="rounded-md overflow-hidden border">
                     {isImage ? (
                       <Image
-                        src={comment.attachedFile.url}
+                        src={comment.attachedFile!.url}
                         alt="Comment attachment"
                         width={200}
                         height={150}
@@ -90,13 +90,13 @@ function CommentEntry({
                       />
                     ) : (
                       <a
-                        href={comment.attachedFile.url}
-                        download={comment.attachedFile.name}
+                        href={comment.attachedFile!.url}
+                        download={comment.attachedFile!.name}
                         className="flex items-center gap-2 p-2 hover:bg-background/50"
                       >
                         <FileText className="w-6 h-6 text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground truncate">
-                          {comment.attachedFile.name}
+                          {comment.attachedFile!.name}
                         </span>
                       </a>
                     )}
@@ -316,7 +316,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
+  const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url;
   const isImage = hasAttachment && post.attachedFile.type.startsWith('image');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
@@ -379,7 +379,7 @@ export default function PostCard({ post }: { post: Post }) {
           <div className="rounded-lg overflow-hidden border max-h-[70vh]">
             {isImage ? (
               <Image
-                src={post.attachedFile.url}
+                src={post.attachedFile!.url}
                 alt="Post attachment"
                 width={600}
                 height={400}
@@ -388,13 +388,13 @@ export default function PostCard({ post }: { post: Post }) {
               />
             ) : (
               <a
-                href={post.attachedFile.url}
-                download={post.attachedFile.name}
+                href={post.attachedFile!.url}
+                download={post.attachedFile!.name}
                 className="flex items-center gap-3 p-3 hover:bg-muted"
               >
                 <FileText className="w-8 h-8 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground truncate">
-                  {post.attachedFile.name}
+                  {post.attachedFile!.name}
                 </span>
               </a>
             )}
