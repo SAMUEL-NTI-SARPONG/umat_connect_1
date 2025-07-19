@@ -1,123 +1,13 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
-import { useUser, type AttachedFile } from '@/app/providers/user-provider';
+import { useUser } from '@/app/providers/user-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, Newspaper, Paperclip, Send, X, FileText } from 'lucide-react';
+import { Bell, MessageSquare, Newspaper } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
-
-function QuickReplyBox({ notification }: { notification: any }) {
-    const { addReply } = useUser();
-    const [replyText, setReplyText] = useState('');
-    const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAttachedFile({
-                    name: file.name,
-                    type: file.type,
-                    url: reader.result as string,
-                });
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const removeFile = () => {
-        setAttachedFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    const handleSendReply = () => {
-        if (!replyText.trim() && !attachedFile) return;
-
-        addReply(notification.postId, notification.commentId, replyText, attachedFile);
-        setReplyText('');
-        setAttachedFile(null);
-    };
-
-    const isImage = attachedFile?.type.startsWith('image/');
-
-    return (
-        <div className="mt-4 space-y-2">
-            {attachedFile && (
-                <div className="relative">
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 rounded-full h-6 w-6 z-10"
-                        onClick={removeFile}
-                    >
-                        <X className="h-3 w-3" />
-                    </Button>
-                    {isImage ? (
-                        <Image
-                            src={attachedFile.url}
-                            alt="Image preview"
-                            width={80}
-                            height={80}
-                            className="rounded-lg object-cover w-20 h-20"
-                            data-ai-hint="reply preview"
-                        />
-                    ) : (
-                        <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50 text-xs">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
-                            <span className="font-medium text-foreground truncate">{attachedFile.name}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-            <div className="flex items-center gap-2">
-                <div className="relative flex-grow">
-                    <Textarea
-                        placeholder="Send a quick reply..."
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        className="pr-20"
-                        rows={1}
-                    />
-                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                        />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <Paperclip className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={handleSendReply}
-                            disabled={!replyText.trim() && !attachedFile}
-                        >
-                            <Send className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 export default function NotificationsPage() {
   const { user, notifications, allUsers, markNotificationAsRead } = useUser();
@@ -160,8 +50,9 @@ export default function NotificationsPage() {
                 }
 
                 return (
-                  <div
+                  <Link
                     key={notification.id}
+                    href={`/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`}
                     onClick={() => getNotificationDetails(notification.id)}
                     className={cn(
                       'block p-4 rounded-lg border transition-colors',
@@ -184,7 +75,7 @@ export default function NotificationsPage() {
                       </div>
                       <div className="flex-1 space-y-2">
                         <div className="text-sm">
-                            <Link href={`/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`} className="font-semibold hover:underline">{actor.name}</Link> {actionText}
+                            <span className="font-semibold">{actor.name}</span> {actionText}
                         </div>
                         <div className="bg-muted p-3 rounded-md">
                            <div className="bg-background/50 border-l-4 border-primary/50 rounded-r-sm px-2 py-1 mb-2">
@@ -199,10 +90,9 @@ export default function NotificationsPage() {
                         <p className="text-xs text-muted-foreground pt-1">
                           {formatRelativeTime(new Date(notification.timestamp))}
                         </p>
-                        <QuickReplyBox notification={notification} />
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
