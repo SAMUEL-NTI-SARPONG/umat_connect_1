@@ -55,7 +55,7 @@ function CommentEntry({
 
   if (!author) return null;
   const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url.trim() !== '';
-  const isImage = hasAttachment && comment.attachedFile.type.startsWith('image/');
+  const isImage = hasAttachment && comment.attachedFile!.type.startsWith('image/');
 
   return (
     <div ref={ref} id={`comment-${comment.id}`}>
@@ -81,7 +81,7 @@ function CommentEntry({
                   <div className="rounded-md overflow-hidden border">
                     {isImage ? (
                       <Image
-                        src={comment.attachedFile.url}
+                        src={comment.attachedFile!.url}
                         alt="Comment attachment"
                         width={200}
                         height={150}
@@ -90,13 +90,13 @@ function CommentEntry({
                       />
                     ) : (
                       <a
-                        href={comment.attachedFile.url}
-                        download={comment.attachedFile.name}
+                        href={comment.attachedFile!.url}
+                        download={comment.attachedFile!.name}
                         className="flex items-center gap-2 p-2 hover:bg-background/50"
                       >
                         <FileText className="w-6 h-6 text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground truncate">
-                          {comment.attachedFile.name}
+                          {comment.attachedFile!.name}
                         </span>
                       </a>
                     )}
