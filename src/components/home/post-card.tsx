@@ -54,8 +54,8 @@ function CommentEntry({
   }, [isHighlighted]);
 
   if (!author) return null;
-  const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url;
-  const isImage = hasAttachment && comment.attachedFile.type.startsWith('image/');
+  const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url.trim() !== '';
+  const isImage = hasAttachment && comment.attachedFile!.type.startsWith('image/');
 
   return (
     <div ref={ref} id={`comment-${comment.id}`}>
@@ -316,8 +316,8 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
-  const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url;
-  const isImage = hasAttachment && post.attachedFile.type.startsWith('image');
+  const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url.trim() !== '';
+  const isImage = hasAttachment && post.attachedFile!.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;
