@@ -78,31 +78,6 @@ function CommentEntry({
                 </p>
               </div>
               {comment.text && <p className="text-sm break-words">{comment.text}</p>}
-               {hasAttachment && (
-                  <div className="rounded-md overflow-hidden border">
-                    {isImage ? (
-                      <Image
-                        src={comment.attachedFile!.url}
-                        alt="Comment attachment"
-                        width={200}
-                        height={150}
-                        className="w-full h-auto object-contain"
-                        data-ai-hint="comment attachment"
-                      />
-                    ) : (
-                      <a
-                        href={comment.attachedFile!.url}
-                        download={comment.attachedFile!.name}
-                        className="flex items-center gap-2 p-2 hover:bg-background/50"
-                      >
-                        <FileText className="w-6 h-6 text-muted-foreground" />
-                        <span className="text-xs font-medium text-foreground truncate">
-                          {comment.attachedFile!.name}
-                        </span>
-                      </a>
-                    )}
-                  </div>
-                )}
             </div>
             <div className="pl-3">
               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onReply(comment.id, author.name)}>
@@ -220,33 +195,6 @@ function CommentSection({ post, highlightedCommentId }: { post: Post, highlighte
                     Replying to {replyingTo.name}...{' '}
                     <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={handleCancelReply}>Cancel</Button>
                 </p>
-            )}
-             {attachedFile && attachedFile.url && (
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 rounded-full h-6 w-6 z-10 bg-black/50 hover:bg-black/70 text-white"
-                  onClick={removeFile}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                {isPreviewImage ? (
-                  <Image
-                    src={attachedFile.url}
-                    alt="Preview"
-                    width={80}
-                    height={80}
-                    className="rounded-lg object-cover w-20 h-20"
-                    data-ai-hint="attachment preview"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted max-w-xs">
-                    <FileText className="w-6 h-6 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs font-medium text-foreground truncate">{attachedFile.name}</span>
-                  </div>
-                )}
-              </div>
             )}
             <div className="relative flex items-center">
               <Textarea
@@ -376,31 +324,6 @@ export default function PostCard({ post }: { post: Post }) {
       </CardHeader>
       <CardContent className="px-2 sm:px-4 py-2 flex-grow space-y-4">
         <p className="whitespace-pre-wrap text-sm">{post.content}</p>
-        {hasAttachment && (
-          <div className="rounded-lg overflow-hidden border max-h-[70vh]">
-            {isImage ? (
-              <Image
-                src={post.attachedFile!.url}
-                alt="Post attachment"
-                width={600}
-                height={400}
-                className="w-full h-auto object-contain"
-                data-ai-hint="post attachment"
-              />
-            ) : (
-              <a
-                href={post.attachedFile!.url}
-                download={post.attachedFile!.name}
-                className="flex items-center gap-3 p-3 hover:bg-muted"
-              >
-                <FileText className="w-8 h-8 text-muted-foreground" />
-                <span className="text-sm font-medium text-foreground truncate">
-                  {post.attachedFile!.name}
-                </span>
-              </a>
-            )}
-          </div>
-        )}
       </CardContent>
       <CardFooter className="px-2 sm:px-4 pt-2 pb-3">
         {canComment && (
@@ -431,5 +354,3 @@ export default function PostCard({ post }: { post: Post }) {
     </Card>
   );
 }
-
-    
