@@ -81,27 +81,27 @@ function CommentEntry({
               {comment.text && <p className="text-sm break-words">{comment.text}</p>}
                {hasAttachment && (
                   <div className="rounded-md overflow-hidden border">
-                    {isImage ? (
+                    {isImage && comment.attachedFile?.url ? (
                       <Image
-                        src={comment.attachedFile!.url}
+                        src={comment.attachedFile.url}
                         alt="Comment attachment"
                         width={200}
                         height={150}
                         className="w-full h-auto object-contain"
                         data-ai-hint="comment attachment"
                       />
-                    ) : (
+                    ) : comment.attachedFile?.url ? (
                       <a
-                        href={comment.attachedFile!.url}
-                        download={comment.attachedFile!.name}
+                        href={comment.attachedFile.url}
+                        download={comment.attachedFile.name}
                         className="flex items-center gap-2 p-2 hover:bg-background/50"
                       >
                         <FileText className="w-6 h-6 text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground truncate">
-                          {comment.attachedFile!.name}
+                          {comment.attachedFile.name}
                         </span>
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 )}
             </div>
@@ -380,7 +380,7 @@ export default function PostCard({ post }: { post: Post }) {
         <p className="whitespace-pre-wrap text-sm">{post.content}</p>
         {hasAttachment && (
           <div className="rounded-lg overflow-hidden border max-h-[70vh]">
-            {isImage ? (
+            {isImage && post.attachedFile?.url ? (
               <Image
                 src={post.attachedFile.url}
                 alt="Post attachment"
@@ -389,7 +389,7 @@ export default function PostCard({ post }: { post: Post }) {
                 className="w-full h-auto object-contain"
                 data-ai-hint="post attachment"
               />
-            ) : (
+            ) : post.attachedFile?.url ? (
               <a
                 href={post.attachedFile.url}
                 download={post.attachedFile.name}
@@ -400,7 +400,7 @@ export default function PostCard({ post }: { post: Post }) {
                   {post.attachedFile.name}
                 </span>
               </a>
-            )}
+            ) : null}
           </div>
         )}
       </CardContent>
