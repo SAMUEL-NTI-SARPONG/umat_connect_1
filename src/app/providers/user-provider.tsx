@@ -97,6 +97,7 @@ interface UserContextType {
   unrejectScheduleEntry: (userId: number, entryId: number) => void;
   notifications: Notification[];
   markNotificationAsRead: (notificationId: string) => void;
+  clearAllNotifications: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -368,6 +369,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const clearAllNotifications = useCallback(() => {
+    if (!user) return;
+    setNotifications(prev => {
+        const remainingNotifications = prev.filter(n => n.recipientId !== user.id);
+        saveToStorage('notifications', remainingNotifications);
+        return remainingNotifications;
+    });
+    toast({ title: 'Notifications Cleared', description: 'All your notifications have been removed.' });
+  }, [user, toast]);
+
   const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
     if (!user || user.role !== 'lecturer') return;
     
@@ -471,7 +482,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     unrejectScheduleEntry,
     notifications,
     markNotificationAsRead,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, notifications, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, markNotificationAsRead]);
+    clearAllNotifications,
+  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, notifications, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, markNotificationAsRead, clearAllNotifications]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

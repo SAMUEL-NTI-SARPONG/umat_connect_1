@@ -2,15 +2,16 @@
 'use client';
 
 import { useUser } from '@/app/providers/user-provider';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, CornerUpLeft } from 'lucide-react';
+import { Bell, MessageSquare, CornerUpLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
-  const { user, notifications, allUsers, markNotificationAsRead } = useUser();
+  const { user, notifications, allUsers, markNotificationAsRead, clearAllNotifications } = useUser();
 
   if (!user) {
     return null;
@@ -28,10 +29,18 @@ export default function NotificationsPage() {
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell />
-            Notifications
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <Bell />
+              Notifications
+            </CardTitle>
+            {userNotifications.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearAllNotifications}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {userNotifications.length > 0 ? (
