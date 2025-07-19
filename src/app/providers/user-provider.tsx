@@ -61,11 +61,9 @@ export type Notification = {
     id: string;
     recipientId: number;
     actorId: number;
-    type: 'reply_to_post' | 'reply_to_comment';
+    type: 'comment_on_post' | 'reply_to_comment';
     postId: number;
     commentId: number; // The new reply's ID
-    replyContent: string; // The full text of the new reply
-    parentContent: string; // A snippet of the content being replied to
     isRead: boolean;
     timestamp: string;
 };
@@ -257,11 +255,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
               id: `${Date.now()}-post-${p.id}`,
               recipientId: p.authorId,
               actorId: user.id,
-              type: 'reply_to_post',
+              type: 'comment_on_post',
               postId: p.id,
               commentId: newComment.id,
-              replyContent: text,
-              parentContent: p.content,
               isRead: false,
               timestamp: new Date().toISOString(),
             };
@@ -327,8 +323,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         type: 'reply_to_comment',
                         postId: post.id,
                         commentId: newReply.id,
-                        replyContent: text,
-                        parentContent: parentComment.text,
                         isRead: false,
                         timestamp: new Date().toISOString(),
                     });
@@ -343,8 +337,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         type: 'reply_to_comment',
                         postId: post.id,
                         commentId: newReply.id,
-                        replyContent: text,
-                        parentContent: parentComment.text,
                         isRead: false,
                         timestamp: new Date().toISOString(),
                     });

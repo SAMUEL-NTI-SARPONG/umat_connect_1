@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, Newspaper } from 'lucide-react';
+import { Bell, MessageSquare, CornerUpLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
@@ -35,19 +35,25 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent>
           {userNotifications.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {userNotifications.map((notification) => {
                 const actor = allUsers.find((u) => u.id === notification.actorId);
                 if (!actor) return null;
 
                 let actionText = '';
                 let icon = <MessageSquare className="h-4 w-4 text-blue-500" />;
-                if (notification.type === 'reply_to_post') {
-                  actionText = 'replied to your post:';
-                  icon = <Newspaper className="h-4 w-4 text-green-500" />;
-                } else if (notification.type === 'reply_to_comment') {
-                  actionText = 'replied to your comment:';
+                switch (notification.type) {
+                  case 'comment_on_post':
+                    actionText = 'commented on your post.';
+                    break;
+                  case 'reply_to_comment':
+                    actionText = 'replied to your comment.';
+                    icon = <CornerUpLeft className="h-4 w-4 text-green-500" />;
+                    break;
+                  default:
+                     actionText = 'interacted with your post.';
                 }
+
 
                 return (
                   <Link
@@ -55,13 +61,13 @@ export default function NotificationsPage() {
                     href={`/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`}
                     onClick={() => getNotificationDetails(notification.id)}
                     className={cn(
-                      'block p-4 rounded-lg border transition-colors',
+                      'block p-3 rounded-lg border transition-colors',
                       notification.isRead
                         ? 'bg-transparent hover:bg-muted/50'
                         : 'bg-primary/10 hover:bg-primary/20 border-primary/30'
                     )}
                   >
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-center gap-3">
                       <div className="relative">
                         <ProfileAvatar
                           src={actor.profileImage}
@@ -73,21 +79,11 @@ export default function NotificationsPage() {
                            {icon}
                          </div>
                       </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="text-sm">
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm">
                             <span className="font-semibold">{actor.name}</span> {actionText}
-                        </div>
-                        <div className="bg-muted p-3 rounded-md">
-                           <div className="bg-background/50 border-l-4 border-primary/50 rounded-r-sm px-2 py-1 mb-2">
-                               <blockquote className="italic text-sm text-muted-foreground truncate">
-                                "{notification.parentContent}"
-                               </blockquote>
-                           </div>
-                           <p className="text-sm">
-                              {notification.replyContent}
-                           </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground pt-1">
+                        </p>
+                         <p className="text-xs text-muted-foreground pt-1">
                           {formatRelativeTime(new Date(notification.timestamp))}
                         </p>
                       </div>
