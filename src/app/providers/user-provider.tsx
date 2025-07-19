@@ -289,59 +289,69 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const newReply: Comment = {
-      id: Date.now(),
-      authorId: user.id,
-      text,
-      timestamp: new Date().toISOString(),
-      replies: [],
+        id: Date.now(),
+        authorId: user.id,
+        text,
+        timestamp: new Date().toISOString(),
+        replies: [],
     };
-    
+
     const newNotifications: Notification[] = [];
 
     setPosts(prevPosts => {
-        const updatedPosts = JSON.parse(JSON.stringify(prevPosts)); // Deep copy
+        const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
         const post = updatedPosts.find((p: Post) => p.id === postId);
 
         if (post) {
             let parentComment: Comment | null = null;
-            // Recursive function to find the parent comment
             const findParentComment = (comments: Comment[]): Comment | null => {
                 for (const comment of comments) {
-                    if (comment.id === parentCommentId) {
-                        return comment;
-                    }
-                    if (comment.replies && comment.replies.length > 0) {
-                        const found = findParentComment(comment.replies);
-                        if (found) return found;
-                    }
+                    if (comment.id === parentCommentId) return comment;
+                    const found = findParentComment(comment.replies);
+                    if (found) return found;
                 }
                 return null;
             };
 
             parentComment = findParentComment(post.comments);
-            
+
             if (parentComment) {
                 parentComment.replies.push(newReply);
 
-                // Notify author of parent comment if they are not the one replying
+                // Notify parent comment author
                 if (parentComment.authorId !== user.id) {
-                    const notification: Notification = {
-                      id: `${Date.now()}-comment-${parentComment.id}`,
-                      recipientId: parentComment.authorId,
-                      actorId: user.id,
-                      type: 'reply_to_comment',
-                      postId: post.id,
-                      commentId: newReply.id,
-                      replyContent: text,
-                      parentContent: parentComment.text,
-                      isRead: false,
-                      timestamp: new Date().toISOString(),
-                    };
-                    newNotifications.push(notification);
+                    newNotifications.push({
+                        id: `${Date.now()}-comment-${parentComment.id}`,
+                        recipientId: parentComment.authorId,
+                        actorId: user.id,
+                        type: 'reply_to_comment',
+                        postId: post.id,
+                        commentId: newReply.id,
+                        replyContent: text,
+                        parentContent: parentComment.text,
+                        isRead: false,
+                        timestamp: new Date().toISOString(),
+                    });
+                }
+
+                // Notify post author, but only if they are not the one being replied to and not the one replying.
+                if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
+                    newNotifications.push({
+                        id: `${Date.now()}-post-${post.id}-reply`,
+                        recipientId: post.authorId,
+                        actorId: user.id,
+                        type: 'reply_to_comment',
+                        postId: post.id,
+                        commentId: newReply.id,
+                        replyContent: text,
+                        parentContent: parentComment.text,
+                        isRead: false,
+                        timestamp: new Date().toISOString(),
+                    });
                 }
             }
         }
-        
+
         saveToStorage('posts', updatedPosts);
         return updatedPosts;
     });
@@ -353,7 +363,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             return updatedNotifications;
         });
     }
-
   }, [user]);
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
