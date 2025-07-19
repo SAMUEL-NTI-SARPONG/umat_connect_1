@@ -54,6 +54,8 @@ function CommentEntry({
   }, [isHighlighted]);
 
   if (!author) return null;
+  
+  // Robust check for a valid attachment URL
   const hasAttachment = comment.attachedFile && typeof comment.attachedFile.url === 'string' && comment.attachedFile.url.trim() !== '';
   const isImage = hasAttachment && comment.attachedFile!.type.startsWith('image/');
 
@@ -316,6 +318,7 @@ export default function PostCard({ post }: { post: Post }) {
 
   if (!author || !user) return null;
 
+  // Robust check for a valid attachment URL
   const hasAttachment = post.attachedFile && typeof post.attachedFile.url === 'string' && post.attachedFile.url.trim() !== '';
   const isImage = hasAttachment && post.attachedFile.type.startsWith('image/');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
