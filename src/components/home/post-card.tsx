@@ -9,9 +9,9 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import Image from 'next/image';
-import { FileText, MessageSquare, Trash2, CornerUpLeft, Send } from 'lucide-react';
+import { FileText, MessageSquare, Trash2, CornerUpLeft, Send, Paperclip, X } from 'lucide-react';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
-import { useUser, type Post, type Comment } from '@/app/providers/user-provider';
+import { useUser, type Post, type Comment, type AttachedFile } from '@/app/providers/user-provider';
 import { formatRelativeTime } from '@/lib/time';
 import { Button } from '../ui/button';
 import {
@@ -54,6 +54,8 @@ function CommentEntry({
   }, [isHighlighted]);
 
   if (!author) return null;
+  const hasAttachment = comment.attachedFile && comment.attachedFile.url;
+  const isImage = hasAttachment && comment.attachedFile.type.startsWith('image/');
 
   return (
     <div ref={ref} id={`comment-${comment.id}`}>
@@ -67,14 +69,39 @@ function CommentEntry({
             imageHint="profile picture"
           />
           <div className="flex-1">
-            <div className="bg-muted rounded-lg px-3 py-2">
+            <div className="bg-muted rounded-lg px-3 py-2 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-sm">{author.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatRelativeTime(new Date(comment.timestamp))}
                 </p>
               </div>
-              <p className="text-sm break-words">{comment.text}</p>
+              {comment.text && <p className="text-sm break-words">{comment.text}</p>}
+               {hasAttachment && (
+                  <div className="rounded-md overflow-hidden border">
+                    {isImage ? (
+                      <Image
+                        src={comment.attachedFile.url}
+                        alt="Comment attachment"
+                        width={200}
+                        height={150}
+                        className="w-full h-auto object-contain"
+                        data-ai-hint="comment attachment"
+                      />
+                    ) : (
+                      <a
+                        href={comment.attachedFile.url}
+                        download={comment.attachedFile.name}
+                        className="flex items-center gap-2 p-2 hover:bg-background/50"
+                      >
+                        <FileText className="w-6 h-6 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground truncate">
+                          {comment.attachedFile.name}
+                        </span>
+                      </a>
+                    )}
+                  </div>
+                )}
             </div>
             <div className="pl-3">
               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onReply(comment.id, author.name)}>
@@ -107,8 +134,10 @@ function CommentEntry({
 function CommentSection({ post, highlightedCommentId }: { post: Post, highlightedCommentId: number | null }) {
     const { user, addComment, addReply } = useUser();
     const [commentText, setCommentText] = useState('');
+    const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
     const [replyingTo, setReplyingTo] = useState<{ id: number; name: string } | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (replyingTo && textareaRef.current) {
@@ -118,22 +147,48 @@ function CommentSection({ post, highlightedCommentId }: { post: Post, highlighte
     
     if (!user) return null;
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAttachedFile({
+            name: file.name,
+            type: file.type,
+            url: reader.result as string,
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  
+    const removeFile = () => {
+      setAttachedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+
     const handleSubmit = () => {
-        if (!commentText.trim()) return;
+        if (!commentText.trim() && !attachedFile) return;
 
         if (replyingTo) {
-            addReply(post.id, replyingTo.id, commentText);
+            addReply(post.id, replyingTo.id, commentText, attachedFile);
             setReplyingTo(null);
         } else {
-            addComment(post.id, commentText);
+            addComment(post.id, commentText, attachedFile);
         }
         setCommentText('');
+        setAttachedFile(null);
     };
 
     const handleCancelReply = () => {
         setReplyingTo(null);
         setCommentText('');
+        setAttachedFile(null);
     };
+
+    const isPreviewImage = attachedFile?.type.startsWith('image/');
     
     return (
       <div className="px-2 sm:px-4 pt-2 pb-4 border-t">
@@ -151,41 +206,85 @@ function CommentSection({ post, highlightedCommentId }: { post: Post, highlighte
         </div>
 
         {/* Input for new comment/reply */}
-        <div className="relative flex items-center gap-2">
+        <div className="relative flex items-start gap-2">
           <ProfileAvatar 
               src={user.profileImage}
               fallback={user.name.charAt(0)}
               className="w-8 h-8 self-start"
               alt={user.name}
           />
-          <div className="flex-1">
+          <div className="flex-1 space-y-2">
             {replyingTo && (
-                <p className="text-xs text-muted-foreground mb-1">
+                <p className="text-xs text-muted-foreground">
                     Replying to {replyingTo.name}...{' '}
                     <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={handleCancelReply}>Cancel</Button>
                 </p>
             )}
-            <Textarea
-                ref={textareaRef}
-                placeholder={replyingTo ? 'Write your reply...' : 'Write a comment...'}
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="pr-12 min-h-[40px]"
-                rows={1}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSubmit();
-                    }
-                }}
-            />
-             <Button 
-                size="icon" 
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8" 
-                onClick={handleSubmit} 
-                disabled={!commentText.trim()}>
-                <Send className="h-4 w-4" />
-            </Button>
+             {attachedFile && (
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 rounded-full h-6 w-6 z-10 bg-black/50 hover:bg-black/70 text-white"
+                  onClick={removeFile}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                {isPreviewImage ? (
+                  <Image
+                    src={attachedFile.url}
+                    alt="Preview"
+                    width={80}
+                    height={80}
+                    className="rounded-lg object-cover w-20 h-20"
+                    data-ai-hint="attachment preview"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted max-w-xs">
+                    <FileText className="w-6 h-6 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs font-medium text-foreground truncate">{attachedFile.name}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="relative flex items-center">
+              <Textarea
+                  ref={textareaRef}
+                  placeholder={replyingTo ? 'Write your reply...' : 'Write a comment...'}
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="pr-20 min-h-[40px] bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
+                  rows={1}
+                  onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSubmit();
+                      }
+                  }}
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button 
+                      variant="ghost"
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground"
+                      onClick={() => fileInputRef.current?.click()}>
+                      <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    className="h-8 w-8" 
+                    onClick={handleSubmit} 
+                    disabled={!commentText.trim() && !attachedFile}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -218,7 +317,7 @@ export default function PostCard({ post }: { post: Post }) {
   if (!author || !user) return null;
 
   const hasAttachment = post.attachedFile && post.attachedFile.url && typeof post.attachedFile.url === 'string';
-  const isImage = hasAttachment && post.attachedFile.url.startsWith('data:image');
+  const isImage = hasAttachment && post.attachedFile.type.startsWith('image');
   const relativeTime = formatRelativeTime(new Date(post.timestamp));
 
   const canDelete = user.id === post.authorId;

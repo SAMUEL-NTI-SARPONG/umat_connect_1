@@ -45,6 +45,7 @@ export type Comment = {
   text: string;
   timestamp: string;
   replies: Comment[];
+  attachedFile?: AttachedFile | null;
 };
 
 export type Post = {
@@ -85,8 +86,8 @@ interface UserContextType {
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => void;
   deletePost: (postId: number) => void;
-  addComment: (postId: number, text: string) => void;
-  addReply: (postId: number, parentCommentId: number, text: string) => void;
+  addComment: (postId: number, text: string, attachedFile: AttachedFile | null) => void;
+  addReply: (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => void;
   lecturerSchedules: TimetableEntry[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   reviewedSchedules: number[];
@@ -233,7 +234,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Post Deleted', description: 'Your post has been removed.' });
   }, [toast]);
   
-  const addComment = useCallback((postId: number, text: string) => {
+  const addComment = useCallback((postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
     
     const newComment: Comment = {
@@ -242,6 +243,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       text,
       timestamp: new Date().toISOString(),
       replies: [],
+      attachedFile,
     };
     
     let newNotifications: Notification[] = [];
@@ -281,7 +283,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   }, [user]);
 
-  const addReply = useCallback((postId: number, parentCommentId: number, text: string) => {
+  const addReply = useCallback((postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
 
     const newReply: Comment = {
@@ -290,6 +292,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         text,
         timestamp: new Date().toISOString(),
         replies: [],
+        attachedFile,
     };
 
     const newNotifications: Notification[] = [];
