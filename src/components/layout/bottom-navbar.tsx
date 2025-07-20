@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Calendar, User, Settings, Bell } from 'lucide-react';
+import { Home, Calendar, User, Compass, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
@@ -12,7 +12,7 @@ import { Badge } from '../ui/badge';
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/timetable', icon: Calendar, label: 'Timetable' },
-  { href: '/sms', icon: Settings, label: 'SMS' },
+  { href: '/explore', icon: Compass, label: 'Explore' },
   { href: '/notifications', icon: Bell, label: 'Alerts' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];

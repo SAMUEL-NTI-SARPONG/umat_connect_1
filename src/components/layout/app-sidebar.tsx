@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Settings } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -74,6 +74,17 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+           <SidebarMenuItem>
+                <Link href="/explore" passHref>
+                    <SidebarMenuButton
+                        tooltip="Explore"
+                        isActive={pathname === '/explore'}
+                    >
+                        <Compass />
+                        <span>Explore</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
               <SidebarMenuButton
@@ -88,17 +99,6 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-           <SidebarMenuItem>
-                <Link href="/sms" passHref>
-                    <SidebarMenuButton
-                        tooltip="SMS Setup"
-                        isActive={pathname === '/sms'}
-                    >
-                        <Settings />
-                        <span>SMS Setup</span>
-                    </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/profile" passHref>
               <SidebarMenuButton

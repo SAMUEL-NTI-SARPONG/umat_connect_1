@@ -12,9 +12,9 @@ import { Button } from '../ui/button';
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
   '/timetable': 'Timetable',
-  '/profile': 'My Profile',
-  '/sms': 'SMS Setup',
+  '/explore': 'Explore',
   '/notifications': 'Notifications',
+  '/profile': 'My Profile',
 };
 
 export default function AppHeader() {
@@ -45,7 +45,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-        {pathname !== '/sms' && <SidebarTrigger side="right" className="md:hidden" />}
+        {pathname !== '/explore' && <SidebarTrigger side="right" className="md:hidden" />}
       </div>
     </header>
   );
