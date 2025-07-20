@@ -1,154 +1,135 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import ChatLayout from '@/components/sms/chat-layout';
-import { useUser } from '@/app/providers/user-provider';
-import { Send, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Copy, Info } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-type Message = {
-  id: number;
-  content: string;
-  isUser: boolean;
-};
-
-// This is a mock function to simulate calling the backend API
-async function sendSmsToBackend(from: string, body: string): Promise<string> {
-    const formData = new FormData();
-    formData.append('From', from);
-    formData.append('Body', body);
-
-    try {
-        const response = await fetch('/api/sms', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API Error Response:', errorText);
-            throw new Error('Network response was not ok');
-        }
-
-        const text = await response.text();
-        const matches = text.match(/<Message>([\s\S]*?)<\/Message>/);
-        return matches ? matches[1] : 'Sorry, there was an issue with the response.';
-
-    } catch (error) {
-        console.error("Failed to send SMS to backend", error);
-        return "Sorry, an error occurred while sending your message. The SMS service may be temporarily unavailable.";
-    }
-}
-
-
-export default function SmsPage() {
-  const { user, masterSchedule } = useUser();
+export default function SmsSetupPage() {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const endOfMessagesRef = useRef<HTMLDivElement>(null);
-  const isTimetableUploaded = masterSchedule && masterSchedule.length > 0;
+  const [config, setConfig] = useState({
+    sid: '',
+    token: '',
+    phone: '',
+  });
+  const [webhookUrl, setWebhookUrl] = useState('');
 
   useEffect(() => {
-    // Start with a welcome message from the bot
-    setMessages([
-      {
-        id: 1,
-        content: `Welcome to the UMaT Connect SMS service. 
-You can ask for your schedule with "Today", "Now", or "Next".
-For this simulation to work best, please ensure an admin has uploaded a timetable.`,
-        isUser: false,
-      },
-    ]);
-  }, []);
-  
-  useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-
-  const handleSend = async () => {
-    if (!input.trim() || !user) return;
-
-    const userMessage: Message = {
-      id: Date.now(),
-      content: input,
-      isUser: true,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const responseText = await sendSmsToBackend(user.phone, input);
-
-      const botMessage: Message = {
-        id: Date.now() + 1,
-        content: responseText,
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, botMessage]);
-
-    } catch (error) {
-      console.error('Error processing SMS:', error);
-      toast({
-          title: "Error",
-          description: "Failed to get a response from the SMS service.",
-          variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false);
+    // Load saved config from local storage
+    const savedConfig = localStorage.getItem('twilioConfig');
+    if (savedConfig) {
+      setConfig(JSON.parse(savedConfig));
     }
+
+    // Set the webhook URL based on the window's origin
+    if (typeof window !== 'undefined') {
+      setWebhookUrl(`${window.location.origin}/api/sms`);
+    }
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setConfig((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSave = () => {
+    localStorage.setItem('twilioConfig', JSON.stringify(config));
+    toast({
+      title: 'Configuration Saved',
+      description: 'Your Twilio settings have been saved locally.',
+    });
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    toast({
+      title: 'Copied to Clipboard',
+      description: 'The webhook URL has been copied.',
+    });
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-3.5rem)]">
-      <div className="p-4 border-b">
-        <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>SMS Service Simulation</AlertTitle>
-            <AlertDescription>
-                This is a simplified SMS simulation. It may not reflect real-time schedule changes made in the app. Status is: {isTimetableUploaded ? <span className="font-semibold text-green-600">Ready</span> : <span className="font-semibold text-yellow-600">Awaiting Timetable</span>}
-            </AlertDescription>
-        </Alert>
-      </div>
-      <ChatLayout
-        messages={messages}
-        isLoading={isLoading}
-        endOfMessagesRef={endOfMessagesRef}
-      />
-      <div className="px-4 py-2 bg-background border-t">
-        <div className="relative">
-          <Textarea
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            className="pr-16"
-            rows={1}
-          />
-          <Button
-            size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9"
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-          >
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="p-4 md:p-6 max-w-2xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>SMS Service Setup</CardTitle>
+          <CardDescription>
+            Configure your Twilio account to enable the SMS features of this
+            application.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="sid">Account SID</Label>
+            <Input
+              id="sid"
+              placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              value={config.sid}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="token">Auth Token</Label>
+            <Input
+              id="token"
+              type="password"
+              placeholder="********************************"
+              value={config.token}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Twilio Phone Number</Label>
+            <Input
+              id="phone"
+              placeholder="+1234567890"
+              value={config.phone}
+              onChange={handleInputChange}
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleSave}>Save Configuration</Button>
+        </CardFooter>
+      </Card>
+
+      <Alert className="mt-6">
+        <Info className="h-4 w-4" />
+        <AlertTitle>Final Step: Configure Your Webhook</AlertTitle>
+        <AlertDescription>
+          <p className="mb-3">
+            To receive incoming messages, you must set the following URL in your
+            Twilio Phone Number settings under "A MESSAGE COMES IN":
+          </p>
+          <div className="relative">
+            <Input type="text" value={webhookUrl} readOnly className="pr-10 bg-muted" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+              onClick={copyToClipboard}
+              disabled={!webhookUrl}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+           <p className="mt-2 text-xs text-muted-foreground">
+            This needs to be done on the Twilio website after you deploy your application to a public URL.
+          </p>
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
