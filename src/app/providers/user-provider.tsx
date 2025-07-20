@@ -12,7 +12,6 @@ import {
 } from 'react';
 import { users as defaultUsers, type User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { getFromStorage, saveToStorage } from '@/lib/storage';
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
@@ -107,7 +106,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>(defaultUsers);
   const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>([]);
   const [lecturerSchedules, setLecturerSchedules] = useState<TimetableEntry[]>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
@@ -116,26 +115,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Initialize state from localStorage on mount
+  // This useEffect handles session-based login persistence.
   useEffect(() => {
-    setAllUsers(getFromStorage('allUsers', defaultUsers));
-    setMasterScheduleState(getFromStorage('masterSchedule', null));
-    setEmptySlotsState(getFromStorage('emptySlots', []));
-    setPosts(getFromStorage('posts', []));
-    setLecturerSchedules(getFromStorage('lecturerSchedules', []));
-    setReviewedSchedules(getFromStorage('reviewedSchedules', []));
-    setRejectedEntries(getFromStorage('rejectedEntries', {}));
-    setNotifications(getFromStorage('notifications', []));
-
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
-      const usersFromStorage = getFromStorage('allUsers', defaultUsers);
-      const foundUser = usersFromStorage.find(u => u.id === parseInt(storedUserId, 10));
+      const foundUser = allUsers.find(u => u.id === parseInt(storedUserId, 10));
       if (foundUser) {
         setUser(foundUser);
       }
     }
-  }, []);
+  }, [allUsers]);
 
   const login = (userId: number) => {
     const foundUser = allUsers.find(u => u.id === userId);
@@ -153,8 +142,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const updateUser = (updatedUser: User) => {
     const newAllUsers = allUsers.map(u => (u.id === updatedUser.id ? updatedUser : u));
     setAllUsers(newAllUsers);
-    saveToStorage('allUsers', newAllUsers);
-    // Also update the currently logged-in user if they are the one being edited
     if (user?.id === updatedUser.id) {
       setUser(updatedUser);
     }
@@ -163,12 +150,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
   const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
-    saveToStorage('masterSchedule', data);
-    // When a new schedule is set, reset the review status and rejections for all lecturers.
     setReviewedSchedules([]);
-    saveToStorage('reviewedSchedules', []);
     setRejectedEntries({});
-    saveToStorage('rejectedEntries', {});
     toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
   }, [toast]);
 
@@ -178,20 +161,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     setMasterScheduleState(prev => {
         if (!prev) return null;
-        const updated = updateSchedule(prev);
-        saveToStorage('masterSchedule', updated);
-        return updated;
+        return updateSchedule(prev);
     });
     setLecturerSchedules(prev => {
-        const updated = updateSchedule(prev);
-        saveToStorage('lecturerSchedules', updated);
-        return updated;
+        return updateSchedule(prev);
     });
   }, []);
   
   const setEmptySlots = useCallback((slots: EmptySlot[]) => {
     setEmptySlotsState(slots);
-    saveToStorage('emptySlots', slots);
   }, []);
 
   const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => {
@@ -206,22 +184,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       audience: postData.audience,
     };
     
-    setPosts(prevPosts => {
-        const updatedPosts = [newPost, ...prevPosts];
-        saveToStorage('posts', updatedPosts);
-        return updatedPosts;
-    });
-
+    setPosts(prevPosts => [newPost, ...prevPosts]);
     toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
 
   }, [user, toast]);
 
   const deletePost = useCallback((postId: number) => {
-    setPosts(prevPosts => {
-      const updatedPosts = prevPosts.filter(p => p.id !== postId);
-      saveToStorage('posts', updatedPosts);
-      return updatedPosts;
-    });
+    setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
     toast({ title: 'Post Deleted', description: 'Your post has been removed.' });
   }, [toast]);
   
@@ -240,9 +209,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let newNotifications: Notification[] = [];
 
     setPosts(prevPosts => {
-      const updatedPosts = prevPosts.map(p => {
+      return prevPosts.map(p => {
         if (p.id === postId) {
-          // Notify post author if they are not the one commenting
           if (p.authorId !== user.id) {
             const notification: Notification = {
               id: `${Date.now()}-post-${p.id}`,
@@ -260,16 +228,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
         return p;
       });
-      saveToStorage('posts', updatedPosts);
-      return updatedPosts;
     });
     
     if (newNotifications.length > 0) {
-        setNotifications(prev => {
-            const updatedNotifications = [...prev, ...newNotifications];
-            saveToStorage('notifications', updatedNotifications);
-            return updatedNotifications;
-        });
+        setNotifications(prev => [...prev, ...newNotifications]);
     }
 
   }, [user]);
@@ -308,7 +270,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             if (parentComment) {
                 parentComment.replies.push(newReply);
 
-                // Notify parent comment author
                 if (parentComment.authorId !== user.id) {
                     newNotifications.push({
                         id: `${Date.now()}-comment-${parentComment.id}`,
@@ -322,7 +283,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     });
                 }
 
-                // Notify post author, but only if they are not the one being replied to and not the one replying.
                 if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
                     newNotifications.push({
                         id: `${Date.now()}-post-${post.id}-reply`,
@@ -337,35 +297,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 }
             }
         }
-
-        saveToStorage('posts', updatedPosts);
         return updatedPosts;
     });
 
     if (newNotifications.length > 0) {
-        setNotifications(prev => {
-            const updatedNotifications = [...prev, ...newNotifications];
-            saveToStorage('notifications', updatedNotifications);
-            return updatedNotifications;
-        });
+        setNotifications(prev => [...prev, ...newNotifications]);
     }
   }, [user]);
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => {
-        const updated = prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n);
-        saveToStorage('notifications', updated);
-        return updated;
-    });
+    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
   }, []);
 
   const clearAllNotifications = useCallback(() => {
     if (!user) return;
-    setNotifications(prev => {
-        const updatedNotifications = prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n);
-        saveToStorage('notifications', updatedNotifications);
-        return updatedNotifications;
-    });
+    setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
     toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
   }, [user, toast]);
 
@@ -374,64 +320,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     const newEntry: TimetableEntry = {
       ...entry,
-      id: Date.now(), // Unique ID
-      status: 'confirmed', // Lecturer-added events are confirmed by default
+      id: Date.now(), 
+      status: 'confirmed', 
       lecturer: user.name,
     };
     
-    setLecturerSchedules(prev => {
-      const updatedSchedules = [...prev, newEntry];
-      saveToStorage('lecturerSchedules', updatedSchedules);
-      return updatedSchedules;
-    });
-    
+    setLecturerSchedules(prev => [...prev, newEntry]);
     toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
 
   }, [user, toast]);
   
   const markScheduleAsReviewed = useCallback((userId: number) => {
-    setReviewedSchedules(prev => {
-        const updated = [...new Set([...prev, userId])];
-        saveToStorage('reviewedSchedules', updated);
-        return updated;
-    });
+    setReviewedSchedules(prev => [...new Set([...prev, userId])]);
     toast({ title: "Schedule Confirmed", description: "Thank you for reviewing your schedule." });
   }, [toast]);
   
   const rejectScheduleEntry = useCallback((userId: number, entryId: number) => {
     setRejectedEntries(prev => {
       const userRejections = prev[userId] || [];
-      const newRejections = { ...prev, [userId]: [...new Set([...userRejections, entryId])] };
-      saveToStorage('rejectedEntries', newRejections);
-      return newRejections;
+      return { ...prev, [userId]: [...new Set([...userRejections, entryId])] };
     });
   }, []);
   
   const unrejectScheduleEntry = useCallback((userId: number, entryId: number) => {
     setRejectedEntries(prev => {
       const userRejections = prev[userId] || [];
-      const newRejections = { ...prev, [userId]: userRejections.filter(id => id !== entryId) };
-      saveToStorage('rejectedEntries', newRejections);
-      return newRejections;
+      return { ...prev, [userId]: userRejections.filter(id => id !== entryId) };
     });
   }, []);
 
-
   const resetState = () => {
-    logout(); // Log out current user
-    
-    // Clear localStorage
-    window.localStorage.removeItem('allUsers');
-    window.localStorage.removeItem('masterSchedule');
-    window.localStorage.removeItem('emptySlots');
-    window.localStorage.removeItem('posts');
-    window.localStorage.removeItem('lecturerSchedules');
-    window.localStorage.removeItem('reviewedSchedules');
-    window.localStorage.removeItem('rejectedEntries');
-    window.localStorage.removeItem('notifications');
-
-    
-    // Reset state to defaults
+    logout();
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
     setEmptySlotsState([]);
@@ -440,10 +359,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setReviewedSchedules([]);
     setRejectedEntries({});
     setNotifications([]);
-
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
-    
-    // Optional: force a reload to ensure a clean slate, though changing state should be enough
     window.location.reload();
   };
 
@@ -474,7 +390,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     notifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, lecturerSchedules, addLecturerSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, lecturerSchedules, addLecturerSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
