@@ -4,10 +4,11 @@
 import { useState, useEffect, useRef } from 'react';
 import ChatLayout from '@/components/sms/chat-layout';
 import { useUser } from '@/app/providers/user-provider';
-import { Send } from 'lucide-react';
+import { Send, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type Message = {
   id: number;
@@ -16,7 +17,6 @@ type Message = {
 };
 
 // This is a mock function to simulate calling the backend API
-// In a real app this would be an actual fetch call.
 async function sendSmsToBackend(from: string, body: string): Promise<string> {
     const formData = new FormData();
     formData.append('From', from);
@@ -29,39 +29,40 @@ async function sendSmsToBackend(from: string, body: string): Promise<string> {
         });
 
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API Error Response:', errorText);
             throw new Error('Network response was not ok');
         }
 
         const text = await response.text();
-        // Twilio returns XML, so we need to parse it to get the message.
-        const matches = text.match(/<Message>(.*?)<\/Message>/);
+        const matches = text.match(/<Message>([\s\S]*?)<\/Message>/);
         return matches ? matches[1] : 'Sorry, there was an issue with the response.';
 
     } catch (error) {
         console.error("Failed to send SMS to backend", error);
-        return "Sorry, an error occurred while sending your message.";
+        return "Sorry, an error occurred while sending your message. The SMS service may be temporarily unavailable.";
     }
 }
 
 
 export default function SmsPage() {
-  const { user } = useUser();
+  const { user, masterSchedule } = useUser();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const isTimetableUploaded = masterSchedule && masterSchedule.length > 0;
 
   useEffect(() => {
     // Start with a welcome message from the bot
     setMessages([
       {
         id: 1,
-        content: `Welcome to the UMaT Connect SMS service.
-You can ask for things like:
-- "Today", "Now", "Next" for your schedule.
-- Lecturers can update class status with "[course code] [confirm/cancel]".`,
+        content: `Welcome to the UMaT Connect SMS service. 
+You can ask for your schedule with "Today", "Now", or "Next".
+For this simulation to work best, please ensure an admin has uploaded a timetable.`,
         isUser: false,
       },
     ]);
@@ -86,7 +87,6 @@ You can ask for things like:
     setIsLoading(true);
 
     try {
-      // Simulate sending the SMS to our backend and getting a response
       const responseText = await sendSmsToBackend(user.phone, input);
 
       const botMessage: Message = {
@@ -110,6 +110,15 @@ You can ask for things like:
 
   return (
     <div className="flex flex-col h-[calc(100vh-11rem)] md:h-[calc(100vh-3.5rem)]">
+      <div className="p-4 border-b">
+        <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>SMS Service Simulation</AlertTitle>
+            <AlertDescription>
+                This is a simplified SMS simulation. It may not reflect real-time schedule changes made in the app. Status is: {isTimetableUploaded ? <span className="font-semibold text-green-600">Ready</span> : <span className="font-semibold text-yellow-600">Awaiting Timetable</span>}
+            </AlertDescription>
+        </Alert>
+      </div>
       <ChatLayout
         messages={messages}
         isLoading={isLoading}

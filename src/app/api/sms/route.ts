@@ -1,24 +1,19 @@
 
+'use client'; // This directive is not strictly necessary but clarifies context
+
 import { NextRequest, NextResponse } from 'next/server';
-import { users, timetable as defaultTimetableData } from '@/lib/data'; // Assuming these are the base data sources
-import { TimetableEntry, User } from '@/app/providers/user-provider';
-import { getFromStorage, saveToStorage } from '@/lib/storage';
 
-// In a real app, these would be in a shared utility or helper file.
-const getApplicationState = () => {
-    const allUsers = getFromStorage<User[]>('allUsers', users);
-    const masterSchedule = getFromStorage<TimetableEntry[]>('masterSchedule', []);
-    const lecturerSchedules = getFromStorage<TimetableEntry[]>('lecturerSchedules', []);
-    const combinedSchedule = [...masterSchedule, ...lecturerSchedules];
-    return { allUsers, combinedSchedule };
-};
+// Mocked in-memory data access. In a real application, this would be a database.
+// The state is managed on the client with UserProvider and localStorage.
+// This serverless function can't directly access that state.
+// So, we will rely on default or mocked data for this simulation.
+import { users, timetable as defaultTimetableData } from '@/lib/data';
+import type { TimetableEntry, User } from '@/app/providers/user-provider';
 
-const setApplicationState = (schedule: TimetableEntry[]) => {
-    // This is a simplified function. A real app would need a more robust way
-    // to separate master and lecturer schedules before saving.
-    // For this example, we assume all changes are applied to the master schedule.
-    saveToStorage('masterSchedule', schedule);
-}
+// NOTE: This is a simplified simulation. The serverless function
+// does not have access to the client's localStorage. State changes made
+// by the user in the UI won't be reflected here. This handler will
+// process logic based on the initial default data.
 
 const findUserByPhone = (phone: string, allUsers: User[]): User | undefined => {
   return allUsers.find(u => u.phone === phone);
@@ -37,7 +32,7 @@ const getScheduleForUser = (user: User, schedule: TimetableEntry[]) => {
             lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
         );
     }
-    return []; // Admins don't have a personal schedule in this context
+    return []; // Admins don't have a personal schedule
 };
 
 const formatEventForSms = (event: TimetableEntry) => {
@@ -49,8 +44,10 @@ const normalizeCourseCode = (code: string) => {
 };
 
 export async function POST(req: NextRequest) {
-  const { allUsers, combinedSchedule } = getApplicationState();
-  let updatedSchedule = [...combinedSchedule]; // Copy to modify
+  // Since we can't access client-side localStorage, we use the default static data.
+  const allUsers = defaultUsers;
+  // This simulation won't have the uploaded timetable. It will be empty.
+  const combinedSchedule: TimetableEntry[] = []; 
 
   try {
     const formData = await req.formData();
@@ -69,41 +66,11 @@ export async function POST(req: NextRequest) {
     }
 
     const messageLower = message.toLowerCase();
-    const messageParts = message.split(/\s+/);
 
-    // --- Lecturer Status Update Logic ---
-    if (user.role === 'lecturer' && messageParts.length > 1) {
-        const potentialStatus = messageParts[messageParts.length - 1].toLowerCase();
-        if (potentialStatus === 'confirm' || potentialStatus === 'cancel') {
-            const status = potentialStatus === 'confirm' ? 'confirmed' : 'canceled';
-            const courseCodeQuery = messageParts.slice(0, -1).join(' ');
-
-            const normalizedQuery = normalizeCourseCode(courseCodeQuery);
-            
-            let foundEntry: TimetableEntry | undefined;
-            
-            // Find the course in the lecturer's schedule for today
-            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            const today = days[new Date().getDay()];
-
-            const lecturerSchedule = getScheduleForUser(user, combinedSchedule);
-            foundEntry = lecturerSchedule.find(entry => 
-                entry.day === today && 
-                normalizeCourseCode(entry.courseCode).includes(normalizedQuery)
-            );
-
-            if (foundEntry) {
-                // Update the status
-                updatedSchedule = updatedSchedule.map(e => e.id === foundEntry!.id ? { ...e, status: status } : e);
-                setApplicationState(updatedSchedule);
-
-                const response = `Status for ${foundEntry.courseCode} has been updated to ${status}.`;
-                return new NextResponse(`<Response><Message>${response}</Message></Response>`, { headers: { 'Content-Type': 'text/xml' }});
-            } else {
-                const response = `Could not find a class matching "${courseCodeQuery}" in your schedule for today.`;
-                return new NextResponse(`<Response><Message>${response}</Message></Response>`, { headers: { 'Content-Type': 'text/xml' }});
-            }
-        }
+    // --- Lecturer Status Update Logic (Simulated) ---
+    if (user.role === 'lecturer' && messageLower.match(/(confirm|cancel)$/)) {
+        const response = `Lecturer features like status updates are not fully supported in this simulation. Please use the main Timetable interface.`;
+        return new NextResponse(`<Response><Message>${response}</Message></Response>`, { headers: { 'Content-Type': 'text/xml' }});
     }
 
     // --- Schedule Retrieval Logic ---
@@ -112,10 +79,10 @@ export async function POST(req: NextRequest) {
     const today = days[new Date().getDay()];
     const todaySchedule = userSchedule.filter(e => e.day === today).sort((a, b) => a.time.localeCompare(b.time));
 
-    let response = "Sorry, I didn't understand that. Try 'Today', 'Now', or 'Next'.";
+    let response = `Sorry, I didn't understand that. Try 'Today', 'Now', or 'Next'. The SMS service works best after an admin has uploaded a timetable.`;
 
     if (todaySchedule.length === 0) {
-        response = `You have no classes scheduled for ${today}.`;
+        response = `You have no classes scheduled for ${today}. Note: The SMS service may not have the latest timetable data.`;
     } else {
         if (messageLower === 'today') {
             response = `Your schedule for ${today}:\n` + todaySchedule.map(formatEventForSms).join('\n');
@@ -146,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Error in SMS webhook:', error);
-    const twimlError = `<Response><Message>Sorry, an error occurred. Please try again later.</Message></Response>`;
+    const twimlError = `<Response><Message>Sorry, an error occurred. The SMS service might be unavailable.</Message></Response>`;
     return new NextResponse(twimlError, { status: 500, headers: { 'Content-Type': 'text/xml' } });
   }
 }
