@@ -4,10 +4,10 @@
 import { useState, useEffect, useRef } from 'react';
 import ChatLayout from '@/components/sms/chat-layout';
 import { useUser } from '@/app/providers/user-provider';
-import { processSms, ProcessSmsInput } from '@/ai/flows/sms-flow';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
 type Message = {
   id: number;
@@ -15,8 +15,38 @@ type Message = {
   isUser: boolean;
 };
 
+// This is a mock function to simulate calling the backend API
+// In a real app this would be an actual fetch call.
+async function sendSmsToBackend(from: string, body: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('From', from);
+    formData.append('Body', body);
+
+    try {
+        const response = await fetch('/api/sms', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const text = await response.text();
+        // Twilio returns XML, so we need to parse it to get the message.
+        const matches = text.match(/<Message>(.*?)<\/Message>/);
+        return matches ? matches[1] : 'Sorry, there was an issue with the response.';
+
+    } catch (error) {
+        console.error("Failed to send SMS to backend", error);
+        return "Sorry, an error occurred while sending your message.";
+    }
+}
+
+
 export default function SmsPage() {
-  const { user, allUsers, masterSchedule, lecturerSchedules, emptySlots } = useUser();
+  const { user } = useUser();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,9 +60,8 @@ export default function SmsPage() {
         id: 1,
         content: `Welcome to the UMaT Connect SMS service.
 You can ask for things like:
-- "My schedule for Monday"
-- "Any free rooms on Tuesday?"
-- "What's my level?"`,
+- "Today", "Now", "Next" for your schedule.
+- Lecturers can update class status with "[course code] [confirm/cancel]".`,
         isUser: false,
       },
     ]);
@@ -57,31 +86,23 @@ You can ask for things like:
     setIsLoading(true);
 
     try {
-      const smsInput: ProcessSmsInput = {
-        from: user.phone,
-        message: input,
-        allUsers,
-        masterSchedule: masterSchedule || [],
-        lecturerSchedules,
-        emptySlots,
-      };
-
-      const result = await processSms(smsInput);
+      // Simulate sending the SMS to our backend and getting a response
+      const responseText = await sendSmsToBackend(user.phone, input);
 
       const botMessage: Message = {
         id: Date.now() + 1,
-        content: result.response,
+        content: responseText,
         isUser: false,
       };
       setMessages((prev) => [...prev, botMessage]);
+
     } catch (error) {
       console.error('Error processing SMS:', error);
-      const errorMessage: Message = {
-        id: Date.now() + 1,
-        content: 'Sorry, something went wrong. Please try again later.',
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      toast({
+          title: "Error",
+          description: "Failed to get a response from the SMS service.",
+          variant: "destructive"
+      })
     } finally {
       setIsLoading(false);
     }
@@ -122,4 +143,3 @@ You can ask for things like:
     </div>
   );
 }
-

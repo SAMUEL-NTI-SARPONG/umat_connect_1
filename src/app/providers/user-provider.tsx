@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { users as defaultUsers, type User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { getFromStorage, saveToStorage } from '@/lib/storage';
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
@@ -81,6 +82,7 @@ interface UserContextType {
   resetState: () => void;
   masterSchedule: TimetableEntry[] | null;
   setMasterSchedule: (data: TimetableEntry[] | null) => void;
+  updateScheduleStatus: (entryId: number, status: EventStatus) => void;
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
@@ -101,35 +103,6 @@ interface UserContextType {
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
-
-// Helper functions for localStorage
-const getFromStorage = <T,>(key: string, defaultValue: T): T => {
-  if (typeof window === 'undefined') {
-    return defaultValue;
-  }
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.error(`Error reading from localStorage key “${key}”:`, error);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = <T,>(key: string, value: T) => {
-  if (typeof window === 'undefined') return;
-  try {
-    const item = JSON.stringify(value);
-    window.localStorage.setItem(key, item);
-  } catch (error) {
-    // Catch quota exceeded errors
-    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-        console.warn(`LocalStorage quota exceeded for key “${key}”. Data could not be saved.`);
-    } else {
-        console.error(`Error writing to localStorage key “${key}”:`, error);
-    }
-  }
-};
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -198,6 +171,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
     saveToStorage('rejectedEntries', {});
     toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
   }, [toast]);
+
+  const updateScheduleStatus = useCallback((entryId: number, status: EventStatus) => {
+    const updateSchedule = (schedule: TimetableEntry[]) => 
+        schedule.map(e => e.id === entryId ? { ...e, status } : e);
+
+    setMasterScheduleState(prev => {
+        if (!prev) return null;
+        const updated = updateSchedule(prev);
+        saveToStorage('masterSchedule', updated);
+        return updated;
+    });
+    setLecturerSchedules(prev => {
+        const updated = updateSchedule(prev);
+        saveToStorage('lecturerSchedules', updated);
+        return updated;
+    });
+  }, []);
   
   const setEmptySlots = useCallback((slots: EmptySlot[]) => {
     setEmptySlotsState(slots);
@@ -372,11 +362,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const clearAllNotifications = useCallback(() => {
     if (!user) return;
     setNotifications(prev => {
-        const remainingNotifications = prev.filter(n => n.recipientId !== user.id);
-        saveToStorage('notifications', remainingNotifications);
-        return remainingNotifications;
+        const updatedNotifications = prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n);
+        saveToStorage('notifications', updatedNotifications);
+        return updatedNotifications;
     });
-    toast({ title: 'Notifications Cleared', description: 'All your notifications have been removed.' });
+    toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
   }, [user, toast]);
 
   const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
@@ -466,6 +456,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     resetState,
     masterSchedule,
     setMasterSchedule,
+    updateScheduleStatus,
     emptySlots,
     setEmptySlots,
     posts,
@@ -483,7 +474,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     notifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, masterSchedule, emptySlots, posts, lecturerSchedules, reviewedSchedules, rejectedEntries, notifications, setMasterSchedule, setEmptySlots, addPost, deletePost, addComment, addReply, addLecturerSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, markNotificationAsRead, clearAllNotifications]);
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, lecturerSchedules, addLecturerSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
@@ -495,5 +486,3 @@ export function useUser() {
   }
   return context;
 }
-
-    

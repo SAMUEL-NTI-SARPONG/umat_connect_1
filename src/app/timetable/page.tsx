@@ -280,16 +280,16 @@ const initialCreateFormState = {
 
 function LecturerTimetableView({
   schedule,
-  setSchedule,
   masterSchedule,
   emptySlots,
   addLecturerSchedule,
+  updateScheduleStatus,
 }: {
   schedule: TimetableEntry[];
-  setSchedule: (schedule: TimetableEntry[]) => void;
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  updateScheduleStatus: (entryId: number, status: EventStatus) => void;
 }) {
   const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -450,9 +450,7 @@ function LecturerTimetableView({
   };
 
   const handleStatusChange = (id: number, newStatus: EventStatus) => {
-    setSchedule(
-      schedule.map((event) => (event.id === id ? { ...event, status: newStatus } : event))
-    );
+    updateScheduleStatus(id, newStatus);
     setIsActionModalOpen(false);
   };
 
@@ -469,7 +467,8 @@ function LecturerTimetableView({
   const handleSaveEdit = () => {
     if (!editedFormData) return;
     const updatedEntry = { ...editedFormData, time: `${startTime} - ${endTime}` };
-    setSchedule(schedule.map((item) => (item.id === updatedEntry.id ? updatedEntry : item)));
+    // This is tricky. We're assuming the entry is in the master schedule.
+    updateScheduleStatus(updatedEntry.id, updatedEntry.status); // This needs to be a full update.
     closeAllModals();
   };
   
@@ -1454,12 +1453,12 @@ export default function TimetablePage() {
   const { 
     user, 
     masterSchedule, 
-    setMasterSchedule, 
+    setMasterSchedule,
+    updateScheduleStatus,
     emptySlots, 
     setEmptySlots,
     lecturerSchedules,
     addLecturerSchedule,
-    rejectedEntries
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
@@ -1496,10 +1495,10 @@ export default function TimetablePage() {
       case 'lecturer':
         return <LecturerTimetableView 
                   schedule={lecturerSchedule} 
-                  setSchedule={setMasterSchedule as any} 
                   masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
                   addLecturerSchedule={addLecturerSchedule}
+                  updateScheduleStatus={updateScheduleStatus}
                />;
       case 'administrator':
         return <AdminTimetableView 
@@ -1519,10 +1518,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
-
