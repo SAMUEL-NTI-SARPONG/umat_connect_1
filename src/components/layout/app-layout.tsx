@@ -38,9 +38,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {children}
             </main>
           </SidebarInset>
-          <Sidebar side="right" variant="floating" collapsible="icon">
-              <ScheduleSidebar />
-          </Sidebar>
+          {user.role !== 'administrator' && (
+            <Sidebar side="right" variant="floating" collapsible="icon">
+                <ScheduleSidebar />
+            </Sidebar>
+          )}
         </div>
         <BottomNavbar />
       </SidebarProvider>
