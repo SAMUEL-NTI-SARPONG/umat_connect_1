@@ -213,7 +213,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (p.id === postId) {
           if (p.authorId !== user.id) {
             const notification: Notification = {
-              id: `${Date.now()}-post-${p.id}`,
+              id: `${Date.now()}-to-${p.authorId}-from-${user.id}`,
               recipientId: p.authorId,
               actorId: user.id,
               type: 'comment_on_post',
@@ -274,7 +274,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 // Notify parent comment author
                 if (parentComment.authorId !== user.id) {
                     newNotifications.push({
-                        id: `${newReply.id}-reply-parent-${parentComment.id}`,
+                        id: `${newReply.id}-reply-to-${parentComment.authorId}`,
                         recipientId: parentComment.authorId,
                         actorId: user.id,
                         type: 'reply_to_comment',
@@ -287,7 +287,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 // Notify post author if they are a different person
                 if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
                     newNotifications.push({
-                        id: `${newReply.id}-reply-post-author-${post.id}`,
+                        id: `${newReply.id}-reply-to-${post.authorId}`,
                         recipientId: post.authorId,
                         actorId: user.id,
                         type: 'reply_to_comment',

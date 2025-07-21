@@ -66,7 +66,7 @@ export default function NotificationsPage() {
 
                 return (
                   <Link
-                    key={`${notification.id}-${notification.actorId}`}
+                    key={notification.id}
                     href={`/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`}
                     onClick={() => getNotificationDetails(notification.id)}
                     className={cn(
