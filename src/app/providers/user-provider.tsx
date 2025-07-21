@@ -12,6 +12,9 @@ import {
 } from 'react';
 import { users as defaultUsers, type User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase/client';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
@@ -59,7 +62,7 @@ export type Post = {
 };
 
 export type Notification = {
-    id: string;
+    id: string; // Firestore document ID
     recipientId: number;
     actorId: number;
     type: 'comment_on_post' | 'reply_to_comment';
@@ -87,8 +90,8 @@ interface UserContextType {
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => void;
   deletePost: (postId: number) => void;
-  addComment: (postId: number, text: string, attachedFile: AttachedFile | null) => void;
-  addReply: (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => void;
+  addComment: (postId: number, text: string, attachedFile: AttachedFile | null) => Promise<void>;
+  addReply: (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => Promise<void>;
   staffSchedules: TimetableEntry[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   reviewedSchedules: number[];
@@ -97,8 +100,9 @@ interface UserContextType {
   rejectScheduleEntry: (userId: number, entryId: number) => void;
   unrejectScheduleEntry: (userId: number, entryId: number) => void;
   notifications: Notification[];
-  markNotificationAsRead: (notificationId: string) => void;
-  clearAllNotifications: () => void;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -193,8 +197,30 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
     toast({ title: 'Post Deleted', description: 'Your post has been removed.' });
   }, [toast]);
-  
-  const addComment = useCallback((postId: number, text: string, attachedFile: AttachedFile | null) => {
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const q = query(collection(db, 'notifications'), where('recipientId', '==', user.id));
+      const querySnapshot = await getDocs(q);
+      const fetchedNotifications: Notification[] = [];
+      querySnapshot.forEach(doc => {
+        fetchedNotifications.push({ id: doc.id, ...doc.data() } as Notification);
+      });
+      setNotifications(fetchedNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+    } catch (error) {
+      console.error("Error fetching notifications: ", error);
+      toast({ variant: 'destructive', description: "Could not fetch notifications." });
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user) {
+        fetchNotifications();
+    }
+  }, [user, fetchNotifications]);
+
+  const addComment = useCallback(async (postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
 
     const newComment: Comment = {
@@ -206,31 +232,36 @@ export function UserProvider({ children }: { children: ReactNode }) {
       attachedFile,
     };
 
-    setPosts(prevPosts =>
-      prevPosts.map(p => {
+    let postAuthorId: number | null = null;
+    
+    setPosts(prevPosts => {
+      const updatedPosts = prevPosts.map(p => {
         if (p.id === postId) {
-          // Add notification inside the same state update to avoid race conditions
-          if (p.authorId !== user.id) {
-            const notification: Notification = {
-              id: `${newComment.timestamp}-${user.id}-${p.authorId}-${newComment.id}`,
-              recipientId: p.authorId,
-              actorId: user.id,
-              type: 'comment_on_post',
-              postId: p.id,
-              commentId: newComment.id,
-              isRead: false,
-              timestamp: newComment.timestamp,
-            };
-            setNotifications(prev => [...prev, notification]);
-          }
+          postAuthorId = p.authorId;
           return { ...p, comments: [...p.comments, newComment] };
         }
         return p;
-      })
-    );
-  }, [user]);
+      });
+      return updatedPosts;
+    });
+    
+    // Create notification
+    if (postAuthorId && postAuthorId !== user.id) {
+        const notification: Omit<Notification, 'id'> = {
+            recipientId: postAuthorId,
+            actorId: user.id,
+            type: 'comment_on_post',
+            postId: postId,
+            commentId: newComment.id,
+            isRead: false,
+            timestamp: newComment.timestamp,
+        };
+        await addDoc(collection(db, 'notifications'), notification);
+        fetchNotifications(); // Refresh notifications
+    }
+  }, [user, fetchNotifications]);
 
-  const addReply = useCallback((postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
+  const addReply = useCallback(async (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
       if (!user) return;
 
       const newReply: Comment = {
@@ -242,6 +273,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           attachedFile,
       };
 
+      const notificationsToAdd: Omit<Notification, 'id'>[] = [];
+      
       setPosts(prevPosts => {
           const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
           const post = updatedPosts.find((p: Post) => p.id === postId);
@@ -261,53 +294,71 @@ export function UserProvider({ children }: { children: ReactNode }) {
               if (parentComment) {
                   parentComment.replies.push(newReply);
                   
-                  const newNotifications: Notification[] = [];
-                  
                   // Notify parent comment author
                   if (parentComment.authorId !== user.id) {
-                      newNotifications.push({
-                          id: `${newReply.timestamp}-${user.id}-${parentComment.authorId}-${newReply.id}`,
+                      notificationsToAdd.push({
                           recipientId: parentComment.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
-                          postId: post.id,
+                          postId: postId,
                           commentId: newReply.id,
                           isRead: false,
                           timestamp: newReply.timestamp,
                       });
                   }
+                  
                   // Notify post author if they are a different person
                   if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
-                      newNotifications.push({
-                          id: `${newReply.timestamp}-${user.id}-${post.authorId}-${newReply.id}`,
+                      notificationsToAdd.push({
                           recipientId: post.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
-                          postId: post.id,
+                          postId: postId,
                           commentId: newReply.id,
                           isRead: false,
                           timestamp: newReply.timestamp,
                       });
-                  }
-
-                  if (newNotifications.length > 0) {
-                      setNotifications(prev => [...prev, ...newNotifications]);
                   }
               }
           }
           return updatedPosts;
       });
-  }, [user]);
 
-  const markNotificationAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
-  }, []);
+      if (notificationsToAdd.length > 0) {
+          for (const notification of notificationsToAdd) {
+              await addDoc(collection(db, 'notifications'), notification);
+          }
+          fetchNotifications(); // Refresh notifications
+      }
+  }, [user, fetchNotifications]);
 
-  const clearAllNotifications = useCallback(() => {
+
+  const markNotificationAsRead = useCallback(async (notificationId: string) => {
+    try {
+        const notifRef = doc(db, 'notifications', notificationId);
+        await updateDoc(notifRef, { isRead: true });
+        setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+    } catch (error) {
+        console.error("Error updating notification: ", error);
+        toast({ variant: 'destructive', description: "Could not mark notification as read." });
+    }
+  }, [toast]);
+
+  const clearAllNotifications = useCallback(async () => {
     if (!user) return;
-    setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
-    toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
-  }, [user, toast]);
+    try {
+        const notifsToUpdate = notifications.filter(n => n.recipientId === user.id && !n.isRead);
+        for (const notif of notifsToUpdate) {
+            const notifRef = doc(db, 'notifications', notif.id);
+            await updateDoc(notifRef, { isRead: true });
+        }
+        setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
+        toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
+    } catch (error) {
+        console.error("Error clearing notifications: ", error);
+        toast({ variant: 'destructive', description: "Could not clear all notifications." });
+    }
+  }, [user, notifications, toast]);
 
   const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
     if (!user || user.role !== 'staff') return;
@@ -382,9 +433,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     rejectScheduleEntry,
     unrejectScheduleEntry,
     notifications,
+    fetchNotifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications, login, logout]);
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, login, logout]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
