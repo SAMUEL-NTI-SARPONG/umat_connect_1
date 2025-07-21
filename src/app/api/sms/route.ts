@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // The state is managed on the client with UserProvider and localStorage.
 // This serverless function can't directly access that state.
 // So, we will rely on default or mocked data for this simulation.
-import { users, timetable as defaultTimetableData } from '@/lib/data';
+import { users as defaultUsers, timetable as defaultTimetableData } from '@/lib/data';
 import type { TimetableEntry, User } from '@/app/providers/user-provider';
 
 // NOTE: This is a simplified simulation. The serverless function
@@ -26,10 +26,10 @@ const getScheduleForUser = (user: User, schedule: TimetableEntry[]) => {
             entry.departments.includes(user.department)
         );
     }
-    if (user.role === 'lecturer') {
-        const lecturerNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
+    if (user.role === 'staff') {
+        const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
         return schedule.filter(entry => 
-            lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
         );
     }
     return []; // Admins don't have a personal schedule
@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
 
     const messageLower = message.toLowerCase();
 
-    // --- Lecturer Status Update Logic (Simulated) ---
-    if (user.role === 'lecturer' && messageLower.match(/(confirm|cancel)$/)) {
-        const response = `Lecturer features like status updates are not fully supported in this simulation. Please use the main Timetable interface.`;
+    // --- Staff Status Update Logic (Simulated) ---
+    if (user.role === 'staff' && messageLower.match(/(confirm|cancel)$/)) {
+        const response = `Staff features like status updates are not fully supported in this simulation. Please use the main Timetable interface.`;
         return new NextResponse(`<Response><Message>${response}</Message></Response>`, { headers: { 'Content-Type': 'text/xml' }});
     }
 

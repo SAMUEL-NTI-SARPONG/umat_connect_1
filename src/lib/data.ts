@@ -1,5 +1,5 @@
 
-export type UserRole = 'student' | 'lecturer' | 'administrator';
+export type UserRole = 'student' | 'staff' | 'administrator';
 
 export interface User {
   id: number;
@@ -27,7 +27,7 @@ export const users: User[] = [
     id: 2,
     name: 'Dr. Yaw Mensah',
     email: 'yaw.mensah@umat.edu.gh',
-    role: 'lecturer' as UserRole,
+    role: 'staff' as UserRole,
     department: 'Computer Science And Engineering',
     level: 0, // Not applicable
     phone: '+233201234567',
@@ -57,7 +57,7 @@ export const users: User[] = [
     id: 5,
     name: 'Dr. Adwoa Ansa',
     email: 'adwoa.ansa@umat.edu.gh',
-    role: 'lecturer' as UserRole,
+    role: 'staff' as UserRole,
     department: 'Geomatic Engineering',
     level: 0, // Not applicable
     phone: '+233278889999',
@@ -67,7 +67,7 @@ export const users: User[] = [
     id: 6,
     name: 'Dr. Kweku Ampah',
     email: 'kweku.ampah@umat.edu.gh',
-    role: 'lecturer' as UserRole,
+    role: 'staff' as UserRole,
     department: 'Electrical and Electronic Engineering',
     level: 0,
     phone: '+233261112222',

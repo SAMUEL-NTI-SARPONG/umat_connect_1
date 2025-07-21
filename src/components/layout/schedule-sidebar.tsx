@@ -41,12 +41,12 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { user, masterSchedule, lecturerSchedules, rejectedEntries } = useUser();
+  const { user, masterSchedule, staffSchedules, rejectedEntries } = useUser();
 
   const todaysSchedule = useMemo(() => {
     if (!user) return [];
     
-    const combinedSchedule = [...(masterSchedule || []), ...lecturerSchedules];
+    const combinedSchedule = [...(masterSchedule || []), ...staffSchedules];
     if (combinedSchedule.length === 0) return [];
 
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -61,21 +61,21 @@ export default function ScheduleSidebar() {
         );
     }
     
-    if (user.role === 'lecturer') {
+    if (user.role === 'staff') {
         const userRejectedIds = rejectedEntries[user.id] || [];
-        const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+        const currentStaffNameParts = user.name.toLowerCase().split(' ');
         
         return combinedSchedule.filter(entry => {
             const isRejected = masterSchedule?.some(ms => ms.id === entry.id) && userRejectedIds.includes(entry.id);
             
             return !isRejected &&
                    entry.day === today &&
-                   currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part));
+                   currentStaffNameParts.some(part => entry.lecturer.toLowerCase().includes(part));
         });
     }
 
     return []; // No personal schedule for admin
-  }, [masterSchedule, lecturerSchedules, user, rejectedEntries]);
+  }, [masterSchedule, staffSchedules, user, rejectedEntries]);
 
   const hasSchedule = todaysSchedule.length > 0;
 

@@ -12,18 +12,18 @@ import { ScrollArea } from '../ui/scroll-area';
 export default function AdminStats() {
     const { allUsers, reviewedSchedules, masterSchedule } = useUser();
 
-    const lecturers = useMemo(() => allUsers.filter(u => u.role === 'lecturer'), [allUsers]);
+    const staffMembers = useMemo(() => allUsers.filter(u => u.role === 'staff'), [allUsers]);
     const reviewedCount = reviewedSchedules.length;
-    const totalLecturers = lecturers.length;
-    const progressPercentage = totalLecturers > 0 ? (reviewedCount / totalLecturers) * 100 : 0;
+    const totalStaff = staffMembers.length;
+    const progressPercentage = totalStaff > 0 ? (reviewedCount / totalStaff) * 100 : 0;
     
-    const reviewedLecturers = useMemo(() => {
-        return lecturers.filter(l => reviewedSchedules.includes(l.id));
-    }, [lecturers, reviewedSchedules]);
+    const reviewedStaff = useMemo(() => {
+        return staffMembers.filter(l => reviewedSchedules.includes(l.id));
+    }, [staffMembers, reviewedSchedules]);
 
-    const unreviewedLecturers = useMemo(() => {
-        return lecturers.filter(l => !reviewedSchedules.includes(l.id));
-    }, [lecturers, reviewedSchedules]);
+    const unreviewedStaff = useMemo(() => {
+        return staffMembers.filter(l => !reviewedSchedules.includes(l.id));
+    }, [staffMembers, reviewedSchedules]);
 
     if (!masterSchedule) {
         return (
@@ -47,35 +47,35 @@ export default function AdminStats() {
                 <div>
                     <div className="flex justify-between items-center mb-1 text-sm">
                         <span className="font-medium">Confirmation Status</span>
-                        <span className="text-muted-foreground">{reviewedCount} / {totalLecturers}</span>
+                        <span className="text-muted-foreground">{reviewedCount} / {totalStaff}</span>
                     </div>
                     <Progress value={progressPercentage} />
                 </div>
                 
                 <ScrollArea className="flex-grow h-0">
                     <div className='pr-4'>
-                        {unreviewedLecturers.length > 0 && (
+                        {unreviewedStaff.length > 0 && (
                             <div>
                                 <h3 className="text-sm font-semibold mb-2">Pending Review</h3>
                                 <div className="space-y-2">
-                                    {unreviewedLecturers.map(lecturer => (
-                                        <div key={lecturer.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                                            <ProfileAvatar src={lecturer.profileImage} fallback={lecturer.name.charAt(0)} className="w-8 h-8"/>
-                                            <span className="text-sm">{lecturer.name}</span>
+                                    {unreviewedStaff.map(staff => (
+                                        <div key={staff.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                                            <ProfileAvatar src={staff.profileImage} fallback={staff.name.charAt(0)} className="w-8 h-8"/>
+                                            <span className="text-sm">{staff.name}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {reviewedLecturers.length > 0 && (
+                        {reviewedStaff.length > 0 && (
                             <div className="mt-4">
                                 <h3 className="text-sm font-semibold mb-2">Confirmed</h3>
                                  <div className="space-y-2">
-                                    {reviewedLecturers.map(lecturer => (
-                                        <div key={lecturer.id} className="flex items-center gap-2 p-2 rounded-md border">
-                                            <ProfileAvatar src={lecturer.profileImage} fallback={lecturer.name.charAt(0)} className="w-8 h-8"/>
-                                            <span className="text-sm">{lecturer.name}</span>
+                                    {reviewedStaff.map(staff => (
+                                        <div key={staff.id} className="flex items-center gap-2 p-2 rounded-md border">
+                                            <ProfileAvatar src={staff.profileImage} fallback={staff.name.charAt(0)} className="w-8 h-8"/>
+                                            <span className="text-sm">{staff.name}</span>
                                         </div>
                                     ))}
                                 </div>

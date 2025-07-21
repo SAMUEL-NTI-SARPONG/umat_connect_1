@@ -50,10 +50,10 @@ function ScheduleItem({
 }
 
 export default function TopScheduleBar() {
-  const { user, masterSchedule, lecturerSchedules } = useUser();
+  const { user, masterSchedule, staffSchedules } = useUser();
 
   const studentSchedule = useMemo(() => {
-    const combinedSchedule = [...(masterSchedule || []), ...lecturerSchedules];
+    const combinedSchedule = [...(masterSchedule || []), ...staffSchedules];
     if (!combinedSchedule || !user || user.role !== 'student') return [];
 
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -64,7 +64,7 @@ export default function TopScheduleBar() {
         entry.day === today &&
         entry.departments.some(dep => userDepartments.includes(dep))
       );
-  }, [masterSchedule, lecturerSchedules, user]);
+  }, [masterSchedule, staffSchedules, user]);
 
   if (!user || user.role !== 'student' || studentSchedule.length === 0) {
     return null;

@@ -89,8 +89,8 @@ interface UserContextType {
   deletePost: (postId: number) => void;
   addComment: (postId: number, text: string, attachedFile: AttachedFile | null) => void;
   addReply: (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => void;
-  lecturerSchedules: TimetableEntry[];
-  addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  staffSchedules: TimetableEntry[];
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   reviewedSchedules: number[];
   markScheduleAsReviewed: (userId: number) => void;
   rejectedEntries: RejectedEntries;
@@ -108,7 +108,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>(defaultUsers);
   const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>([]);
-  const [lecturerSchedules, setLecturerSchedules] = useState<TimetableEntry[]>([]);
+  const [staffSchedules, setStaffSchedules] = useState<TimetableEntry[]>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
@@ -163,7 +163,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (!prev) return null;
         return updateSchedule(prev);
     });
-    setLecturerSchedules(prev => {
+    setStaffSchedules(prev => {
         return updateSchedule(prev);
     });
   }, []);
@@ -315,8 +315,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
   }, [user, toast]);
 
-  const addLecturerSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
-    if (!user || user.role !== 'lecturer') return;
+  const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
+    if (!user || user.role !== 'staff') return;
     
     const newEntry: TimetableEntry = {
       ...entry,
@@ -325,7 +325,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       lecturer: user.name,
     };
     
-    setLecturerSchedules(prev => [...prev, newEntry]);
+    setStaffSchedules(prev => [...prev, newEntry]);
     toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
 
   }, [user, toast]);
@@ -355,7 +355,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setMasterScheduleState(null);
     setEmptySlotsState([]);
     setPosts([]);
-    setLecturerSchedules([]);
+    setStaffSchedules([]);
     setReviewedSchedules([]);
     setRejectedEntries({});
     setNotifications([]);
@@ -380,8 +380,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     deletePost,
     addComment,
     addReply,
-    lecturerSchedules,
-    addLecturerSchedule,
+    staffSchedules,
+    addStaffSchedule,
     reviewedSchedules,
     markScheduleAsReviewed,
     rejectedEntries,
@@ -390,7 +390,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     notifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, lecturerSchedules, addLecturerSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

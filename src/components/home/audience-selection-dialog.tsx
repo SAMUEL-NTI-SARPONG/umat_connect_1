@@ -43,10 +43,10 @@ export default function AudienceSelectionDialog({
   const [studentDept, setStudentDept] = useState('');
   const [studentLevel, setStudentLevel] = useState('');
   
-  // Lecturer filters
-  const [lecturerSearch, setLecturerSearch] = useState('');
-  const [lecturerFaculty, setLecturerFaculty] = useState('');
-  const [lecturerDept, setLecturerDept] = useState('');
+  // Staff filters
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffFaculty, setStaffFaculty] = useState('');
+  const [staffDept, setStaffDept] = useState('');
   
   // Admin filters
   const [adminSearch, setAdminSearch] = useState('');
@@ -57,10 +57,10 @@ export default function AudienceSelectionDialog({
     return faculties.find(f => f.name === studentFaculty)?.departments || [];
   }, [studentFaculty]);
 
-  const lecturerAvailableDepts = useMemo(() => {
-    if (!lecturerFaculty) return allDepartments;
-    return faculties.find(f => f.name === lecturerFaculty)?.departments || [];
-  }, [lecturerFaculty]);
+  const staffAvailableDepts = useMemo(() => {
+    if (!staffFaculty) return allDepartments;
+    return faculties.find(f => f.name === staffFaculty)?.departments || [];
+  }, [staffFaculty]);
 
   // Effect to reset department if faculty changes and dept is no longer valid
   useEffect(() => {
@@ -70,10 +70,10 @@ export default function AudienceSelectionDialog({
   }, [studentDept, studentAvailableDepts]);
 
   useEffect(() => {
-    if (lecturerDept && !lecturerAvailableDepts.includes(lecturerDept)) {
-      setLecturerDept('');
+    if (staffDept && !staffAvailableDepts.includes(staffDept)) {
+      setStaffDept('');
     }
-  }, [lecturerDept, lecturerAvailableDepts]);
+  }, [staffDept, staffAvailableDepts]);
 
   const handleAddFilteredToSelection = (users: User[]) => {
     setSelectedIds(prev => {
@@ -106,15 +106,15 @@ export default function AudienceSelectionDialog({
     );
   }, [allUsers, studentSearch, studentFaculty, studentDept, studentLevel]);
 
-  const filteredLecturers = useMemo(() => {
-    const facultyDepts = lecturerFaculty ? faculties.find(f => f.name === lecturerFaculty)?.departments : null;
+  const filteredStaff = useMemo(() => {
+    const facultyDepts = staffFaculty ? faculties.find(f => f.name === staffFaculty)?.departments : null;
     return allUsers.filter(user =>
-      user.role === 'lecturer' &&
-      user.name.toLowerCase().includes(lecturerSearch.toLowerCase()) &&
-      (!lecturerFaculty || (facultyDepts && facultyDepts.includes(user.department))) &&
-      (!lecturerDept || user.department === lecturerDept)
+      user.role === 'staff' &&
+      user.name.toLowerCase().includes(staffSearch.toLowerCase()) &&
+      (!staffFaculty || (facultyDepts && facultyDepts.includes(user.department))) &&
+      (!staffDept || user.department === staffDept)
     );
-  }, [allUsers, lecturerSearch, lecturerFaculty, lecturerDept]);
+  }, [allUsers, staffSearch, staffFaculty, staffDept]);
 
   const filteredAdmins = useMemo(() => {
     return allUsers.filter(user =>
@@ -176,17 +176,17 @@ export default function AudienceSelectionDialog({
     setStudentDept('');
     setStudentLevel('');
   };
-  const clearLecturerFilters = () => {
-    setLecturerSearch('');
-    setLecturerFaculty('');
-    setLecturerDept('');
+  const clearStaffFilters = () => {
+    setStaffSearch('');
+    setStaffFaculty('');
+    setStaffDept('');
   };
   const clearAdminFilters = () => {
     setAdminSearch('');
   };
   
   const isStudentFilterActive = !!(studentSearch || studentFaculty || studentDept || studentLevel);
-  const isLecturerFilterActive = !!(lecturerSearch || lecturerFaculty || lecturerDept);
+  const isStaffFilterActive = !!(staffSearch || staffFaculty || staffDept);
   const isAdminFilterActive = !!adminSearch;
 
   return (
@@ -206,7 +206,7 @@ export default function AudienceSelectionDialog({
                     <Tabs defaultValue="students" className="flex-grow flex flex-col min-h-0">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="students"><GraduationCap className="mr-2 h-4 w-4" />Students</TabsTrigger>
-                        <TabsTrigger value="lecturers"><UserIcon className="mr-2 h-4 w-4" />Lecturers</TabsTrigger>
+                        <TabsTrigger value="staff"><UserIcon className="mr-2 h-4 w-4" />Staff</TabsTrigger>
                         <TabsTrigger value="admins"><Building className="mr-2 h-4 w-4" />Admins</TabsTrigger>
                     </TabsList>
                     
@@ -241,26 +241,26 @@ export default function AudienceSelectionDialog({
                         {renderFilterControls(filteredStudents, () => handleAddFilteredToSelection(filteredStudents), isStudentFilterActive, clearStudentFilters, filteredStudents.length)}
                     </TabsContent>
 
-                    <TabsContent value="lecturers" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
+                    <TabsContent value="staff" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div className="relative md:col-span-2">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search by name..." value={lecturerSearch} onChange={e => setLecturerSearch(e.target.value)} className="pl-10"/>
+                            <Input placeholder="Search by name..." value={staffSearch} onChange={e => setStaffSearch(e.target.value)} className="pl-10"/>
                         </div>
-                        <Select value={lecturerFaculty} onValueChange={setLecturerFaculty}>
+                        <Select value={staffFaculty} onValueChange={setStaffFaculty}>
                             <SelectTrigger><SelectValue placeholder="All Faculties" /></SelectTrigger>
                             <SelectContent>
                                 {faculties.map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                        <Select value={lecturerDept} onValueChange={setLecturerDept} disabled={!lecturerAvailableDepts.length}>
+                        <Select value={staffDept} onValueChange={setStaffDept} disabled={!staffAvailableDepts.length}>
                             <SelectTrigger><SelectValue placeholder="All Departments" /></SelectTrigger>
                             <SelectContent>
-                                {lecturerAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                {staffAvailableDepts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         </div>
-                        {renderFilterControls(filteredLecturers, () => handleAddFilteredToSelection(filteredLecturers), isLecturerFilterActive, clearLecturerFilters, filteredLecturers.length)}
+                        {renderFilterControls(filteredStaff, () => handleAddFilteredToSelection(filteredStaff), isStaffFilterActive, clearStaffFilters, filteredStaff.length)}
                     </TabsContent>
 
                     <TabsContent value="admins" className="flex-grow flex flex-col min-h-0 mt-4 space-y-2">

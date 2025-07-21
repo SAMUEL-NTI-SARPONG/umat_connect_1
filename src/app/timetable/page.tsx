@@ -278,17 +278,17 @@ const initialCreateFormState = {
   time: '',
 };
 
-function LecturerTimetableView({
+function StaffTimetableView({
   schedule,
   masterSchedule,
   emptySlots,
-  addLecturerSchedule,
+  addStaffSchedule,
   updateScheduleStatus,
 }: {
   schedule: TimetableEntry[];
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
-  addLecturerSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
 }) {
   const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
@@ -325,16 +325,16 @@ function LecturerTimetableView({
     return { normalizedId: fallbackId, displayCode: courseCode, originalId: entry.id };
   };
 
-  const lecturerCourses = useMemo(() => {
+  const staffCourses = useMemo(() => {
     if (!masterSchedule || !user) return [];
     
-    const lecturerNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
+    const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
     
-    const allEntriesForLecturer = masterSchedule.filter(entry =>
-      lecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+    const allEntriesForStaff = masterSchedule.filter(entry =>
+      staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
 
-    const groupedByNormalizedId = allEntriesForLecturer.reduce((acc, entry) => {
+    const groupedByNormalizedId = allEntriesForStaff.reduce((acc, entry) => {
         const { normalizedId, displayCode } = normalizeCourse(entry);
         if (!acc[normalizedId]) {
             acc[normalizedId] = {
@@ -354,7 +354,7 @@ function LecturerTimetableView({
   const allRejectedIds = useMemo(() => {
     if (!user || !rejectedEntries[user.id]) return new Set<number>();
     
-    const rejectedCourseGroups = lecturerCourses.filter(course =>
+    const rejectedCourseGroups = staffCourses.filter(course =>
       (rejectedEntries[user.id] || []).includes(course.id)
     );
     
@@ -364,7 +364,7 @@ function LecturerTimetableView({
     });
     
     return rejectedIds;
-  }, [user, rejectedEntries, lecturerCourses]);
+  }, [user, rejectedEntries, staffCourses]);
 
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -424,7 +424,7 @@ function LecturerTimetableView({
 
   const handleReviewToggle = (courseGroupId: number, shouldReject: boolean) => {
       if (!user) return;
-      const courseGroup = lecturerCourses.find(c => c.id === courseGroupId);
+      const courseGroup = staffCourses.find(c => c.id === courseGroupId);
       if (!courseGroup) return;
 
       if (shouldReject) {
@@ -438,11 +438,11 @@ function LecturerTimetableView({
   
   useEffect(() => {
     if (user && masterSchedule && masterSchedule.length > 0 && !hasReviewed) {
-      if (lecturerCourses.length > 0) {
+      if (staffCourses.length > 0) {
         setIsReviewModalOpen(true);
       }
     }
-  }, [masterSchedule, user, hasReviewed, lecturerCourses.length]);
+  }, [masterSchedule, user, hasReviewed, staffCourses.length]);
   
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -478,7 +478,7 @@ function LecturerTimetableView({
       alert("Please fill all fields");
       return;
     }
-    addLecturerSchedule({
+    addStaffSchedule({
       courseCode,
       day,
       level,
@@ -511,7 +511,7 @@ function LecturerTimetableView({
   };
 
   const handleCourseSelection = (courseCode: string) => {
-    const selectedCourse = lecturerCourses.find(c => c.courseCode === courseCode);
+    const selectedCourse = staffCourses.find(c => c.courseCode === courseCode);
     if (selectedCourse) {
       setCreateFormData((prev: any) => ({
         ...prev,
@@ -598,7 +598,7 @@ function LecturerTimetableView({
               markScheduleAsReviewed(user.id);
             }
         }}
-        courses={lecturerCourses}
+        courses={staffCourses}
       />
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
         <div className="flex justify-end sm:justify-start gap-2">
@@ -840,7 +840,7 @@ function LecturerTimetableView({
                   <SelectValue placeholder="Select a course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {lecturerCourses.map(course => (
+                  {staffCourses.map(course => (
                     <SelectItem key={course.id} value={course.courseCode}>{course.courseCode}</SelectItem>
                   ))}
                 </SelectContent>
@@ -908,7 +908,7 @@ function LecturerTimetableView({
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] my-4 pr-6">
             <div className="space-y-2 py-4">
-              {lecturerCourses.map((course) => {
+              {staffCourses.map((course) => {
                 const isRejected = userRejectedEntryIds.includes(course.id);
                 return (
                   <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
@@ -1457,22 +1457,22 @@ export default function TimetablePage() {
     updateScheduleStatus,
     emptySlots, 
     setEmptySlots,
-    lecturerSchedules,
-    addLecturerSchedule,
+    staffSchedules,
+    addStaffSchedule,
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
-    return [...(masterSchedule || []), ...lecturerSchedules];
-  }, [masterSchedule, lecturerSchedules]);
+    return [...(masterSchedule || []), ...staffSchedules];
+  }, [masterSchedule, staffSchedules]);
 
   // Derived states are now calculated within the render logic using useMemo
-  const lecturerSchedule = useMemo(() => {
-    if (!combinedSchedule || !user || user.role !== 'lecturer') return [];
+  const staffSchedule = useMemo(() => {
+    if (!combinedSchedule || !user || user.role !== 'staff') return [];
     
-    const currentLecturerNameParts = user.name.toLowerCase().split(' ');
+    const currentStaffNameParts = user.name.toLowerCase().split(' ');
 
     return combinedSchedule.filter(entry => 
-      currentLecturerNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+      currentStaffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
     );
   }, [combinedSchedule, user]);
 
@@ -1492,12 +1492,12 @@ export default function TimetablePage() {
     switch (user.role) {
       case 'student':
         return <StudentTimetableView schedule={studentSchedule} />;
-      case 'lecturer':
-        return <LecturerTimetableView 
-                  schedule={lecturerSchedule} 
+      case 'staff':
+        return <StaffTimetableView 
+                  schedule={staffSchedule} 
                   masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
-                  addLecturerSchedule={addLecturerSchedule}
+                  addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
                />;
       case 'administrator':

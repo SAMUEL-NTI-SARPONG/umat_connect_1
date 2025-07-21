@@ -50,7 +50,7 @@ function HomePageContent() {
         )}
       </div>
 
-      {(user.role === 'lecturer' || user.role === 'administrator') && (
+      {(user.role === 'staff' || user.role === 'administrator') && (
         <CreatePost>
           <Button
             className="fixed bottom-20 right-6 md:bottom-8 md:right-[calc(50vw-18rem-4rem)] h-16 w-16 rounded-full shadow-lg"
