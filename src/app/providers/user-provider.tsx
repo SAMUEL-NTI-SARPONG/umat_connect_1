@@ -196,7 +196,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
   const addComment = useCallback((postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
-    
+
     const newComment: Comment = {
       id: Date.now(),
       authorId: user.id,
@@ -205,106 +205,98 @@ export function UserProvider({ children }: { children: ReactNode }) {
       replies: [],
       attachedFile,
     };
-    
-    let newNotifications: Notification[] = [];
 
-    setPosts(prevPosts => {
-      return prevPosts.map(p => {
+    setPosts(prevPosts =>
+      prevPosts.map(p => {
         if (p.id === postId) {
+          // Add notification inside the same state update to avoid race conditions
           if (p.authorId !== user.id) {
             const notification: Notification = {
-              id: `${Date.now()}-${user.id}-to-${p.authorId}-on-${newComment.id}`,
+              id: `${newComment.timestamp}-${user.id}-${p.authorId}-${newComment.id}`,
               recipientId: p.authorId,
               actorId: user.id,
               type: 'comment_on_post',
               postId: p.id,
               commentId: newComment.id,
               isRead: false,
-              timestamp: new Date().toISOString(),
+              timestamp: newComment.timestamp,
             };
-            newNotifications.push(notification);
+            setNotifications(prev => [...prev, notification]);
           }
           return { ...p, comments: [...p.comments, newComment] };
         }
         return p;
-      });
-    });
-    
-    if (newNotifications.length > 0) {
-        setNotifications(prev => [...prev, ...newNotifications]);
-    }
-
+      })
+    );
   }, [user]);
 
   const addReply = useCallback((postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
-    if (!user) return;
+      if (!user) return;
 
-    const newReply: Comment = {
-        id: Date.now(),
-        authorId: user.id,
-        text,
-        timestamp: new Date().toISOString(),
-        replies: [],
-        attachedFile,
-    };
+      const newReply: Comment = {
+          id: Date.now(),
+          authorId: user.id,
+          text,
+          timestamp: new Date().toISOString(),
+          replies: [],
+          attachedFile,
+      };
 
-    const newNotifications: Notification[] = [];
-    const timestamp = new Date().toISOString();
+      setPosts(prevPosts => {
+          const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
+          const post = updatedPosts.find((p: Post) => p.id === postId);
 
-    setPosts(prevPosts => {
-        const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
-        const post = updatedPosts.find((p: Post) => p.id === postId);
+          if (post) {
+              const findParentComment = (comments: Comment[]): Comment | null => {
+                  for (const comment of comments) {
+                      if (comment.id === parentCommentId) return comment;
+                      const found = findParentComment(comment.replies);
+                      if (found) return found;
+                  }
+                  return null;
+              };
 
-        if (post) {
-            let parentComment: Comment | null = null;
-            const findParentComment = (comments: Comment[]): Comment | null => {
-                for (const comment of comments) {
-                    if (comment.id === parentCommentId) return comment;
-                    const found = findParentComment(comment.replies);
-                    if (found) return found;
-                }
-                return null;
-            };
+              const parentComment = findParentComment(post.comments);
 
-            parentComment = findParentComment(post.comments);
+              if (parentComment) {
+                  parentComment.replies.push(newReply);
+                  
+                  const newNotifications: Notification[] = [];
+                  
+                  // Notify parent comment author
+                  if (parentComment.authorId !== user.id) {
+                      newNotifications.push({
+                          id: `${newReply.timestamp}-${user.id}-${parentComment.authorId}-${newReply.id}`,
+                          recipientId: parentComment.authorId,
+                          actorId: user.id,
+                          type: 'reply_to_comment',
+                          postId: post.id,
+                          commentId: newReply.id,
+                          isRead: false,
+                          timestamp: newReply.timestamp,
+                      });
+                  }
+                  // Notify post author if they are a different person
+                  if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
+                      newNotifications.push({
+                          id: `${newReply.timestamp}-${user.id}-${post.authorId}-${newReply.id}`,
+                          recipientId: post.authorId,
+                          actorId: user.id,
+                          type: 'reply_to_comment',
+                          postId: post.id,
+                          commentId: newReply.id,
+                          isRead: false,
+                          timestamp: newReply.timestamp,
+                      });
+                  }
 
-            if (parentComment) {
-                parentComment.replies.push(newReply);
-
-                // Notify parent comment author
-                if (parentComment.authorId !== user.id) {
-                    newNotifications.push({
-                        id: `${timestamp}-${user.id}-to-${parentComment.authorId}-on-${newReply.id}`,
-                        recipientId: parentComment.authorId,
-                        actorId: user.id,
-                        type: 'reply_to_comment',
-                        postId: post.id,
-                        commentId: newReply.id,
-                        isRead: false,
-                        timestamp,
-                    });
-                }
-                // Notify post author if they are a different person
-                if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
-                    newNotifications.push({
-                        id: `${timestamp}-${user.id}-to-${post.authorId}-on-${newReply.id}`,
-                        recipientId: post.authorId,
-                        actorId: user.id,
-                        type: 'reply_to_comment',
-                        postId: post.id,
-                        commentId: newReply.id,
-                        isRead: false,
-                        timestamp,
-                    });
-                }
-            }
-        }
-        return updatedPosts;
-    });
-
-    if (newNotifications.length > 0) {
-        setNotifications(prev => [...prev, ...newNotifications]);
-    }
+                  if (newNotifications.length > 0) {
+                      setNotifications(prev => [...prev, ...newNotifications]);
+                  }
+              }
+          }
+          return updatedPosts;
+      });
   }, [user]);
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
