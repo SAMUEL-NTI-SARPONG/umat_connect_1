@@ -249,6 +249,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
 
     const newNotifications: Notification[] = [];
+    const timestamp = new Date().toISOString();
 
     setPosts(prevPosts => {
         const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
@@ -270,29 +271,30 @@ export function UserProvider({ children }: { children: ReactNode }) {
             if (parentComment) {
                 parentComment.replies.push(newReply);
 
+                // Notify parent comment author
                 if (parentComment.authorId !== user.id) {
                     newNotifications.push({
-                        id: `${Date.now()}-comment-${parentComment.id}`,
+                        id: `${newReply.id}-reply-parent-${parentComment.id}`,
                         recipientId: parentComment.authorId,
                         actorId: user.id,
                         type: 'reply_to_comment',
                         postId: post.id,
                         commentId: newReply.id,
                         isRead: false,
-                        timestamp: new Date().toISOString(),
+                        timestamp,
                     });
                 }
-
+                // Notify post author if they are a different person
                 if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
                     newNotifications.push({
-                        id: `${Date.now()}-post-${post.id}-reply`,
+                        id: `${newReply.id}-reply-post-author-${post.id}`,
                         recipientId: post.authorId,
                         actorId: user.id,
                         type: 'reply_to_comment',
                         postId: post.id,
                         commentId: newReply.id,
                         isRead: false,
-                        timestamp: new Date().toISOString(),
+                        timestamp,
                     });
                 }
             }
@@ -390,7 +392,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     notifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications]);
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, markNotificationAsRead, clearAllNotifications, login, logout]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
