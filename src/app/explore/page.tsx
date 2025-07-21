@@ -1,28 +1,15 @@
 
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Compass } from "lucide-react";
+import React from 'react';
 
+// This page is currently not in use and is not linked from the main navigation.
+// It can be repurposed or removed in the future.
 export default function ExplorePage() {
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Compass />
-            Explore UMaT Connect
-          </CardTitle>
-          <CardDescription>
-            Discover and connect with students and lecturers across campus.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-12">
-            <p>The AI-powered people search functionality will be built here.</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <h1 className="text-2xl font-bold mb-2">Explore</h1>
+        <p className="text-muted-foreground">This page is not currently in use.</p>
     </div>
   );
 }

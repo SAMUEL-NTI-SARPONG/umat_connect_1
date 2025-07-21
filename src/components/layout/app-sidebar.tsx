@@ -74,17 +74,6 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-           <SidebarMenuItem>
-                <Link href="/explore" passHref>
-                    <SidebarMenuButton
-                        tooltip="Explore"
-                        isActive={pathname === '/explore'}
-                    >
-                        <Compass />
-                        <span>Explore</span>
-                    </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
               <SidebarMenuButton

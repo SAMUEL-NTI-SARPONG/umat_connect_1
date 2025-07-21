@@ -12,7 +12,6 @@ import { Badge } from '../ui/badge';
 const navItems = [
   { href: '/', icon: Home, label: 'Home' },
   { href: '/timetable', icon: Calendar, label: 'Timetable' },
-  { href: '/explore', icon: Compass, label: 'Explore' },
   { href: '/notifications', icon: Bell, label: 'Alerts' },
   { href: '/profile', icon: User, label: 'Profile' },
 ];
