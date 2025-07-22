@@ -2,6 +2,7 @@
 'use server';
 
 import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 // This is a new, robust parser based entirely on the user-provided implementation.
 // It correctly handles merged cells, multiple courses within a single cell, and complex formats.
@@ -228,4 +229,103 @@ export async function findEmptyClassrooms(fileData: string) {
   });
 
   return result;
+}
+
+// Special Resit upload handler
+export async function handleSpecialResitUpload(fileData: string) {
+    const fileBuffer = Buffer.from(fileData, 'base64');
+
+    function extractTimetableData(csvData: string) {
+        const timetable: any[] = [];
+        const headers = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
+        
+        // Use papaparse for robust CSV parsing
+        const parsed = Papa.parse(csvData, { skipEmptyLines: true });
+        const rows: string[][] = parsed.data as string[][];
+
+        let headerRowIndex = -1;
+        for(let i=0; i<rows.length; i++){
+            if(rows[i].some(cell => cell.includes('COURSE NO.'))){
+                headerRowIndex = i;
+                break;
+            }
+        }
+        
+        if (headerRowIndex === -1) {
+          throw new Error("Could not find the header row in the uploaded file. Please ensure the column headers (e.g., 'COURSE NO.', 'COURSE NAME') are present.");
+        }
+
+        // Dynamically find header indices
+        const headerMap: { [key: string]: number } = {};
+        const headerRow = rows[headerRowIndex].map(h => h.trim());
+        headers.forEach(h => {
+            const index = headerRow.findIndex(cell => cell.includes(h));
+            if(index !== -1){
+                headerMap[h] = index;
+            }
+        });
+
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
+            const row = rows[i];
+            
+            const rowContent = row.join(',').trim();
+            if (rowContent === '' || row.every(cell => cell.trim() === '')) continue;
+            if (rowContent.includes('FOR ANY ISSUES') || rowContent.includes('MORNING PAPERS') || rowContent.includes('GM MSC CLASSROOM')) {
+                continue;
+            }
+
+            const entry: any = {};
+            let hasRequiredData = false;
+            
+            headers.forEach(header => {
+                const index = headerMap[header];
+                if (index === undefined) return;
+
+                let value = (row[index] || '').trim();
+                
+                if (header === 'NUMBER') {
+                    value = String(parseInt(value, 10) || 0);
+                }
+                
+                if (header === 'DATE') {
+                    value = value.replace(/th|st|nd|rd/g, '');
+                }
+                
+                if (header === 'COURSE NO.') {
+                    if (value && value !== '') {
+                        hasRequiredData = true;
+                    }
+                }
+                
+                const key = header.toLowerCase().replace(' (m/a)', '').replace(/\./g, '').replace(/ /g, '_');
+                entry[key] = value;
+            });
+
+            if (hasRequiredData) {
+                timetable.push(entry);
+            }
+        }
+        
+        return timetable;
+    }
+
+    try {
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+            throw new Error("The Excel file is empty or does not contain any sheets.");
+        }
+        const sheet = workbook.Sheets[firstSheetName];
+        const csvData = XLSX.utils.sheet_to_csv(sheet);
+
+        const parsedData = extractTimetableData(csvData);
+        return parsedData;
+
+    } catch (error) {
+        console.error("Special Resit Parsing failed:", error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error("Failed to parse the special resit Excel file.");
+    }
 }
