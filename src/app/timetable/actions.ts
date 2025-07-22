@@ -235,74 +235,63 @@ export async function findEmptyClassrooms(fileData: string) {
 export async function handleSpecialResitUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
 
-    function extractTimetableData(csvData: string) {
+    function extractTimetableData(excelData: string) {
+        // Initialize an array to store the extracted timetable entries
         const timetable: any[] = [];
+        
+        // Define the headers with exact matching, including the session column
         const headers = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
         
-        // Use papaparse for robust CSV parsing
-        const parsed = Papa.parse(csvData, { skipEmptyLines: true });
-        const rows: string[][] = parsed.data as string[][];
-
-        let headerRowIndex = -1;
-        for(let i=0; i<rows.length; i++){
-            if(rows[i].some(cell => cell.includes('COURSE NO.'))){
-                headerRowIndex = i;
-                break;
-            }
-        }
+        // Split the excel data into rows and filter out empty or irrelevant rows
+        const rows = excelData.split('\n').filter(row => row.trim() !== '' && !row.includes('VENUE:') && !row.includes('FOR ANY ISSUES') && !row.includes('MORNING PAPERS') && !row.includes('GM MSC CLASSROOM'));
         
-        if (headerRowIndex === -1) {
-          throw new Error("Could not find the header row in the uploaded file. Please ensure the column headers (e.g., 'COURSE NO.', 'COURSE NAME') are present.");
-        }
-
-        // Dynamically find header indices
-        const headerMap: { [key: string]: number } = {};
-        const headerRow = rows[headerRowIndex].map(h => h.trim());
-        headers.forEach(h => {
-            const index = headerRow.findIndex(cell => cell.includes(h));
-            if(index !== -1){
-                headerMap[h] = index;
-            }
-        });
-
+        // Find the header row (row4 in the data)
+        const headerRowIndex = rows.findIndex(row => row.includes('DATE,COURSE NO.,COURSE NAME'));
+        if (headerRowIndex === -1) return timetable; // Return empty if header not found
+        
+        // Process rows starting from the row after headers
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
             
-            const rowContent = row.join(',').trim();
-            if (rowContent === '' || row.every(cell => cell.trim() === '')) continue;
-            if (rowContent.includes('FOR ANY ISSUES') || rowContent.includes('MORNING PAPERS') || rowContent.includes('GM MSC CLASSROOM')) {
-                continue;
-            }
-
-            const entry: any = {};
-            let hasRequiredData = false;
+            // Split the row into columns, handling potential commas in course names
+            const columns = row.split(',').map(item => item.trim());
             
-            headers.forEach(header => {
-                const index = headerMap[header];
-                if (index === undefined) return;
-
-                let value = (row[index] || '').trim();
+            // Ensure we have enough columns to match headers
+            if (columns.length >= headers.length) {
+                // Create an object for each timetable entry
+                const entry: any = {};
                 
-                if (header === 'NUMBER') {
-                    value = String(parseInt(value, 10) || 0);
-                }
-                
-                if (header === 'DATE') {
-                    value = value.replace(/th|st|nd|rd/g, '');
-                }
-                
-                if (header === 'COURSE NO.') {
-                    if (value && value !== '') {
-                        hasRequiredData = true;
+                // Map columns to headers
+                headers.forEach((header, index) => {
+                    let value: string | number = columns[index] || '';
+                    
+                    // Specific handling for problematic columns
+                    if (header === 'NUMBER') {
+                        // Convert NUMBER to integer, default to 0 if invalid
+                        value = parseInt(value as string, 10);
+                        value = isNaN(value) ? 0 : value;
+                    } else if (header === 'COURSE NO.') {
+                        // Ensure COURSE NO. is treated as a string and cleaned
+                        value = value.trim().toUpperCase();
+                    } else if (header === 'SESSION (M/A)') {
+                        // Ensure SESSION is either 'M' or 'A', default to empty string if invalid
+                        value = ['M', 'A'].includes(value.trim().toUpperCase()) ? value.trim().toUpperCase() : '';
+                    } else if (header === 'DATE') {
+                        // Standardize date format by removing 'th' or 'st'
+                        value = value.replace(/th|st/, '').trim();
+                    } else {
+                        // Trim other values to remove extra spaces
+                        value = value.trim();
                     }
-                }
+                    
+                    // Store in entry with cleaned header name
+                    entry[header.toLowerCase().replace(/ \(m\/a\)/, '').replace(/ /g, '_')] = value;
+                });
                 
-                const key = header.toLowerCase().replace(' (m/a)', '').replace(/\./g, '').replace(/ /g, '_');
-                entry[key] = value;
-            });
-
-            if (hasRequiredData) {
-                timetable.push(entry);
+                // Only add valid entries (must have a valid course_no and session)
+                if (entry.course_no && entry.course_no !== '' && entry.session !== '') {
+                    timetable.push(entry);
+                }
             }
         }
         
