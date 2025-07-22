@@ -60,6 +60,8 @@ import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getFromStorage, saveToStorage } from '@/lib/storage';
+import { useToast } from '@/hooks/use-toast';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -70,19 +72,29 @@ const statusConfig = {
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
-  const { user, emptySlots, specialResitSchedule, studentResitSelections, updateStudentResitSelections } = useUser();
+  const { user, emptySlots } = useUser();
+  const { toast } = useToast();
   const [activeDay, setActiveDay] = useState("Monday");
   const [activeTab, setActiveTab] = useState("classes");
   const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
   const [isResitRegisterModalOpen, setIsResitRegisterModalOpen] = useState(false);
+  
+  const [specialResitSchedule, setSpecialResitSchedule] = useState<SpecialResitEntry[] | null>(null);
+  const [studentResitSelections, setStudentResitSelections] = useState<Record<number, string[]>>({});
   const [localResitSelections, setLocalResitSelections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (user && studentResitSelections[user.id]) {
-      setLocalResitSelections(new Set(studentResitSelections[user.id]));
-    }
-  }, [studentResitSelections, user]);
+    // Load data from localStorage on component mount
+    const storedSchedule = getFromStorage<SpecialResitEntry[] | null>('specialResitSchedule', null);
+    const storedSelections = getFromStorage<Record<number, string[]>>('studentResitSelections', {});
+    
+    setSpecialResitSchedule(storedSchedule);
+    setStudentResitSelections(storedSelections);
 
+    if (user && storedSelections[user.id]) {
+      setLocalResitSelections(new Set(storedSelections[user.id]));
+    }
+  }, [user]);
 
   const dailySchedule = useMemo(() => {
     return schedule.reduce((acc, event) => {
@@ -164,8 +176,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   const handleSaveResitSelections = () => {
     if (user) {
-        updateStudentResitSelections(user.id, Array.from(localResitSelections));
+        const updatedSelections = { ...studentResitSelections, [user.id]: Array.from(localResitSelections) };
+        setStudentResitSelections(updatedSelections);
+        saveToStorage('studentResitSelections', updatedSelections);
         setIsResitRegisterModalOpen(false);
+        toast({ title: 'Resit Courses Registered', description: 'Your selections have been saved.' });
     }
   };
 

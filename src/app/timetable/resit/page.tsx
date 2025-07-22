@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { useUser } from '@/app/providers/user-provider';
@@ -34,10 +34,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { SpecialResitEntry } from '@/app/providers/user-provider';
+import { getFromStorage, saveToStorage } from '@/lib/storage';
+import { useToast } from '@/hooks/use-toast';
 
 
 function SpecialResitTimetableView() {
-  const { specialResitSchedule, setSpecialResitSchedule } = useUser();
+  const { toast } = useToast();
+  const [specialResitSchedule, setSpecialResitSchedule] = useState<SpecialResitEntry[] | null>(
+    () => getFromStorage('specialResitSchedule', null)
+  );
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +64,11 @@ function SpecialResitTimetableView() {
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid resit data. Please check the file format and content.");
         setSpecialResitSchedule(null);
+        saveToStorage('specialResitSchedule', null);
       } else {
         setSpecialResitSchedule(data);
+        saveToStorage('specialResitSchedule', data);
+        toast({ title: 'Special Resit Timetable Updated', description: 'The new schedule has been distributed.' });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
@@ -77,6 +86,7 @@ function SpecialResitTimetableView() {
 
   const handleDeleteAll = () => {
     setSpecialResitSchedule(null);
+    saveToStorage('specialResitSchedule', null);
     setError(null);
   };
   
