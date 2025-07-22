@@ -101,7 +101,9 @@ function SpecialResitTimetableView() {
     }, {} as Record<string, SpecialResitEntry[]>);
   }, [parsedData]);
   
-  const datesWithData = Object.keys(groupedByDate);
+  const datesWithData = useMemo(() => {
+    return Object.keys(groupedByDate);
+  }, [groupedByDate]);
 
   return (
     <div className="space-y-6">
@@ -194,7 +196,7 @@ function SpecialResitTimetableView() {
                           </TableHeader>
                           <TableBody>
                             {groupedByDate[date]?.map((entry, index) => (
-                              <TableRow key={`${entry.course_no.}-${index}`}>
+                              <TableRow key={`${entry['course_no.']}-${index}`}>
                                 <TableCell>{entry['course_no.']}</TableCell>
                                 <TableCell>{entry.course_name}</TableCell>
                                 <TableCell>{entry.department}</TableCell>
