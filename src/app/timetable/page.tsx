@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Checkbox } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ import { Label } from '@/components/ui/label';
 import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
