@@ -235,46 +235,47 @@ export async function findEmptyClassrooms(fileData: string) {
 export async function handleSpecialResitUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
 
+    function parseCSVLine(line: string) {
+        const regex = /("([^"]*)"|([^,]*))(,|$)/g;
+        const columns: string[] = [];
+        let match;
+        while ((match = regex.exec(line)) !== null) {
+            const value = match[2] !== undefined ? match[2] : match[3];
+            columns.push(value.trim());
+        }
+        return columns;
+    }
+
     function extractTimetableData(excelData: string) {
-        // Initialize arrays for valid entries and errors
         const timetable: any[] = [];
         const errors: string[] = [];
         
-        // Define the headers
         const headers = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
         
-        // Split the excel data into rows and filter out empty or irrelevant rows
         const rows = excelData.split('\n').filter(row => row.trim() !== '' && !row.includes('VENUE:') && !row.includes('FOR ANY ISSUES') && !row.includes('MORNING PAPERS') && !row.includes('GM MSC CLASSROOM'));
         
-        // Find the header row
         const headerRowIndex = rows.findIndex(row => row.includes('DATE,COURSE NO.,COURSE NAME'));
         if (headerRowIndex === -1) {
             return { timetable: [], errors: ['Header row not found. Please ensure the file contains the correct headers.'] };
         }
         
-        // Process rows starting from the row after headers
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
-            const rowNumber = i + 1; // For error reporting
+            const rowNumber = i + 1;
             
-            // Split the row into columns
-            const columns = row.split(',').map(item => item.trim());
+            const columns = parseCSVLine(row);
             
-            // Check if row has enough columns
             if (columns.length < headers.length) {
                 errors.push(`Row ${rowNumber}: Insufficient columns (expected ${headers.length}, got ${columns.length}).`);
                 continue;
             }
             
-            // Create an object for the timetable entry
             const entry: any = {};
             let isValid = true;
             
-            // Map columns to headers
             headers.forEach((header, index) => {
                 let value: string | number = columns[index] || '';
                 
-                // Specific validation for each column
                 if (header === 'NUMBER') {
                     value = parseInt(value as string, 10);
                     if (isNaN(value) || value <= 0) {
@@ -283,7 +284,6 @@ export async function handleSpecialResitUpload(fileData: string) {
                     }
                 } else if (header === 'COURSE NO.') {
                     value = value.trim().toUpperCase();
-                    // Validate COURSE NO. format (e.g., two letters followed by a space and numbers)
                     if (!/^[A-Z]{2}\s\d{3}$/.test(value)) {
                         errors.push(`Row ${rowNumber}: Invalid COURSE NO. format (${value}). Expected format like "ES 142".`);
                         isValid = false;
@@ -296,14 +296,13 @@ export async function handleSpecialResitUpload(fileData: string) {
                     }
                 } else if (header === 'DATE') {
                     value = value.replace(/th|st/, '').trim();
-                    // Basic date format validation (e.g., DD-MMM-YYYY)
                     if (!/^\d{1,2}-[A-Z]{3}-\d{4}$/.test(value)) {
                         errors.push(`Row ${rowNumber}: Invalid DATE format (${value}). Expected format like "24-JUL-2025".`);
                         isValid = false;
                     }
                 } else {
                     value = value.trim();
-                    if (!value && header !== 'EXAMINER') { // Allow empty EXAMINER but not others
+                    if (!value && header !== 'EXAMINER') {
                         errors.push(`Row ${rowNumber}: Missing value for ${header}.`);
                         isValid = false;
                     }
@@ -312,7 +311,6 @@ export async function handleSpecialResitUpload(fileData: string) {
                 entry[header.toLowerCase().replace(/ \(m\/a\)/, '').replace(/ /g, '_')] = value;
             });
             
-            // Only add valid entries
             if (isValid && entry.course_no && entry.session) {
                 timetable.push(entry);
             }
