@@ -236,66 +236,89 @@ export async function handleSpecialResitUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
 
     function extractTimetableData(excelData: string) {
-        // Initialize an array to store the extracted timetable entries
+        // Initialize arrays for valid entries and errors
         const timetable: any[] = [];
+        const errors: string[] = [];
         
-        // Define the headers with exact matching, including the session column
+        // Define the headers
         const headers = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
         
         // Split the excel data into rows and filter out empty or irrelevant rows
         const rows = excelData.split('\n').filter(row => row.trim() !== '' && !row.includes('VENUE:') && !row.includes('FOR ANY ISSUES') && !row.includes('MORNING PAPERS') && !row.includes('GM MSC CLASSROOM'));
         
-        // Find the header row (row4 in the data)
+        // Find the header row
         const headerRowIndex = rows.findIndex(row => row.includes('DATE,COURSE NO.,COURSE NAME'));
-        if (headerRowIndex === -1) return timetable; // Return empty if header not found
+        if (headerRowIndex === -1) {
+            return { timetable: [], errors: ['Header row not found. Please ensure the file contains the correct headers.'] };
+        }
         
         // Process rows starting from the row after headers
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
             const row = rows[i];
+            const rowNumber = i + 1; // For error reporting
             
-            // Split the row into columns, handling potential commas in course names
+            // Split the row into columns
             const columns = row.split(',').map(item => item.trim());
             
-            // Ensure we have enough columns to match headers
-            if (columns.length >= headers.length) {
-                // Create an object for each timetable entry
-                const entry: any = {};
+            // Check if row has enough columns
+            if (columns.length < headers.length) {
+                errors.push(`Row ${rowNumber}: Insufficient columns (expected ${headers.length}, got ${columns.length}).`);
+                continue;
+            }
+            
+            // Create an object for the timetable entry
+            const entry: any = {};
+            let isValid = true;
+            
+            // Map columns to headers
+            headers.forEach((header, index) => {
+                let value: string | number = columns[index] || '';
                 
-                // Map columns to headers
-                headers.forEach((header, index) => {
-                    let value: string | number = columns[index] || '';
-                    
-                    // Specific handling for problematic columns
-                    if (header === 'NUMBER') {
-                        // Convert NUMBER to integer, default to 0 if invalid
-                        value = parseInt(value as string, 10);
-                        value = isNaN(value) ? 0 : value;
-                    } else if (header === 'COURSE NO.') {
-                        // Ensure COURSE NO. is treated as a string and cleaned
-                        value = value.trim().toUpperCase();
-                    } else if (header === 'SESSION (M/A)') {
-                        // Ensure SESSION is either 'M' or 'A', default to empty string if invalid
-                        value = ['M', 'A'].includes(value.trim().toUpperCase()) ? value.trim().toUpperCase() : '';
-                    } else if (header === 'DATE') {
-                        // Standardize date format by removing 'th' or 'st'
-                        value = value.replace(/th|st/, '').trim();
-                    } else {
-                        // Trim other values to remove extra spaces
-                        value = value.trim();
+                // Specific validation for each column
+                if (header === 'NUMBER') {
+                    value = parseInt(value as string, 10);
+                    if (isNaN(value) || value <= 0) {
+                        errors.push(`Row ${rowNumber}: Invalid NUMBER value (${columns[index]}). Must be a positive integer.`);
+                        isValid = false;
                     }
-                    
-                    // Store in entry with cleaned header name
-                    entry[header.toLowerCase().replace(/ \(m\/a\)/, '').replace(/ /g, '_')] = value;
-                });
-                
-                // Only add valid entries (must have a valid course_no and session)
-                if (entry.course_no && entry.course_no !== '' && entry.session !== '') {
-                    timetable.push(entry);
+                } else if (header === 'COURSE NO.') {
+                    value = value.trim().toUpperCase();
+                    // Validate COURSE NO. format (e.g., two letters followed by a space and numbers)
+                    if (!/^[A-Z]{2}\s\d{3}$/.test(value)) {
+                        errors.push(`Row ${rowNumber}: Invalid COURSE NO. format (${value}). Expected format like "ES 142".`);
+                        isValid = false;
+                    }
+                } else if (header === 'SESSION (M/A)') {
+                    value = value.trim().toUpperCase();
+                    if (!['M', 'A'].includes(value)) {
+                        errors.push(`Row ${rowNumber}: Invalid SESSION value (${value}). Must be 'M' or 'A'.`);
+                        isValid = false;
+                    }
+                } else if (header === 'DATE') {
+                    value = value.replace(/th|st/, '').trim();
+                    // Basic date format validation (e.g., DD-MMM-YYYY)
+                    if (!/^\d{1,2}-[A-Z]{3}-\d{4}$/.test(value)) {
+                        errors.push(`Row ${rowNumber}: Invalid DATE format (${value}). Expected format like "24-JUL-2025".`);
+                        isValid = false;
+                    }
+                } else {
+                    value = value.trim();
+                    if (!value && header !== 'EXAMINER') { // Allow empty EXAMINER but not others
+                        errors.push(`Row ${rowNumber}: Missing value for ${header}.`);
+                        isValid = false;
+                    }
                 }
+                
+                entry[header.toLowerCase().replace(/ \(m\/a\)/, '').replace(/ /g, '_')] = value;
+            });
+            
+            // Only add valid entries
+            if (isValid && entry.course_no && entry.session) {
+                timetable.push(entry);
             }
         }
         
-        return timetable;
+        return { timetable, errors: errors.length > 0 ? errors : [] };
     }
 
     try {
@@ -308,7 +331,12 @@ export async function handleSpecialResitUpload(fileData: string) {
         const csvData = XLSX.utils.sheet_to_csv(sheet);
 
         const parsedData = extractTimetableData(csvData);
-        return parsedData;
+
+        if (parsedData.errors.length > 0) {
+             throw new Error("Parsing failed with errors: " + parsedData.errors.join('; '));
+        }
+        
+        return parsedData.timetable;
 
     } catch (error) {
         console.error("Special Resit Parsing failed:", error);
