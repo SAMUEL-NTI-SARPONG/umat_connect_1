@@ -1518,5 +1518,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    

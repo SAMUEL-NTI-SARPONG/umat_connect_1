@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, PenSquare } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -31,7 +31,7 @@ export default function AppSidebar() {
     return null;
   }
   
-  const timetableLabel = user.role === 'administrator' ? 'Manage Timetable' : 'Timetable';
+  const timetableLabel = user.role === 'administrator' ? 'Class Timetable' : 'Timetable';
 
   return (
     <>
@@ -74,6 +74,32 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+           {user.role === 'administrator' && (
+            <>
+              <SidebarMenuItem>
+                <Link href="/timetable/exams" passHref>
+                  <SidebarMenuButton
+                    tooltip="Exams Timetable"
+                    isActive={pathname === '/timetable/exams'}
+                  >
+                    <BookOpen />
+                    <span>Exams Timetable</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Link href="/timetable/resit" passHref>
+                  <SidebarMenuButton
+                    tooltip="Special Resit"
+                    isActive={pathname === '/timetable/resit'}
+                  >
+                    <PenSquare />
+                    <span>Special Resit</span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            </>
+           )}
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
               <SidebarMenuButton
