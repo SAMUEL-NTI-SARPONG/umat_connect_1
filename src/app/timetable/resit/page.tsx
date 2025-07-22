@@ -40,13 +40,19 @@ import { useToast } from '@/hooks/use-toast';
 
 function SpecialResitTimetableView() {
   const { toast } = useToast();
-  const [specialResitSchedule, setSpecialResitSchedule] = useState<SpecialResitEntry[] | null>(
-    () => getFromStorage('specialResitSchedule', null)
-  );
+  const [specialResitSchedule, setSpecialResitSchedule] = useState<SpecialResitEntry[] | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load data from localStorage on component mount
+    const storedSchedule = getFromStorage<SpecialResitEntry[] | null>('specialResitSchedule', null);
+    if (storedSchedule) {
+      setSpecialResitSchedule(storedSchedule);
+    }
+  }, []);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
