@@ -72,8 +72,21 @@ export type Notification = {
     timestamp: string;
 };
 
+export interface SpecialResitEntry {
+  date: string;
+  course_no: string;
+  course_name: string;
+  department: string;
+  number: number;
+  room: string;
+  examiner: string;
+  session: string;
+}
+
 // Maps userId to an array of rejected entry IDs
 export type RejectedEntries = Record<number, number[]>;
+// Maps userId to an array of selected resit course numbers
+export type StudentResitSelections = Record<number, string[]>;
 
 interface UserContextType {
   user: User | null;
@@ -103,6 +116,10 @@ interface UserContextType {
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   clearAllNotifications: () => Promise<void>;
+  specialResitSchedule: SpecialResitEntry[] | null;
+  setSpecialResitSchedule: (data: SpecialResitEntry[] | null) => void;
+  studentResitSelections: StudentResitSelections;
+  updateStudentResitSelections: (userId: number, selections: string[]) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -118,6 +135,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
   const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [specialResitSchedule, setSpecialResitScheduleState] = useState<SpecialResitEntry[] | null>(null);
+  const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
 
   // This useEffect handles session-based login persistence.
   useEffect(() => {
@@ -247,7 +266,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     // Create notification
     if (postAuthorId && postAuthorId !== user.id) {
-        const notification: Omit<Notification, 'id'> = {
+        const newNotification: Omit<Notification, 'id'> = {
             recipientId: postAuthorId,
             actorId: user.id,
             type: 'comment_on_post',
@@ -256,10 +275,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
             isRead: false,
             timestamp: newComment.timestamp,
         };
-        await addDoc(collection(db, 'notifications'), notification);
-        fetchNotifications(); // Refresh notifications
+        setNotifications(prev => [ { ...newNotification, id: String(Date.now()) }, ...prev]);
+        await addDoc(collection(db, 'notifications'), newNotification);
     }
-  }, [user, fetchNotifications]);
+  }, [user]);
 
   const addReply = useCallback(async (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
       if (!user) return;
@@ -325,12 +344,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
 
       if (notificationsToAdd.length > 0) {
+          setNotifications(prev => [
+            ...notificationsToAdd.map(n => ({...n, id: String(Date.now())})),
+            ...prev
+          ]);
           for (const notification of notificationsToAdd) {
               await addDoc(collection(db, 'notifications'), notification);
           }
-          fetchNotifications(); // Refresh notifications
       }
-  }, [user, fetchNotifications]);
+  }, [user]);
 
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
@@ -394,6 +416,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setSpecialResitSchedule = useCallback((data: SpecialResitEntry[] | null) => {
+    setSpecialResitScheduleState(data);
+    toast({ title: "Special Resit Timetable Updated", description: "The new schedule has been distributed." });
+  }, [toast]);
+  
+  const updateStudentResitSelections = useCallback((userId: number, selections: string[]) => {
+    setStudentResitSelections(prev => ({
+      ...prev,
+      [userId]: selections,
+    }));
+    toast({ title: "Resit Courses Registered", description: "Your selections have been saved." });
+  }, [toast]);
+
+
   const resetState = () => {
     logout();
     setAllUsers(defaultUsers);
@@ -404,6 +440,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setReviewedSchedules([]);
     setRejectedEntries({});
     setNotifications([]);
+    setSpecialResitSchedule(null);
+    setStudentResitSelections({});
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
     window.location.reload();
   };
@@ -436,7 +474,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     fetchNotifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, login, logout]);
+    specialResitSchedule,
+    setSpecialResitSchedule,
+    studentResitSelections,
+    updateStudentResitSelections,
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitSchedule, setSpecialResitSchedule, studentResitSelections, updateStudentResitSelections, login, logout]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

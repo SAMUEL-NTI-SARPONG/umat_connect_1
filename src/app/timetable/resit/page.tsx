@@ -33,20 +33,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import type { SpecialResitEntry } from '@/app/providers/user-provider';
 
-interface SpecialResitEntry {
-  date: string;
-  'course_no.': string;
-  course_name: string;
-  department: string;
-  number: number;
-  room: string;
-  examiner: string;
-  'session_(m/a)': string;
-}
 
 function SpecialResitTimetableView() {
-  const [parsedData, setParsedData] = useState<SpecialResitEntry[] | null>(null);
+  const { specialResitSchedule, setSpecialResitSchedule } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +48,7 @@ function SpecialResitTimetableView() {
 
     setIsLoading(true);
     setError(null);
-    setParsedData(null);
+    setSpecialResitSchedule(null);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -66,9 +57,9 @@ function SpecialResitTimetableView() {
       
       if (data.length === 0) {
         setError("The uploaded file could not be parsed or contains no valid resit data. Please check the file format and content.");
-        setParsedData(null);
+        setSpecialResitSchedule(null);
       } else {
-        setParsedData(data);
+        setSpecialResitSchedule(data);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
@@ -85,13 +76,13 @@ function SpecialResitTimetableView() {
   };
 
   const handleDeleteAll = () => {
-    setParsedData(null);
+    setSpecialResitSchedule(null);
     setError(null);
   };
   
   const groupedByDate = useMemo(() => {
-    if (!parsedData) return {};
-    return parsedData.reduce((acc, entry) => {
+    if (!specialResitSchedule) return {};
+    return specialResitSchedule.reduce((acc, entry) => {
         const date = entry.date;
         if (!acc[date]) {
             acc[date] = [];
@@ -99,7 +90,7 @@ function SpecialResitTimetableView() {
         acc[date].push(entry);
         return acc;
     }, {} as Record<string, SpecialResitEntry[]>);
-  }, [parsedData]);
+  }, [specialResitSchedule]);
   
   const datesWithData = useMemo(() => {
     return Object.keys(groupedByDate);
@@ -133,7 +124,7 @@ function SpecialResitTimetableView() {
               <Tooltip>
                   <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={!parsedData}>
+                          <Button variant="destructive" size="icon" disabled={!specialResitSchedule}>
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                           </Button>
@@ -169,12 +160,12 @@ function SpecialResitTimetableView() {
          </Alert>
       )}
 
-      {parsedData && (
+      {specialResitSchedule && (
         <Card>
           <CardHeader>
             <CardTitle>Parsed Special Resit Schedule</CardTitle>
             <CardDescription>
-              A total of {parsedData?.length || 0} entries were found in the uploaded file.
+              A total of {specialResitSchedule?.length || 0} entries were found in the uploaded file.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -196,13 +187,13 @@ function SpecialResitTimetableView() {
                           </TableHeader>
                           <TableBody>
                             {groupedByDate[date]?.map((entry, index) => (
-                              <TableRow key={`${entry['course_no.']}-${index}`}>
-                                <TableCell>{entry['course_no.']}</TableCell>
+                              <TableRow key={`${entry.course_no}-${index}`}>
+                                <TableCell>{entry.course_no}</TableCell>
                                 <TableCell>{entry.course_name}</TableCell>
                                 <TableCell>{entry.department}</TableCell>
                                 <TableCell>{entry.room}</TableCell>
                                 <TableCell>{entry.examiner}</TableCell>
-                                <TableCell>{entry['session_(m/a)']}</TableCell>
+                                <TableCell>{entry.session}</TableCell>
                                 <TableCell className="text-right">{entry.number}</TableCell>
                               </TableRow>
                             ))}
