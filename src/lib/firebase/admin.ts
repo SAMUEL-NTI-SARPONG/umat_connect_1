@@ -2,7 +2,8 @@
 // src/lib/firebase/admin.ts
 import admin from 'firebase-admin';
 
-if (!admin.apps.length) {
+// In local-only mode, we prevent the admin SDK from initializing.
+if (false && !admin.apps.length) {
   try {
     const serviceAccount = JSON.parse(
       process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
@@ -16,8 +17,8 @@ if (!admin.apps.length) {
   }
 }
 
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
-export const adminStorage = admin.storage();
+export const adminDb = {}; // admin.firestore();
+export const adminAuth = {}; // admin.auth();
+export const adminStorage = {}; // admin.storage();
 
-export default admin;
+export default {}; // admin;

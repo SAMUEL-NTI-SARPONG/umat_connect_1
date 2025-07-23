@@ -12,8 +12,8 @@ import {
 } from 'react';
 import { users as defaultUsers, type User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase/client';
-import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+// import { db } from '@/lib/firebase/client';
+// import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 
 
 // Define the shape of timetable entries and empty slots
@@ -210,20 +210,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
-    try {
-      const q = query(collection(db, 'notifications'), where('recipientId', '==', user.id));
-      const querySnapshot = await getDocs(q);
-      const fetchedNotifications: Notification[] = [];
-      querySnapshot.forEach(doc => {
-        fetchedNotifications.push({ id: doc.id, ...doc.data() } as Notification);
-      });
-      setNotifications(fetchedNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-    } catch (error) {
-      console.error("Error fetching notifications: ", error);
-      toast({ variant: 'destructive', description: "Could not fetch notifications." });
-    }
-  }, [user, toast]);
+    // This function is a no-op in local mode.
+    // Notifications are managed in-memory.
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -256,9 +245,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return updatedPosts;
     });
     
-    // Create notification
+    // Create notification locally
     if (postAuthorId && postAuthorId !== user.id) {
-        const newNotification: Omit<Notification, 'id'> = {
+        const newNotification: Notification = {
+            id: String(Date.now()), // Local unique ID
             recipientId: postAuthorId,
             actorId: user.id,
             type: 'comment_on_post',
@@ -267,8 +257,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             isRead: false,
             timestamp: newComment.timestamp,
         };
-        setNotifications(prev => [ { ...newNotification, id: String(Date.now()) }, ...prev]);
-        await addDoc(collection(db, 'notifications'), newNotification);
+        setNotifications(prev => [newNotification, ...prev]);
     }
   }, [user]);
 
@@ -284,7 +273,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           attachedFile,
       };
 
-      const notificationsToAdd: Omit<Notification, 'id'>[] = [];
+      const notificationsToAdd: Notification[] = [];
       
       setPosts(prevPosts => {
           const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
@@ -308,6 +297,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                   // Notify parent comment author
                   if (parentComment.authorId !== user.id) {
                       notificationsToAdd.push({
+                          id: String(Date.now() + Math.random()),
                           recipientId: parentComment.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
@@ -321,6 +311,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                   // Notify post author if they are a different person
                   if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
                       notificationsToAdd.push({
+                          id: String(Date.now() + Math.random()),
                           recipientId: post.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
@@ -337,42 +328,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (notificationsToAdd.length > 0) {
           setNotifications(prev => [
-            ...notificationsToAdd.map(n => ({...n, id: String(Date.now())})),
+            ...notificationsToAdd,
             ...prev
           ]);
-          for (const notification of notificationsToAdd) {
-              await addDoc(collection(db, 'notifications'), notification);
-          }
       }
   }, [user]);
 
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
-    try {
-        const notifRef = doc(db, 'notifications', notificationId);
-        await updateDoc(notifRef, { isRead: true });
-        setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
-    } catch (error) {
-        console.error("Error updating notification: ", error);
-        toast({ variant: 'destructive', description: "Could not mark notification as read." });
-    }
-  }, [toast]);
+    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
+  }, []);
 
   const clearAllNotifications = useCallback(async () => {
     if (!user) return;
-    try {
-        const notifsToUpdate = notifications.filter(n => n.recipientId === user.id && !n.isRead);
-        for (const notif of notifsToUpdate) {
-            const notifRef = doc(db, 'notifications', notif.id);
-            await updateDoc(notifRef, { isRead: true });
-        }
-        setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
-        toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
-    } catch (error) {
-        console.error("Error clearing notifications: ", error);
-        toast({ variant: 'destructive', description: "Could not clear all notifications." });
-    }
-  }, [user, notifications, toast]);
+    setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
+    toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
+  }, [user, toast]);
 
   const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
     if (!user || user.role !== 'staff') return;
@@ -469,5 +440,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
