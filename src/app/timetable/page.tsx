@@ -950,19 +950,15 @@ function ClassTimetableView({
   parsedData,
   setParsedData,
   emptySlots,
-  setEmptySlots,
+  searchTerm,
+  showInvalid,
 }: {
   parsedData: TimetableEntry[] | null;
   setParsedData: (data: TimetableEntry[] | null) => void;
   emptySlots: EmptySlot[];
-  setEmptySlots: (slots: EmptySlot[]) => void;
+  searchTerm: string;
+  showInvalid: boolean;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showInvalid, setShowInvalid] = useState(false);
-  
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -971,40 +967,6 @@ function ClassTimetableView({
 
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
-  
-  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const fileData = Buffer.from(arrayBuffer).toString('base64');
-      const [data, slots] = await Promise.all([
-        handleFileUpload(fileData),
-        findEmptyClassrooms(fileData)
-      ]);
-      
-      if (data.length === 0) {
-        setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-        setParsedData(null);
-        setEmptySlots([]);
-      } else {
-        const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-        setParsedData(dataWithIdsAndStatus);
-        setEmptySlots(slots);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
-    } finally {
-      setIsLoading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
   
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
@@ -1018,18 +980,6 @@ function ClassTimetableView({
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleDeleteAll = () => {
-    setParsedData(null);
-    setEmptySlots([]);
-    setError(null);
-    setSearchTerm('');
-    setShowInvalid(false);
   };
   
   const handleDeleteRow = () => {
@@ -1147,89 +1097,10 @@ function ClassTimetableView({
 
   return (
     <div className="space-y-6">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={onFileChange}
-        className="hidden"
-        accept=".xlsx, .xls"
-      />
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
-        <TooltipProvider>
-          <div className="flex gap-2 flex-wrap flex-shrink-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  <span className="sr-only">Upload New</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Upload New Timetable</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData}>
-                  <FilterX className="h-4 w-4" />
-                  <span className="sr-only">Filter for review</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Filter for review</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <AlertDialog>
-              <Tooltip>
-                  <TooltipTrigger asChild>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={!parsedData}>
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                          </Button>
-                      </AlertDialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                      <p>Delete Timetable</p>
-                  </TooltipContent>
-              </Tooltip>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    entire timetable data from this view.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </TooltipProvider>
-        {parsedData && (
-          <div className="relative flex-grow w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search course, lecturer, room, department..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        )}
-      </div>
-
-      {error && (
-         <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-         </Alert>
+      {!parsedData && (
+        <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground">Upload a timetable to begin.</p>
+        </div>
       )}
 
       {parsedData && (
@@ -1460,48 +1331,188 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showInvalid, setShowInvalid] = useState(false);
+
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const fileData = Buffer.from(arrayBuffer).toString('base64');
+      const [data, slots] = await Promise.all([
+        handleFileUpload(fileData),
+        findEmptyClassrooms(fileData)
+      ]);
+      
+      if (data.length === 0) {
+        setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+        setParsedData(null);
+        setEmptySlots([]);
+      } else {
+        const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
+        setParsedData(dataWithIdsAndStatus);
+        setEmptySlots(slots);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
+    } finally {
+      setIsLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDeleteAll = () => {
+    setParsedData(null);
+    setEmptySlots([]);
+    setError(null);
+    setSearchTerm('');
+    setShowInvalid(false);
+  };
+  
   return (
-    <Tabs defaultValue="class" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">Class Timetable</TabsTrigger>
-        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-        <TabsTrigger value="resit">Special Resit Timetable</TabsTrigger>
-      </TabsList>
-      <TabsContent value="class">
-        <ClassTimetableView
-          parsedData={parsedData}
-          setParsedData={setParsedData}
-          emptySlots={emptySlots}
-          setEmptySlots={setEmptySlots}
-        />
-      </TabsContent>
-      <TabsContent value="exams">
-        <Card>
-          <CardHeader>
-            <CardTitle>Exams Timetable</CardTitle>
-            <CardDescription>
-              Upload and manage the exams timetable here. This feature is under development.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground">Exams Timetable functionality coming soon.</p>
-          </CardContent>
-        </Card>
-      </TabsContent>
-      <TabsContent value="resit">
-        <Card>
-          <CardHeader>
-            <CardTitle>Special Resit Timetable</CardTitle>
-            <CardDescription>
-              Upload and manage the special resit timetable here. This feature is under development.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground">Special Resit Timetable functionality coming soon.</p>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-6">
+       <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFileChange}
+        className="hidden"
+        accept=".xlsx, .xls"
+      />
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <TooltipProvider>
+          <div className="flex gap-2 flex-wrap flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="sr-only">Upload New</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload New Timetable</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData}>
+                  <FilterX className="h-4 w-4" />
+                  <span className="sr-only">Filter for review</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Filter for review</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <AlertDialog>
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="icon" disabled={!parsedData}>
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
+                          </Button>
+                      </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Delete Timetable</p>
+                  </TooltipContent>
+              </Tooltip>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    entire timetable data from this view.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </TooltipProvider>
+        {parsedData && (
+          <div className="relative flex-grow w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search course, lecturer, room, department..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+
+       {error && (
+         <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+         </Alert>
+      )}
+
+      <Tabs defaultValue="class" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="class">Class Timetable</TabsTrigger>
+          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+          <TabsTrigger value="resit">Special Resit Timetable</TabsTrigger>
+        </TabsList>
+        <TabsContent value="class" className="mt-6">
+          <ClassTimetableView
+            parsedData={parsedData}
+            setParsedData={setParsedData}
+            emptySlots={emptySlots}
+            searchTerm={searchTerm}
+            showInvalid={showInvalid}
+          />
+        </TabsContent>
+        <TabsContent value="exams" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Exams Timetable</CardTitle>
+              <CardDescription>
+                Upload and manage the exams timetable here. This feature is under development.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground">Exams Timetable functionality coming soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="resit" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Special Resit Timetable</CardTitle>
+              <CardDescription>
+                Upload and manage the special resit timetable here. This feature is under development.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground">Special Resit Timetable functionality coming soon.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
