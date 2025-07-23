@@ -11,7 +11,7 @@ import { Button } from '../ui/button';
 
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
-  '/timetable': 'Timetable',
+  '/timetable': 'Timetable Management',
   '/notifications': 'Notifications',
   '/profile': 'My Profile',
 };
@@ -21,8 +21,11 @@ export default function AppHeader() {
   const { user } = useUser();
 
   const getTitle = () => {
-    if (pathname === '/timetable' && user?.role === 'administrator') {
-      return 'Manage Class Timetable';
+    if (pathname === '/timetable' && user?.role === 'student') {
+      return 'Class Timetable';
+    }
+     if (pathname === '/timetable' && user?.role === 'staff') {
+      return 'My Timetable';
     }
     return pageTitles[pathname] || 'UMaT Connect';
   };

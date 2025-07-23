@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, 'useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
@@ -946,7 +946,7 @@ function StaffTimetableView({
   );
 }
 
-function AdminTimetableView({
+function ClassTimetableView({
   parsedData,
   setParsedData,
   emptySlots,
@@ -1446,6 +1446,62 @@ function AdminTimetableView({
       </AlertDialog>
 
     </div>
+  );
+}
+
+function AdminTimetableView({
+  parsedData,
+  setParsedData,
+  emptySlots,
+  setEmptySlots,
+}: {
+  parsedData: TimetableEntry[] | null;
+  setParsedData: (data: TimetableEntry[] | null) => void;
+  emptySlots: EmptySlot[];
+  setEmptySlots: (slots: EmptySlot[]) => void;
+}) {
+  return (
+    <Tabs defaultValue="class" className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="class">Class Timetable</TabsTrigger>
+        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+        <TabsTrigger value="resit">Special Resit Timetable</TabsTrigger>
+      </TabsList>
+      <TabsContent value="class">
+        <ClassTimetableView
+          parsedData={parsedData}
+          setParsedData={setParsedData}
+          emptySlots={emptySlots}
+          setEmptySlots={setEmptySlots}
+        />
+      </TabsContent>
+      <TabsContent value="exams">
+        <Card>
+          <CardHeader>
+            <CardTitle>Exams Timetable</CardTitle>
+            <CardDescription>
+              Upload and manage the exams timetable here. This feature is under development.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground">Exams Timetable functionality coming soon.</p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="resit">
+        <Card>
+          <CardHeader>
+            <CardTitle>Special Resit Timetable</CardTitle>
+            <CardDescription>
+              Upload and manage the special resit timetable here. This feature is under development.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground">Special Resit Timetable functionality coming soon.</p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 }
 
