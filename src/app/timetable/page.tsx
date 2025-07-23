@@ -5,7 +5,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload, findEmptyClassrooms } from './actions';
+import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -946,6 +946,76 @@ function StaffTimetableView({
   );
 }
 
+function ResitTimetableDisplay({
+  parsedData,
+  searchTerm
+}: {
+  parsedData: SpecialResitTimetable | null;
+  searchTerm: string;
+}) {
+
+  const filteredData = useMemo(() => {
+    if (!parsedData || !parsedData.data) return [];
+    if (!searchTerm) return parsedData.data;
+
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return parsedData.data.filter(entry =>
+        Object.values(entry).some(value =>
+            String(value).toLowerCase().includes(lowercasedFilter)
+        )
+    );
+  }, [parsedData, searchTerm]);
+
+  if (!parsedData) {
+    return (
+      <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+        <p className="text-muted-foreground">Upload a special resit timetable to begin.</p>
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+        <CardHeader>
+            <CardTitle>{parsedData.metadata.title}</CardTitle>
+            <CardDescription>{parsedData.metadata.venue}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            {parsedData.headers.map((header) => (
+                                <TableHead key={header}>{header}</TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredData.map((row, rowIndex) => (
+                            <TableRow key={rowIndex}>
+                                {parsedData.headers.map((header) => (
+                                    <TableCell key={`${rowIndex}-${header}`}>{row[header]}</TableCell>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+             {filteredData.length === 0 && searchTerm && (
+              <div className="text-center p-12 text-muted-foreground">
+                <p>No results found for your search term.</p>
+              </div>
+            )}
+        </CardContent>
+        <CardFooter className="flex flex-col items-start gap-2 text-sm text-muted-foreground">
+            {parsedData.metadata.footer.map((line, index) => (
+                <p key={index}>{line}</p>
+            ))}
+        </CardFooter>
+    </Card>
+  );
+}
+
 function TimetableDisplay({
   parsedData,
   setParsedData,
@@ -1338,7 +1408,8 @@ function AdminTimetableView({
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
   const [activeTab, setActiveTab] = useState('class');
-
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // State for Class Timetable
   const [classParsedData, setClassParsedData] = useState<TimetableEntry[] | null>(parsedData);
   const [classEmptySlots, setClassEmptySlots] = useState<EmptySlot[]>(emptySlots);
@@ -1356,21 +1427,24 @@ function AdminTimetableView({
   const [examsShowInvalid, setExamsShowInvalid] = useState(false);
 
   // State for Resit Timetable
-  const [resitParsedData, setResitParsedData] = useState<TimetableEntry[] | null>(null);
-  const [resitEmptySlots, setResitEmptySlots] = useState<EmptySlot[]>([]);
+  const [resitParsedData, setResitParsedData] = useState<SpecialResitTimetable | null>(null);
   const [isResitLoading, setIsResitLoading] = useState(false);
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
-  const [resitShowInvalid, setResitShowInvalid] = useState(false);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Map state to the active tab
-  const activeState = {
-    class: { parsedData: classParsedData, setParsedData: setClassParsedData, emptySlots: classEmptySlots, setEmptySlots: setClassEmptySlots, isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid },
-    exams: { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: examsEmptySlots, setEmptySlots: setExamsEmptySlots, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid },
-    resit: { parsedData: resitParsedData, setParsedData: setResitParsedData, emptySlots: resitEmptySlots, setEmptySlots: setResitEmptySlots, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid },
-  }[activeTab as 'class' | 'exams' | 'resit'];
+  const activeState = useMemo(() => {
+    switch (activeTab) {
+        case 'class':
+            return { parsedData: classParsedData, setParsedData: setClassParsedData, emptySlots: classEmptySlots, setEmptySlots: setClassEmptySlots, isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid, handler: handleFileUpload, cleaner: setClassEmptySlots };
+        case 'exams':
+            return { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: examsEmptySlots, setEmptySlots: setExamsEmptySlots, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleFileUpload, cleaner: setExamsEmptySlots };
+        case 'resit':
+            return { parsedData: resitParsedData, setParsedData: setResitParsedData, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, handler: handleSpecialResitUpload, cleaner: () => {} };
+        default:
+            return { parsedData: null, setParsedData: () => {}, emptySlots: [], setEmptySlots: () => {}, isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {}, handler: async () => [], cleaner: () => {} };
+    }
+  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, examsEmptySlots, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, resitParsedData, isResitLoading, resitError, resitSearchTerm]);
 
   useEffect(() => {
       setClassParsedData(parsedData);
@@ -1388,27 +1462,33 @@ function AdminTimetableView({
       const arrayBuffer = await file.arrayBuffer();
       const fileData = Buffer.from(arrayBuffer).toString('base64');
       
-      // We can use different parsers here in the future based on activeTab
-      const [data, slots] = await Promise.all([
-        handleFileUpload(fileData),
-        findEmptyClassrooms(fileData)
-      ]);
+      const data = await activeState.handler(fileData);
       
-      if (data.length === 0) {
-        activeState.setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-        activeState.setParsedData(null);
-        activeState.setEmptySlots([]);
-      } else {
-        const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-        activeState.setParsedData(dataWithIdsAndStatus);
-        activeState.setEmptySlots(slots);
-        
-        // This is a special case for the class timetable to update the global context
-        if (activeTab === 'class') {
-          setParsedData(dataWithIdsAndStatus);
-          setEmptySlots(slots);
+      if (activeTab === 'class' || activeTab === 'exams') {
+        const slots = await findEmptyClassrooms(fileData);
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            activeState.setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+            (activeState.setParsedData as Function)(null);
+            (activeState.setEmptySlots as Function)([]);
+        } else {
+            const dataWithIdsAndStatus = (data as any[]).map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
+            (activeState.setParsedData as Function)(dataWithIdsAndStatus);
+            (activeState.setEmptySlots as Function)(slots);
+            
+            if (activeTab === 'class') {
+              setParsedData(dataWithIdsAndStatus);
+              setEmptySlots(slots);
+            }
         }
+      } else if (activeTab === 'resit') {
+         if (!data) {
+             activeState.setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+             (activeState.setParsedData as Function)(null);
+         } else {
+             (activeState.setParsedData as Function)(data);
+         }
       }
+
     } catch (err) {
       activeState.setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
     } finally {
@@ -1424,11 +1504,15 @@ function AdminTimetableView({
   };
 
   const handleDeleteAll = () => {
-    activeState.setParsedData(null);
-    activeState.setEmptySlots([]);
+    (activeState.setParsedData as Function)(null);
+    if ('setEmptySlots' in activeState) {
+        (activeState.setEmptySlots as Function)([]);
+    }
     activeState.setError(null);
     activeState.setSearchTerm('');
-    activeState.setShowInvalid(false);
+    if ('setShowInvalid' in activeState) {
+        (activeState.setShowInvalid as Function)(false);
+    }
     if (activeTab === 'class') {
         setParsedData(null);
         setEmptySlots([]);
@@ -1459,17 +1543,19 @@ function AdminTimetableView({
               </TooltipContent>
             </Tooltip>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!activeState.parsedData}>
-                  <FilterX className="h-4 w-4" />
-                  <span className="sr-only">Filter for review</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Filter for review</p>
-              </TooltipContent>
-            </Tooltip>
+            {activeTab !== 'resit' && (
+                <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
+                    <FilterX className="h-4 w-4" />
+                    <span className="sr-only">Filter for review</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Filter for review</p>
+                </TooltipContent>
+                </Tooltip>
+            )}
 
             <AlertDialog>
               <Tooltip>
@@ -1553,15 +1639,9 @@ function AdminTimetableView({
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
-           <TimetableDisplay
+           <ResitTimetableDisplay
             parsedData={resitParsedData}
-            setParsedData={setResitParsedData}
-            emptySlots={resitEmptySlots}
             searchTerm={resitSearchTerm}
-            showInvalid={resitShowInvalid}
-            title="Parsed Resit Timetable Preview"
-            description={`A total of ${resitParsedData?.length || 0} resit entries were found.`}
-            placeholder="Upload a special resit timetable to begin."
           />
         </TabsContent>
       </Tabs>

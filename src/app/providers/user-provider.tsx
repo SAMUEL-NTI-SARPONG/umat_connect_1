@@ -73,6 +73,21 @@ export type Notification = {
 // Maps userId to an array of rejected entry IDs
 export type RejectedEntries = Record<number, number[]>;
 
+export interface SpecialResitEntry {
+    [key: string]: string; // Headers are dynamic
+}
+
+export interface SpecialResitTimetable {
+    metadata: {
+        title: string;
+        venue: string;
+        footer: string[];
+    };
+    headers: string[];
+    data: SpecialResitEntry[];
+}
+
+
 interface UserContextType {
   user: User | null;
   allUsers: User[];

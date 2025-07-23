@@ -230,3 +230,102 @@ export async function findEmptyClassrooms(fileData: string) {
 
   return result;
 }
+
+/**
+ * Extracts contents of the SPECIAL RESIT Excel sheet into a structured JSON object.
+ * @param {string[]} inputRows - Array of strings, each representing a row from the Excel sheet.
+ * @returns {Object} - Structured JSON object with metadata, headers, and data.
+ */
+function extractResitTimetable(inputRows: string[]) {
+  // Initialize output structure
+  const result = {
+    metadata: {
+      title: '',
+      venue: '',
+      footer: [] as string[],
+    },
+    headers: [] as string[],
+    data: [] as any[],
+  };
+
+  // Helper function to clean and split row data
+  function parseRow(row: string) {
+    // Split by commas and trim whitespace
+    return row.split(',').map(cell => cell.trim()).filter(cell => cell !== '');
+  }
+
+  // Process rows
+  for (let i = 0; i < inputRows.length; i++) {
+    const row = inputRows[i];
+
+    // Skip empty rows
+    if (!row || row.trim() === '') continue;
+
+    // Extract metadata (rows 1–3)
+    if (i === 0) {
+      result.metadata.title = row.trim();
+    } else if (i === 1) {
+      result.metadata.venue = row.trim();
+    } else if (i === 2) {
+      // Empty row, skip
+      continue;
+    }
+    // Extract headers (row 4)
+    else if (i === 3) {
+      result.headers = parseRow(row);
+    }
+    // Extract data rows (rows 5 and onwards, leaving room for a 3-line footer)
+    else if (i >= 4 && i < inputRows.length - 3) {
+      const cells = parseRow(row);
+      // Ensure row has expected number of columns and is not an empty parsed row
+      if (cells.length > 0 && cells.length === result.headers.length) {
+        const rowData: { [key: string]: string } = {};
+        result.headers.forEach((header, index) => {
+          rowData[header] = cells[index];
+        });
+        result.data.push(rowData);
+      }
+    }
+    // Extract footer (last 3 non-empty rows)
+    // This logic is simplified; we just grab the last few rows. A more robust solution might be needed.
+    else if (i >= inputRows.length - 3) {
+      result.metadata.footer.push(row.trim());
+    }
+  }
+
+  // Validate extracted data
+  if (result.headers.length === 0) {
+    throw new Error('No headers found in the input data.');
+  }
+  if (result.data.length === 0) {
+    console.warn('No data rows extracted.');
+  }
+
+  return result;
+}
+
+export async function handleSpecialResitUpload(fileData: string) {
+  const fileBuffer = Buffer.from(fileData, 'base64');
+  try {
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+        throw new Error('No sheets found in the Excel file.');
+    }
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_csv(sheet, { blankrows: true }).split('\n');
+    
+    const parsedData = extractResitTimetable(rows);
+    
+    if (!parsedData || parsedData.data.length === 0) {
+      throw new Error("The uploaded file could not be parsed or contains no valid resit data. Please check the file format.");
+    }
+    return parsedData;
+  } catch (error) {
+    console.error("Resit parsing failed:", error);
+    if (error instanceof Error && error.message.includes("contains no valid resit data")) {
+        throw error;
+    }
+    throw new Error("Failed to parse the special resit Excel file. Please ensure it is in the correct format.");
+  }
+}
