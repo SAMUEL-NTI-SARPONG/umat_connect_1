@@ -232,92 +232,92 @@ export async function findEmptyClassrooms(fileData: string) {
 }
 
 /**
- * Extracts contents of the SPECIAL RESIT Excel sheet into a structured JSON object.
- * @param {string[]} inputRows - Array of strings, each representing a row from the Excel sheet.
- * @returns {Object} - Structured JSON object with metadata, headers, and data.
+ * Extracts timetable data from an Excel file with a structure similar to the provided example.
+ * @param {Buffer} fileBuffer - The uploaded Excel file buffer.
+ * @returns {Object} - Structured JSON object containing timetable data.
  */
-function extractResitTimetable(inputRows: string[]) {
-  // Initialize output structure
-  const result = {
-    metadata: {
-      title: '',
+function extractTimetableData(fileBuffer: Buffer) {
+  try {
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const timetableData = {
       venue: '',
-      footer: [] as string[],
-    },
-    headers: [] as string[],
-    data: [] as any[],
-  };
+      sheets: [] as { sheetName: string; entries: any[] }[],
+    };
 
-  // Helper function to clean and split row data
-  function parseRow(row: string) {
-    // Split by commas and trim whitespace
-    return row.split(',').map(cell => cell.trim()).filter(cell => cell !== '');
-  }
-
-  // Process rows
-  for (let i = 0; i < inputRows.length; i++) {
-    const row = inputRows[i];
-
-    // Skip empty rows
-    if (!row || row.trim() === '') continue;
-
-    // Extract metadata (rows 1–3)
-    if (i === 0) {
-      result.metadata.title = row.trim();
-    } else if (i === 1) {
-      result.metadata.venue = row.trim();
-    } else if (i === 2) {
-      // Empty row, skip
-      continue;
-    }
-    // Extract headers (row 4)
-    else if (i === 3) {
-      result.headers = parseRow(row);
-    }
-    // Extract data rows (rows 5 and onwards, leaving room for a 3-line footer)
-    else if (i >= 4 && i < inputRows.length - 3) {
-      const cells = parseRow(row);
-      // Ensure row has expected number of columns and is not an empty parsed row
-      if (cells.length > 0 && cells.length === result.headers.length) {
-        const rowData: { [key: string]: string } = {};
-        result.headers.forEach((header, index) => {
-          rowData[header] = cells[index];
-        });
-        result.data.push(rowData);
+    workbook.SheetNames.forEach(sheetName => {
+      const worksheet = workbook.Sheets[sheetName];
+      const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, blankrows: false }) as any[][];
+      let headerRowIndex = -1;
+      const expectedHeaders = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
+      
+      for (let i = 0; i < sheetData.length; i++) {
+        const row = sheetData[i];
+        if (row.length >= expectedHeaders.length && row.slice(0, expectedHeaders.length).every((cell, idx) => 
+          cell && typeof cell === 'string' && cell.trim().toUpperCase() === expectedHeaders[idx]
+        )) {
+          headerRowIndex = i;
+          break;
+        }
       }
-    }
-    // Extract footer (last 3 non-empty rows)
-    // This logic is simplified; we just grab the last few rows. A more robust solution might be needed.
-    else if (i >= inputRows.length - 3) {
-      result.metadata.footer.push(row.trim());
-    }
-  }
 
-  // Validate extracted data
-  if (result.headers.length === 0) {
-    throw new Error('No headers found in the input data.');
-  }
-  if (result.data.length === 0) {
-    console.warn('No data rows extracted.');
-  }
+      if (headerRowIndex === -1) {
+        console.warn(`No valid header row found in sheet "${sheetName}". Skipping.`);
+        return;
+      }
 
-  return result;
+      let venue = '';
+      for (let i = 0; i < headerRowIndex; i++) {
+        if (sheetData[i][0] && typeof sheetData[i][0] === 'string' && sheetData[i][0].toUpperCase().includes('VENUE')) {
+          venue = sheetData[i][0].replace(/VENUE:/i, '').trim();
+          break;
+        }
+      }
+      if (!timetableData.venue) {
+        timetableData.venue = venue || 'Not specified';
+      }
+
+      const entries = [];
+      for (let i = headerRowIndex + 1; i < sheetData.length; i++) {
+        const row = sheetData[i];
+        if (!row[0] || row[0].toString().trim() === '' || row[0].toString().toUpperCase().includes('FOR ANY ISSUES')) {
+          continue;
+        }
+
+        const entry = {
+          date: row[0] || null,
+          courseCode: row[1] || null,
+          courseName: row[2] || null,
+          department: row[3] || null,
+          numberOfStudents: parseInt(row[4], 10) || 0,
+          room: row[5] || null,
+          examiner: row[6] || null,
+          session: row[7] || null
+        };
+
+        if (entry.date && entry.courseCode && entry.courseName) {
+          entries.push(entry);
+        }
+      }
+
+      timetableData.sheets.push({
+        sheetName,
+        entries
+      });
+    });
+
+    return timetableData;
+  } catch (error) {
+    console.error('Error processing Excel file:', error);
+    throw new Error('Failed to extract timetable data. Please ensure the file is a valid Excel file with the correct format.');
+  }
 }
 
 export async function handleSpecialResitUpload(fileData: string) {
   const fileBuffer = Buffer.from(fileData, 'base64');
   try {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-        throw new Error('No sheets found in the Excel file.');
-    }
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_csv(sheet, { blankrows: true }).split('\n');
+    const parsedData = extractTimetableData(fileBuffer);
     
-    const parsedData = extractResitTimetable(rows);
-    
-    if (!parsedData || parsedData.data.length === 0) {
+    if (!parsedData || parsedData.sheets.length === 0) {
       throw new Error("The uploaded file could not be parsed or contains no valid resit data. Please check the file format.");
     }
     return parsedData;

@@ -74,17 +74,22 @@ export type Notification = {
 export type RejectedEntries = Record<number, number[]>;
 
 export interface SpecialResitEntry {
-    [key: string]: string; // Headers are dynamic
+  date: string | null;
+  courseCode: string | null;
+  courseName: string | null;
+  department: string | null;
+  numberOfStudents: number;
+  room: string | null;
+  examiner: string | null;
+  session: string | null;
 }
 
 export interface SpecialResitTimetable {
-    metadata: {
-        title: string;
-        venue: string;
-        footer: string[];
-    };
-    headers: string[];
-    data: SpecialResitEntry[];
+  venue: string;
+  sheets: {
+    sheetName: string;
+    entries: SpecialResitEntry[];
+  }[];
 }
 
 

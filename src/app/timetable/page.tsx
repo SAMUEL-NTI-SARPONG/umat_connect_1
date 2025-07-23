@@ -59,6 +59,7 @@ import { Label } from '@/components/ui/label';
 import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -954,18 +955,23 @@ function ResitTimetableDisplay({
   searchTerm: string;
 }) {
 
-  const filteredData = useMemo(() => {
-    if (!parsedData || !parsedData.data) return [];
-    if (!searchTerm) return parsedData.data;
+  const filteredSheets = useMemo(() => {
+    if (!parsedData) return [];
+    if (!searchTerm) return parsedData.sheets;
 
     const lowercasedFilter = searchTerm.toLowerCase();
-    return parsedData.data.filter(entry =>
+
+    return parsedData.sheets.map(sheet => {
+      const filteredEntries = sheet.entries.filter(entry =>
         Object.values(entry).some(value =>
             String(value).toLowerCase().includes(lowercasedFilter)
         )
-    );
-  }, [parsedData, searchTerm]);
+      );
+      return { ...sheet, entries: filteredEntries };
+    }).filter(sheet => sheet.entries.length > 0);
 
+  }, [parsedData, searchTerm]);
+  
   if (!parsedData) {
     return (
       <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
@@ -973,45 +979,57 @@ function ResitTimetableDisplay({
       </div>
     );
   }
+  
+  const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
 
   return (
     <Card>
         <CardHeader>
-            <CardTitle>{parsedData.metadata.title}</CardTitle>
-            <CardDescription>{parsedData.metadata.venue}</CardDescription>
+            <CardTitle>Special Resit Timetable</CardTitle>
+            <CardDescription>Venue: {parsedData.venue}</CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            {parsedData.headers.map((header) => (
-                                <TableHead key={header}>{header}</TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredData.map((row, rowIndex) => (
-                            <TableRow key={rowIndex}>
-                                {parsedData.headers.map((header) => (
-                                    <TableCell key={`${rowIndex}-${header}`}>{row[header]}</TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-             {filteredData.length === 0 && searchTerm && (
+            {filteredSheets.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets[0].sheetName}>
+                    {filteredSheets.map((sheet) => (
+                        <AccordionItem value={sheet.sheetName} key={sheet.sheetName}>
+                            <AccordionTrigger>{sheet.sheetName} ({sheet.entries.length} entries)</AccordionTrigger>
+                            <AccordionContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                {headers.map((header) => (
+                                                    <TableHead key={header}>{header}</TableHead>
+                                                ))}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {sheet.entries.map((row, rowIndex) => (
+                                                <TableRow key={rowIndex}>
+                                                    <TableCell>{row.date}</TableCell>
+                                                    <TableCell>{row.courseCode}</TableCell>
+                                                    <TableCell>{row.courseName}</TableCell>
+                                                    <TableCell>{row.department}</TableCell>
+                                                    <TableCell>{row.numberOfStudents}</TableCell>
+                                                    <TableCell>{row.room}</TableCell>
+                                                    <TableCell>{row.examiner}</TableCell>
+                                                    <TableCell>{row.session}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            ) : (
               <div className="text-center p-12 text-muted-foreground">
                 <p>No results found for your search term.</p>
               </div>
             )}
         </CardContent>
-        <CardFooter className="flex flex-col items-start gap-2 text-sm text-muted-foreground">
-            {parsedData.metadata.footer.map((line, index) => (
-                <p key={index}>{line}</p>
-            ))}
-        </CardFooter>
     </Card>
   );
 }
