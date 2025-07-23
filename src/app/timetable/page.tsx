@@ -946,18 +946,24 @@ function StaffTimetableView({
   );
 }
 
-function ClassTimetableView({
+function TimetableDisplay({
   parsedData,
   setParsedData,
   emptySlots,
   searchTerm,
   showInvalid,
+  title,
+  description,
+  placeholder,
 }: {
   parsedData: TimetableEntry[] | null;
   setParsedData: (data: TimetableEntry[] | null) => void;
   emptySlots: EmptySlot[];
   searchTerm: string;
   showInvalid: boolean;
+  title: string;
+  description: string;
+  placeholder: string;
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -1099,21 +1105,21 @@ function ClassTimetableView({
     <div className="space-y-6">
       {!parsedData && (
         <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">Upload a timetable to begin.</p>
+          <p className="text-muted-foreground">{placeholder}</p>
         </div>
       )}
 
       {parsedData && (
         <Card>
           <CardHeader>
-            <CardTitle>Parsed Timetable Preview</CardTitle>
+            <CardTitle>{title}</CardTitle>
             <CardDescription>
               {
                 showInvalid 
                   ? `Found ${filteredData?.length || 0} entries for review.`
                   : searchTerm 
                     ? `Found ${filteredData?.length || 0} matching entries.`
-                    : `A total of ${parsedData?.length || 0} entries were found. Click a row to edit or delete.`
+                    : description
               }
             </CardDescription>
           </CardHeader>
@@ -1331,40 +1337,82 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
+  const [activeTab, setActiveTab] = useState('class');
+
+  // State for Class Timetable
+  const [classParsedData, setClassParsedData] = useState<TimetableEntry[] | null>(parsedData);
+  const [classEmptySlots, setClassEmptySlots] = useState<EmptySlot[]>(emptySlots);
+  const [isClassLoading, setIsClassLoading] = useState(false);
+  const [classError, setClassError] = useState<string | null>(null);
+  const [classSearchTerm, setClassSearchTerm] = useState('');
+  const [classShowInvalid, setClassShowInvalid] = useState(false);
+
+  // State for Exams Timetable
+  const [examsParsedData, setExamsParsedData] = useState<TimetableEntry[] | null>(null);
+  const [examsEmptySlots, setExamsEmptySlots] = useState<EmptySlot[]>([]);
+  const [isExamsLoading, setIsExamsLoading] = useState(false);
+  const [examsError, setExamsError] = useState<string | null>(null);
+  const [examsSearchTerm, setExamsSearchTerm] = useState('');
+  const [examsShowInvalid, setExamsShowInvalid] = useState(false);
+
+  // State for Resit Timetable
+  const [resitParsedData, setResitParsedData] = useState<TimetableEntry[] | null>(null);
+  const [resitEmptySlots, setResitEmptySlots] = useState<EmptySlot[]>([]);
+  const [isResitLoading, setIsResitLoading] = useState(false);
+  const [resitError, setResitError] = useState<string | null>(null);
+  const [resitSearchTerm, setResitSearchTerm] = useState('');
+  const [resitShowInvalid, setResitShowInvalid] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showInvalid, setShowInvalid] = useState(false);
+
+  // Map state to the active tab
+  const activeState = {
+    class: { parsedData: classParsedData, setParsedData: setClassParsedData, emptySlots: classEmptySlots, setEmptySlots: setClassEmptySlots, isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid },
+    exams: { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: examsEmptySlots, setEmptySlots: setExamsEmptySlots, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid },
+    resit: { parsedData: resitParsedData, setParsedData: setResitParsedData, emptySlots: resitEmptySlots, setEmptySlots: setResitEmptySlots, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid },
+  }[activeTab as 'class' | 'exams' | 'resit'];
+
+  useEffect(() => {
+      setClassParsedData(parsedData);
+      setClassEmptySlots(emptySlots);
+  }, [parsedData, emptySlots]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsLoading(true);
-    setError(null);
+    activeState.setIsLoading(true);
+    activeState.setError(null);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
       const fileData = Buffer.from(arrayBuffer).toString('base64');
+      
+      // We can use different parsers here in the future based on activeTab
       const [data, slots] = await Promise.all([
         handleFileUpload(fileData),
         findEmptyClassrooms(fileData)
       ]);
       
       if (data.length === 0) {
-        setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-        setParsedData(null);
-        setEmptySlots([]);
+        activeState.setError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
+        activeState.setParsedData(null);
+        activeState.setEmptySlots([]);
       } else {
         const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-        setParsedData(dataWithIdsAndStatus);
-        setEmptySlots(slots);
+        activeState.setParsedData(dataWithIdsAndStatus);
+        activeState.setEmptySlots(slots);
+        
+        // This is a special case for the class timetable to update the global context
+        if (activeTab === 'class') {
+          setParsedData(dataWithIdsAndStatus);
+          setEmptySlots(slots);
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
+      activeState.setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
     } finally {
-      setIsLoading(false);
+      activeState.setIsLoading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -1376,11 +1424,15 @@ function AdminTimetableView({
   };
 
   const handleDeleteAll = () => {
-    setParsedData(null);
-    setEmptySlots([]);
-    setError(null);
-    setSearchTerm('');
-    setShowInvalid(false);
+    activeState.setParsedData(null);
+    activeState.setEmptySlots([]);
+    activeState.setError(null);
+    activeState.setSearchTerm('');
+    activeState.setShowInvalid(false);
+    if (activeTab === 'class') {
+        setParsedData(null);
+        setEmptySlots([]);
+    }
   };
   
   return (
@@ -1397,8 +1449,8 @@ function AdminTimetableView({
           <div className="flex gap-2 flex-wrap flex-shrink-0">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
+                  {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   <span className="sr-only">Upload New</span>
                 </Button>
               </TooltipTrigger>
@@ -1409,7 +1461,7 @@ function AdminTimetableView({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant={showInvalid ? "secondary" : "outline"} size="icon" onClick={() => setShowInvalid(!showInvalid)} disabled={!parsedData}>
+                <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!activeState.parsedData}>
                   <FilterX className="h-4 w-4" />
                   <span className="sr-only">Filter for review</span>
                 </Button>
@@ -1423,7 +1475,7 @@ function AdminTimetableView({
               <Tooltip>
                   <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={!parsedData}>
+                          <Button variant="destructive" size="icon" disabled={!activeState.parsedData}>
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                           </Button>
@@ -1449,67 +1501,68 @@ function AdminTimetableView({
             </AlertDialog>
           </div>
         </TooltipProvider>
-        {parsedData && (
+        {activeState.parsedData && (
           <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search course, lecturer, room, department..."
               className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={activeState.searchTerm}
+              onChange={(e) => activeState.setSearchTerm(e.target.value)}
             />
           </div>
         )}
       </div>
 
-       {error && (
+       {activeState.error && (
          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{activeState.error}</AlertDescription>
          </Alert>
       )}
 
-      <Tabs defaultValue="class" className="w-full">
+      <Tabs defaultValue="class" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="class">Class Timetable</TabsTrigger>
           <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
           <TabsTrigger value="resit">Special Resit Timetable</TabsTrigger>
         </TabsList>
         <TabsContent value="class" className="mt-6">
-          <ClassTimetableView
-            parsedData={parsedData}
-            setParsedData={setParsedData}
-            emptySlots={emptySlots}
-            searchTerm={searchTerm}
-            showInvalid={showInvalid}
+          <TimetableDisplay
+            parsedData={classParsedData}
+            setParsedData={setClassParsedData}
+            emptySlots={classEmptySlots}
+            searchTerm={classSearchTerm}
+            showInvalid={classShowInvalid}
+            title="Parsed Class Timetable Preview"
+            description={`A total of ${classParsedData?.length || 0} entries were found. Click a row to edit or delete.`}
+            placeholder="Upload a class timetable to begin."
           />
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Exams Timetable</CardTitle>
-              <CardDescription>
-                Upload and manage the exams timetable here. This feature is under development.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground">Exams Timetable functionality coming soon.</p>
-            </CardContent>
-          </Card>
+           <TimetableDisplay
+            parsedData={examsParsedData}
+            setParsedData={setExamsParsedData}
+            emptySlots={examsEmptySlots}
+            searchTerm={examsSearchTerm}
+            showInvalid={examsShowInvalid}
+            title="Parsed Exams Timetable Preview"
+            description={`A total of ${examsParsedData?.length || 0} exam entries were found.`}
+            placeholder="Upload an exams timetable to begin."
+          />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Special Resit Timetable</CardTitle>
-              <CardDescription>
-                Upload and manage the special resit timetable here. This feature is under development.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground">Special Resit Timetable functionality coming soon.</p>
-            </CardContent>
-          </Card>
+           <TimetableDisplay
+            parsedData={resitParsedData}
+            setParsedData={setResitParsedData}
+            emptySlots={resitEmptySlots}
+            searchTerm={resitSearchTerm}
+            showInvalid={resitShowInvalid}
+            title="Parsed Resit Timetable Preview"
+            description={`A total of ${resitParsedData?.length || 0} resit entries were found.`}
+            placeholder="Upload a special resit timetable to begin."
+          />
         </TabsContent>
       </Tabs>
     </div>
