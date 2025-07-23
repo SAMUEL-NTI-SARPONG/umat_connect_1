@@ -74,21 +74,6 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-           {user.role === 'administrator' && (
-            <>
-              <SidebarMenuItem>
-                <Link href="/timetable/exams" passHref>
-                  <SidebarMenuButton
-                    tooltip="Exams Timetable"
-                    isActive={pathname === '/timetable/exams'}
-                  >
-                    <BookOpen />
-                    <span>Exams Timetable</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            </>
-           )}
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
               <SidebarMenuButton

@@ -12,8 +12,6 @@ import { Button } from '../ui/button';
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
   '/timetable': 'Timetable',
-  '/timetable/exams': 'Exams Timetable',
-  '/timetable/resit': 'Special Resit',
   '/notifications': 'Notifications',
   '/profile': 'My Profile',
 };
