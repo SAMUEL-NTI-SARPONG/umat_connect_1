@@ -5,7 +5,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitEntry } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,9 +59,6 @@ import { Label } from '@/components/ui/label';
 import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
-import { getFromStorage, saveToStorage } from '@/lib/storage';
-import { useToast } from '@/hooks/use-toast';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -73,28 +70,8 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const { user, emptySlots } = useUser();
-  const { toast } = useToast();
   const [activeDay, setActiveDay] = useState("Monday");
-  const [activeTab, setActiveTab] = useState("classes");
   const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
-  const [isResitRegisterModalOpen, setIsResitRegisterModalOpen] = useState(false);
-  
-  const [specialResitSchedule, setSpecialResitSchedule] = useState<SpecialResitEntry[] | null>(null);
-  const [studentResitSelections, setStudentResitSelections] = useState<Record<number, string[]>>({});
-  const [localResitSelections, setLocalResitSelections] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    // Load data from localStorage on component mount
-    const storedSchedule = getFromStorage<SpecialResitEntry[] | null>('specialResitSchedule', null);
-    const storedSelections = getFromStorage<Record<number, string[]>>('studentResitSelections', {});
-    
-    setSpecialResitSchedule(storedSchedule);
-    setStudentResitSelections(storedSelections);
-
-    if (user && storedSelections[user.id]) {
-      setLocalResitSelections(new Set(storedSelections[user.id]));
-    }
-  }, [user]);
 
   const dailySchedule = useMemo(() => {
     return schedule.reduce((acc, event) => {
@@ -161,188 +138,96 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
     return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
   }, [emptySlots, activeDay]);
-  
-  const handleResitSelectionChange = (courseNo: string) => {
-    setLocalResitSelections(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(courseNo)) {
-            newSet.delete(courseNo);
-        } else {
-            newSet.add(courseNo);
-        }
-        return newSet;
-    });
-  };
-
-  const handleSaveResitSelections = () => {
-    if (user) {
-        const updatedSelections = { ...studentResitSelections, [user.id]: Array.from(localResitSelections) };
-        setStudentResitSelections(updatedSelections);
-        saveToStorage('studentResitSelections', updatedSelections);
-        setIsResitRegisterModalOpen(false);
-        toast({ title: 'Resit Courses Registered', description: 'Your selections have been saved.' });
-    }
-  };
-
-  const selectedResitCourses = useMemo(() => {
-    if (!specialResitSchedule || !user || !studentResitSelections[user.id]) return [];
-    const selections = studentResitSelections[user.id] || [];
-    return specialResitSchedule.filter(entry => selections.includes(entry.course_no));
-  }, [specialResitSchedule, studentResitSelections, user]);
-  
-  const groupedResitsByDate = useMemo(() => {
-    return selectedResitCourses.reduce((acc, entry) => {
-        const date = entry.date;
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(entry);
-        return acc;
-    }, {} as Record<string, SpecialResitEntry[]>);
-  }, [selectedResitCourses]);
 
 
   return (
     <>
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-                <TabsList className="grid w-full grid-cols-2 h-12 flex-grow">
-                    <TabsTrigger value="classes"><CalendarIcon className="w-4 h-4 mr-2" /> Classes</TabsTrigger>
-                    <TabsTrigger value="resits" disabled={!specialResitSchedule}><PenSquare className="w-4 h-4 mr-2" /> Special Resit</TabsTrigger>
-                </TabsList>
-                 <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
-                     if (activeTab === 'classes') setIsFreeRoomModalOpen(true);
-                     if (activeTab === 'resits') setIsResitRegisterModalOpen(true);
-                 }} disabled={activeTab === 'resits' && !specialResitSchedule}>
-                    {activeTab === 'classes' && <><SearchIcon className="mr-2 h-4 w-4" /> Find Free Rooms</>}
-                    {activeTab === 'resits' && <><FilePenLine className="mr-2 h-4 w-4" /> Register Courses</>}
-                 </Button>
-            </div>
-        </div>
+      <div className="flex justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => setIsFreeRoomModalOpen(true)}>
+            <SearchIcon className="mr-2 h-4 w-4" />
+            Find Free Rooms
+        </Button>
+      </div>
 
-        <TabsContent value="classes">
-            <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-                <TabsList className="grid w-full grid-cols-7 mt-4">
-                  {days.map(day => (
-                    <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-                  ))}
-                </TabsList>
-              <div className="py-6">
-                {days.map(day => (
-                  <TabsContent key={day} value={day}>
-                    {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                        <div className="md:border md:rounded-lg md:overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="hidden md:table-header-group">
-                                        <TableRow>
-                                            <TableHead className="w-[20%]">Time</TableHead>
-                                            <TableHead>Course</TableHead>
-                                            <TableHead className="w-[20%]">Location</TableHead>
-                                            <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
-                                            <TableHead className="w-[15%]">Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {dailySchedule[day].map((event, index) => (
-                                            <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
-                                                <TableCell className="block md:hidden p-0 w-full">
-                                                  <div className="border rounded-lg p-4 space-y-2 m-2">
-                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                                      <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
-                                                        <div className="font-medium break-words pl-5">{event.time}</div>
-                                                      </div>
-                                                      <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
-                                                        <div className="font-medium break-words pl-5">{event.courseCode}</div>
-                                                      </div>
-                                                      <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
-                                                        <div className="font-medium break-words pl-5">{event.room}</div>
-                                                      </div>
-                                                      <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
-                                                         <div className="pl-5">
-                                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                                {statusConfig[event.status].text}
-                                                            </Badge>
-                                                        </div>
-                                                      </div>
-                                                    </div>
+      <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
+        <TabsList className="grid w-full grid-cols-7">
+          {days.map(day => (
+            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
+          ))}
+        </TabsList>
+        <div className="py-6">
+          {days.map(day => (
+            <TabsContent key={day} value={day}>
+              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                  <div className="md:border md:rounded-lg md:overflow-hidden">
+                      <div className="overflow-x-auto">
+                          <Table>
+                              <TableHeader className="hidden md:table-header-group">
+                                  <TableRow>
+                                      <TableHead className="w-[20%]">Time</TableHead>
+                                      <TableHead>Course</TableHead>
+                                      <TableHead className="w-[20%]">Location</TableHead>
+                                      <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
+                                      <TableHead className="w-[15%]">Status</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {dailySchedule[day].map((event, index) => (
+                                      <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
+                                          <TableCell className="block md:hidden p-0 w-full">
+                                            <div className="border rounded-lg p-4 space-y-2 m-2">
+                                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                                <div>
+                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
+                                                  <div className="font-medium break-words pl-5">{event.time}</div>
+                                                </div>
+                                                <div>
+                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
+                                                  <div className="font-medium break-words pl-5">{event.courseCode}</div>
+                                                </div>
+                                                <div>
+                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
+                                                  <div className="font-medium break-words pl-5">{event.room}</div>
+                                                </div>
+                                                <div>
+                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
+                                                   <div className="pl-5">
+                                                      <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                          {statusConfig[event.status].text}
+                                                      </Badge>
                                                   </div>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                                <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                        {statusConfig[event.status].text}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </div>
-                    ) : (
-                        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                           <CardContent className="text-center text-muted-foreground">
-                               <p className="font-medium">No classes scheduled for {day}.</p>
-                               <p className="text-sm">Enjoy your day off!</p>
-                           </CardContent>
-                        </Card>
-                    )}
-                  </TabsContent>
-                ))}
-              </div>
-            </Tabs>
-        </TabsContent>
-        <TabsContent value="resits" className="py-6">
-            {selectedResitCourses.length > 0 ? (
-                 Object.entries(groupedResitsByDate).map(([date, entries]) => (
-                    <div key={date} className="mb-6">
-                        <h3 className="font-semibold text-lg mb-2 border-b pb-1">{date}</h3>
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Course</TableHead>
-                                        <TableHead>Room</TableHead>
-                                        <TableHead>Examiner</TableHead>
-                                        <TableHead>Session</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {entries.map((entry, index) => (
-                                        <TableRow key={`${entry.course_no}-${index}`}>
-                                            <TableCell>
-                                                <p className="font-medium">{entry.course_no}</p>
-                                                <p className="text-sm text-muted-foreground">{entry.course_name}</p>
-                                            </TableCell>
-                                            <TableCell>{entry.room}</TableCell>
-                                            <TableCell>{entry.examiner}</TableCell>
-                                            <TableCell>{entry.session}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                   <CardContent className="text-center text-muted-foreground">
-                       <p className="font-medium">No special resit courses registered.</p>
-                       <p className="text-sm">Click the "Register Courses" button to make your selections.</p>
-                   </CardContent>
-                </Card>
-            )}
-        </TabsContent>
-    </Tabs>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                          <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                          <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                          <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
+                                          <TableCell className="hidden md:table-cell">
+                                              <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                  {statusConfig[event.status].text}
+                                              </Badge>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </div>
+                  </div>
+              ) : (
+                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                     <CardContent className="text-center text-muted-foreground">
+                         <p className="font-medium">No classes scheduled for {day}.</p>
+                         <p className="text-sm">Enjoy your day off!</p>
+                     </CardContent>
+                  </Card>
+              )}
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
 
-    {/* Modals */}
     <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
         <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -377,39 +262,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </ScrollArea>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    <Dialog open={isResitRegisterModalOpen} onOpenChange={setIsResitRegisterModalOpen}>
-        <DialogContent className="max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>Register for Special Resit</DialogTitle>
-                <DialogDescription>
-                    Select the courses you intend to write for the special resit.
-                </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                <div className="space-y-2">
-                    {specialResitSchedule?.map(entry => (
-                        <div key={entry.course_no} className="flex items-center space-x-3 p-3 border rounded-lg">
-                           <Checkbox 
-                                id={`resit-${entry.course_no}`}
-                                checked={localResitSelections.has(entry.course_no)}
-                                onCheckedChange={() => handleResitSelectionChange(entry.course_no)}
-                           />
-                           <label htmlFor={`resit-${entry.course_no}`} className="flex-1 cursor-pointer">
-                               <p className="font-medium">{entry.course_no}</p>
-                               <p className="text-sm text-muted-foreground">{entry.course_name}</p>
-                           </label>
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
-            <DialogFooter>
-                 <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                 </DialogClose>
-                 <Button onClick={handleSaveResitSelections}>Save Selections</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>
@@ -1666,5 +1518,3 @@ export default function TimetablePage() {
     </div>
   );
 }
-
-    

@@ -12,8 +12,6 @@ import {
 } from 'react';
 import { users as defaultUsers, type User } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-// import { db } from '@/lib/firebase/client';
-// import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
 
 
 // Define the shape of timetable entries and empty slots
@@ -71,17 +69,6 @@ export type Notification = {
     isRead: boolean;
     timestamp: string;
 };
-
-export interface SpecialResitEntry {
-  date: string;
-  course_no: string;
-  course_name: string;
-  department: string;
-  number: number;
-  room: string;
-  examiner: string;
-  session: string;
-}
 
 // Maps userId to an array of rejected entry IDs
 export type RejectedEntries = Record<number, number[]>;

@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, PenSquare } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -84,17 +84,6 @@ export default function AppSidebar() {
                   >
                     <BookOpen />
                     <span>Exams Timetable</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link href="/timetable/resit" passHref>
-                  <SidebarMenuButton
-                    tooltip="Special Resit"
-                    isActive={pathname === '/timetable/resit'}
-                  >
-                    <PenSquare />
-                    <span>Special Resit</span>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
