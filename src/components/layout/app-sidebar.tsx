@@ -31,7 +31,7 @@ export default function AppSidebar() {
     return null;
   }
   
-  const timetableLabel = user.role === 'administrator' ? 'Class Timetable' : 'Timetable';
+  const timetableLabel = user.role === 'administrator' ? 'Manage Timetable' : 'Timetable';
 
   return (
     <>
@@ -67,7 +67,7 @@ export default function AppSidebar() {
             <Link href="/timetable" passHref>
               <SidebarMenuButton
                 tooltip={timetableLabel}
-                isActive={pathname === '/timetable'}
+                isActive={pathname.startsWith('/timetable')}
               >
                 <Calendar />
                 <span>{timetableLabel}</span>
