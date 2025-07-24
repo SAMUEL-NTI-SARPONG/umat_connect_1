@@ -960,9 +960,13 @@ function ResitTimetableDisplay({
 }) {
   const { toast } = useToast();
   const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
+  const [isEditingNotice, setIsEditingNotice] = useState(false);
 
   useEffect(() => {
     setLocalNotice(parsedData?.notice || '');
+    if (!parsedData?.notice) {
+        setIsEditingNotice(true);
+    }
   }, [parsedData?.notice]);
 
   const handleSaveNotice = () => {
@@ -974,6 +978,7 @@ function ResitTimetableDisplay({
       title: "Notice Updated",
       description: "The special resit timetable notice has been saved.",
     });
+    setIsEditingNotice(false);
   };
 
   const filteredSheets = useMemo(() => {
@@ -1011,33 +1016,42 @@ function ResitTimetableDisplay({
             <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
             <CardDescription>Venue: {parsedData.venue}</CardDescription>
             <div className="space-y-2 pt-2">
-                <Label htmlFor="notice-textarea" className="font-semibold">Administrator's Notice</Label>
-                 <div className="flex items-start gap-2">
-                    <Textarea
-                        id="notice-textarea"
-                        placeholder="Add an important notice for students viewing this timetable..."
-                        value={localNotice}
-                        onChange={(e) => setLocalNotice(e.target.value)}
-                        className="text-base min-h-[80px]"
-                    />
-                    <Button onClick={handleSaveNotice} size="icon">
-                        <Save className="h-4 w-4" />
-                        <span className="sr-only">Save Notice</span>
-                    </Button>
-                </div>
+                <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
+                    <span>Administrator's Notice</span>
+                    {!isEditingNotice && (
+                        <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
+                            <PenSquare className="h-4 w-4 mr-2" />
+                            Edit Notice
+                        </Button>
+                    )}
+                </Label>
+                {isEditingNotice ? (
+                    <div className="flex items-start gap-2">
+                        <Textarea
+                            id="notice-textarea"
+                            placeholder="Add an important notice for students viewing this timetable..."
+                            value={localNotice}
+                            onChange={(e) => setLocalNotice(e.target.value)}
+                        />
+                        <Button onClick={handleSaveNotice} size="icon" disabled={!localNotice.trim()}>
+                            <Save className="h-4 w-4" />
+                            <span className="sr-only">Save Notice</span>
+                        </Button>
+                    </div>
+                ) : (
+                    parsedData.notice && (
+                        <Alert className="mb-6">
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Notice</AlertTitle>
+                            <AlertDescription className="whitespace-pre-wrap">
+                                {parsedData.notice}
+                            </AlertDescription>
+                        </Alert>
+                    )
+                )}
             </div>
         </CardHeader>
         <CardContent>
-            {parsedData.notice && (
-                 <Alert className="mb-6">
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Notice</AlertTitle>
-                    <AlertDescription className="whitespace-pre-wrap">
-                        {parsedData.notice}
-                    </AlertDescription>
-                 </Alert>
-            )}
-
             {filteredSheets.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].sheetName : undefined}>
                     {filteredSheets.map((sheet) => (
