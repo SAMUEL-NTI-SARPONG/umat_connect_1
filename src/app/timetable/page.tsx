@@ -457,6 +457,88 @@ const initialCreateFormState = {
   time: '',
 };
 
+function StaffResitView() {
+  const { user, specialResitTimetable } = useUser();
+
+  const staffResitSchedule = useMemo(() => {
+    if (!user || !specialResitTimetable) return [];
+    
+    const staffName = user.name.toLowerCase();
+    const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
+    
+    return allEntries.filter(entry => 
+      entry.examiner && entry.examiner.toLowerCase().includes(staffName)
+    );
+  }, [user, specialResitTimetable]);
+
+  if (!specialResitTimetable || specialResitTimetable.sheets.length === 0) {
+    return (
+      <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+        <CardContent className="text-center text-muted-foreground">
+          <p className="font-medium">Special Resit Timetable Not Available</p>
+          <p className="text-sm">The resit schedule has not been published by the administrator yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Session'];
+
+  return (
+    <div className="space-y-6">
+      {specialResitTimetable.notice && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Administrator's Notice</AlertTitle>
+          <AlertDescription className="whitespace-pre-wrap">
+            {specialResitTimetable.notice}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Your Resit Supervision Schedule</CardTitle>
+            <CardDescription>
+                {staffResitSchedule.length > 0
+                ? `You have ${staffResitSchedule.length} supervision(s) scheduled.`
+                : "You have no resit supervisions scheduled."}
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {staffResitSchedule.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {staffResitSchedule.map((entry) => (
+                                <TableRow key={entry.id}>
+                                    <TableCell>{entry.date}</TableCell>
+                                    <TableCell>{entry.courseCode}</TableCell>
+                                    <TableCell>{entry.courseName}</TableCell>
+                                    <TableCell>{entry.department}</TableCell>
+                                    <TableCell>{entry.room}</TableCell>
+                                    <TableCell>{entry.session}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-12">
+                    <p>No supervision duties found for you in the special resit timetable.</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function StaffTimetableView({
   schedule,
   masterSchedule,
@@ -768,360 +850,380 @@ function StaffTimetableView({
   const userRejectedEntryIds = (user && rejectedEntries[user.id]) || [];
 
   return (
-    <>
-      <LecturerReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => {
-            setIsReviewModalOpen(false);
-            if (user && !reviewedSchedules.includes(user.id)) {
-              markScheduleAsReviewed(user.id);
-            }
-        }}
-        courses={staffCourses}
-      />
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-        <div className="flex justify-end sm:justify-start gap-2">
-            <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
-                <Settings className="w-4 h-4 mr-2" />
-                Manage Courses
-            </Button>
-            <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Create Schedule
-            </Button>
-             <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                        <SearchIcon className="mr-2 h-4 w-4" />
-                        Find Free Rooms
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                        <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
-                        <DialogDescription>
-                            Here are the classrooms that are available and their free time slots.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                        {freeRoomsForDay.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {freeRoomsForDay.map(({ room, freeRanges }) => (
-                                    <Card key={room}>
-                                        <CardHeader className="p-4">
-                                            <CardTitle className="text-base">{room}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-4 pt-0">
-                                            <div className="space-y-1">
-                                                {freeRanges.map((range, idx) => (
-                                                   <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
-                                                ))}
+    <Tabs defaultValue="class" className="w-full">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="class">Class Timetable</TabsTrigger>
+        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+      </TabsList>
+      <TabsContent value="class" className="mt-6">
+        <>
+          <LecturerReviewModal
+            isOpen={isReviewModalOpen}
+            onClose={() => {
+                setIsReviewModalOpen(false);
+                if (user && !reviewedSchedules.includes(user.id)) {
+                  markScheduleAsReviewed(user.id);
+                }
+            }}
+            courses={staffCourses}
+          />
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+            <div className="flex justify-end sm:justify-start gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Courses
+                </Button>
+                <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    Create Schedule
+                </Button>
+                 <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                            <SearchIcon className="mr-2 h-4 w-4" />
+                            Find Free Rooms
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
+                            <DialogDescription>
+                                Here are the classrooms that are available and their free time slots.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                            {freeRoomsForDay.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {freeRoomsForDay.map(({ room, freeRanges }) => (
+                                        <Card key={room}>
+                                            <CardHeader className="p-4">
+                                                <CardTitle className="text-base">{room}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="p-4 pt-0">
+                                                <div className="space-y-1">
+                                                    {freeRanges.map((range, idx) => (
+                                                       <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
+                                                    ))}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center p-12 text-muted-foreground">
+                                    <p>No free classrooms found for {activeDay}.</p>
+                                </div>
+                            )}
+                        </ScrollArea>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+          </div>
+          <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
+            <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+              <TabsList className="grid w-full grid-cols-7 h-12">
+                {days.map((day) => (
+                  <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+            <div className="py-6">
+              {days.map((day) => (
+                <TabsContent key={day} value={day}>
+                  {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                    <div className="md:border md:rounded-lg md:overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="hidden md:table-header-group">
+                                    <TableRow>
+                                        <TableHead className="w-1/4">Time</TableHead>
+                                        <TableHead>Course</TableHead>
+                                        <TableHead className="w-1/4">Location</TableHead>
+                                        <TableHead className="w-1/4">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {dailySchedule[day].map((event, index) => (
+                                    <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0 cursor-pointer">
+                                        <TableCell className="block md:hidden p-0 w-full">
+                                          <div className="border rounded-lg p-4 space-y-4 m-2">
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
+                                                <div className="font-medium break-words pl-5">{event.time}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
+                                                <div className="font-medium break-words pl-5">{event.courseCode}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
+                                                <div className="font-medium break-words pl-5">{event.room}</div>
+                                              </div>
+                                              <div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
+                                                <div className="pl-5">
+                                                  <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                    {statusConfig[event.status].text}
+                                                  </Badge>
+                                                </div>
+                                              </div>
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center p-12 text-muted-foreground">
-                                <p>No free classrooms found for {activeDay}.</p>
-                            </div>
-                        )}
-                    </ScrollArea>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-      </div>
-      <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
-        <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-          <TabsList className="grid w-full grid-cols-7 h-12">
-            {days.map((day) => (
-              <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        <div className="py-6">
-          {days.map((day) => (
-            <TabsContent key={day} value={day}>
-              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                <div className="md:border md:rounded-lg md:overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="hidden md:table-header-group">
-                                <TableRow>
-                                    <TableHead className="w-1/4">Time</TableHead>
-                                    <TableHead>Course</TableHead>
-                                    <TableHead className="w-1/4">Location</TableHead>
-                                    <TableHead className="w-1/4">Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {dailySchedule[day].map((event, index) => (
-                                <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0 cursor-pointer">
-                                    <TableCell className="block md:hidden p-0 w-full">
-                                      <div className="border rounded-lg p-4 space-y-4 m-2">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
-                                            <div className="font-medium break-words pl-5">{event.time}</div>
                                           </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
-                                            <div className="font-medium break-words pl-5">{event.courseCode}</div>
-                                          </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
-                                            <div className="font-medium break-words pl-5">{event.room}</div>
-                                          </div>
-                                          <div>
-                                            <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
-                                            <div className="pl-5">
-                                              <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
                                                 {statusConfig[event.status].text}
-                                              </Badge>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                    <TableCell className="hidden md:table-cell">
-                                        <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                            {statusConfig[event.status].text}
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </div>
+                  ) : (
+                    <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                        <CardContent className="text-center text-muted-foreground">
+                          <p className="font-medium">No classes scheduled for {day}.</p>
+                          <p className="text-sm">Enjoy your day off!</p>
+                        </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+              ))}
+            </div>
+          </Tabs>
+          
+          {/* Action Modal */}
+          <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Class Actions</DialogTitle>
+                {selectedEntry && (
+                  <DialogDescription>
+                    Manage your class: {selectedEntry.courseCode} at {selectedEntry.time}.
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+              <div className="flex flex-col gap-3 py-4">
+                 <Button
+                    variant="outline"
+                    onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'confirmed')}
+                    disabled={selectedEntry?.status === 'confirmed'}
+                    className="w-full justify-start"
+                >
+                    <ShieldCheck className="mr-2 h-4 w-4 text-green-500" /> Confirm Class
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => selectedEntry && handleRescheduleClick(selectedEntry)}
+                    className="w-full justify-start"
+                >
+                    <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'canceled')}
+                    disabled={selectedEntry?.status === 'canceled'}
+                    className="w-full justify-start text-destructive hover:text-destructive"
+                >
+                    <Ban className="mr-2 h-4 w-4" /> Cancel Class
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeAllModals}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Edit Modal */}
+          <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Reschedule Class</DialogTitle>
+                <DialogDescription>
+                  Select a new room and time for this class.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="room" className="text-right">Room</Label>
+                  <Select value={editedFormData?.room || ''} onValueChange={(value) => handleEditInputChange('room', value)}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
+                      {availableSlotsForEdit.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                    <CardContent className="text-center text-muted-foreground">
-                      <p className="font-medium">No classes scheduled for {day}.</p>
-                      <p className="text-sm">Enjoy your day off!</p>
-                    </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
-      
-      {/* Action Modal */}
-      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Class Actions</DialogTitle>
-            {selectedEntry && (
-              <DialogDescription>
-                Manage your class: {selectedEntry.courseCode} at {selectedEntry.time}.
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          <div className="flex flex-col gap-3 py-4">
-             <Button
-                variant="outline"
-                onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'confirmed')}
-                disabled={selectedEntry?.status === 'confirmed'}
-                className="w-full justify-start"
-            >
-                <ShieldCheck className="mr-2 h-4 w-4 text-green-500" /> Confirm Class
-            </Button>
-            <Button
-                variant="outline"
-                onClick={() => selectedEntry && handleRescheduleClick(selectedEntry)}
-                className="w-full justify-start"
-            >
-                <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
-            </Button>
-            <Button
-                variant="outline"
-                onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'canceled')}
-                disabled={selectedEntry?.status === 'canceled'}
-                className="w-full justify-start text-destructive hover:text-destructive"
-            >
-                <Ban className="mr-2 h-4 w-4" /> Cancel Class
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeAllModals}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reschedule Class</DialogTitle>
-            <DialogDescription>
-              Select a new room and time for this class.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="room" className="text-right">Room</Label>
-              <Select value={editedFormData?.room || ''} onValueChange={(value) => handleEditInputChange('room', value)}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a room" />
-                </SelectTrigger>
-                <SelectContent>
-                  {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
-                  {availableSlotsForEdit.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Time</Label>
-              <div className="col-span-3 grid grid-cols-2 gap-2">
-                <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
-                  <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                  <SelectContent>
-                    {availableSlotsForEdit.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
-                  <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                  <SelectContent>
-                    {availableSlotsForEdit.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-            <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Create Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create New Schedule</DialogTitle>
-            <DialogDescription>
-              Add a new class. Select a day, room and time from available slots.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="courseCode-create" className="text-right">Course</Label>
-              <Select onValueChange={handleCourseSelection}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a course" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffCourses.map(course => (
-                    <SelectItem key={course.id} value={course.courseCode}>{course.courseCode}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="level-create" className="text-right">Level</Label>
-              <Input id="level-create" value={createFormData.level || ''} className="col-span-3" readOnly disabled />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="departments-create" className="text-right">Department</Label>
-              <Input id="departments-create" value={createFormData.departments.join(', ') || ''} className="col-span-3" readOnly disabled />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="day-create" className="text-right">Day</Label>
-              <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="room-create" className="text-right">Room</Label>
-              <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)} disabled={!createFormData.day}>
-                <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a room" /></SelectTrigger>
-                <SelectContent>
-                  {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Time</Label>
-              <div className="col-span-3 grid grid-cols-2 gap-2">
-                <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
-                  <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                  <SelectContent>
-                    {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
-                  <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                  <SelectContent>
-                    {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-            <Button type="submit" onClick={handleSaveCreate}>Add Class</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Courses Modal */}
-      <Dialog open={isManageModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Manage My Assigned Courses</DialogTitle>
-            <DialogDescription>
-              Here are all courses officially assigned to you. You can hide or show them in your personal timetable.
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh] my-4 pr-6">
-            <div className="space-y-2 py-4">
-              {staffCourses.map((course) => {
-                const isRejected = userRejectedEntryIds.includes(course.id);
-                return (
-                  <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold break-words">{course.courseCode}</p>
-                      <div className="flex flex-wrap items-center text-sm text-muted-foreground">
-                        <span className="break-all">{course.departments.join(', ')}</span>
-                        <span className="mx-1.5">&middot;</span>
-                        <span>Level {course.level}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 pl-4">
-                      <Label htmlFor={`switch-${course.id}`} className="text-sm shrink-0">
-                        {isRejected ? 'Hidden' : 'Visible'}
-                      </Label>
-                      <Switch
-                        id={`switch-${course.id}`}
-                        checked={!isRejected}
-                        onCheckedChange={(checked) => handleReviewToggle(course.id, !checked)}
-                      />
-                    </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Time</Label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
+                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForEdit.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
+                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForEdit.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline">Close</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+                <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Create Modal */}
+          <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Create New Schedule</DialogTitle>
+                <DialogDescription>
+                  Add a new class. Select a day, room and time from available slots.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="courseCode-create" className="text-right">Course</Label>
+                  <Select onValueChange={handleCourseSelection}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a course" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {staffCourses.map(course => (
+                        <SelectItem key={course.id} value={course.courseCode}>{course.courseCode}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="level-create" className="text-right">Level</Label>
+                  <Input id="level-create" value={createFormData.level || ''} className="col-span-3" readOnly disabled />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="departments-create" className="text-right">Department</Label>
+                  <Input id="departments-create" value={createFormData.departments.join(', ') || ''} className="col-span-3" readOnly disabled />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="day-create" className="text-right">Day</Label>
+                  <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
+                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="room-create" className="text-right">Room</Label>
+                  <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)} disabled={!createFormData.day}>
+                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a room" /></SelectTrigger>
+                    <SelectContent>
+                      {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Time</Label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
+                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
+                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+                <Button type="submit" onClick={handleSaveCreate}>Add Class</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Manage Courses Modal */}
+          <Dialog open={isManageModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Manage My Assigned Courses</DialogTitle>
+                <DialogDescription>
+                  Here are all courses officially assigned to you. You can hide or show them in your personal timetable.
+                </DialogDescription>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                <div className="space-y-2 py-4">
+                  {staffCourses.map((course) => {
+                    const isRejected = userRejectedEntryIds.includes(course.id);
+                    return (
+                      <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold break-words">{course.courseCode}</p>
+                          <div className="flex flex-wrap items-center text-sm text-muted-foreground">
+                            <span className="break-all">{course.departments.join(', ')}</span>
+                            <span className="mx-1.5">&middot;</span>
+                            <span>Level {course.level}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 pl-4">
+                          <Label htmlFor={`switch-${course.id}`} className="text-sm shrink-0">
+                            {isRejected ? 'Hidden' : 'Visible'}
+                          </Label>
+                          <Switch
+                            id={`switch-${course.id}`}
+                            checked={!isRejected}
+                            onCheckedChange={(checked) => handleReviewToggle(course.id, !checked)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">Close</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      </TabsContent>
+       <TabsContent value="exams" className="mt-6">
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Exams Timetable Not Available</p>
+                    <p className="text-sm">The exams timetable will appear here once it's published.</p>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="resit" className="mt-6">
+            <StaffResitView />
+        </TabsContent>
+    </Tabs>
   );
 }
 
@@ -2059,6 +2161,7 @@ export default function TimetablePage() {
     setEmptySlots,
     staffSchedules,
     addStaffSchedule,
+    specialResitTimetable,
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
