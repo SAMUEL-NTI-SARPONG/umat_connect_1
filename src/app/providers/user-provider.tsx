@@ -126,6 +126,7 @@ interface UserContextType {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   clearAllNotifications: () => Promise<void>;
   specialResitTimetable: SpecialResitTimetable | null;
+  setSpecialResitTimetable: (data: SpecialResitTimetable | null) => void;
   studentResitSelections: StudentResitSelections;
   updateStudentResitSelection: (entryId: number, isSelected: boolean) => void;
 }
@@ -143,7 +144,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
   const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [specialResitTimetable, setSpecialResitTimetable] = useState<SpecialResitTimetable | null>(null);
+  const [specialResitTimetable, setSpecialResitTimetableState] = useState<SpecialResitTimetable | null>(null);
   const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
 
   // This useEffect handles session-based login persistence.
@@ -162,7 +163,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
         const storedResitData = localStorage.getItem('specialResitSchedule');
         if (storedResitData) {
-            setSpecialResitTimetable(JSON.parse(storedResitData));
+            setSpecialResitTimetableState(JSON.parse(storedResitData));
         }
         const storedSelections = localStorage.getItem('studentResitSelections');
         if (storedSelections) {
@@ -411,6 +412,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setSpecialResitTimetable = useCallback((data: SpecialResitTimetable | null) => {
+    setSpecialResitTimetableState(data);
+    if (data) {
+      localStorage.setItem('specialResitSchedule', JSON.stringify(data));
+    } else {
+      localStorage.removeItem('specialResitSchedule');
+    }
+  }, []);
+
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
     
@@ -439,6 +449,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setReviewedSchedules([]);
     setRejectedEntries({});
     setNotifications([]);
+    setSpecialResitTimetableState(null);
+    setStudentResitSelections({});
     
     // Clear local storage for resit data as well
     if (typeof window !== 'undefined') {
@@ -479,9 +491,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     markNotificationAsRead,
     clearAllNotifications,
     specialResitTimetable,
+    setSpecialResitTimetable,
     studentResitSelections,
     updateStudentResitSelection,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, studentResitSelections, updateStudentResitSelection, login, logout]);
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, login, logout]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

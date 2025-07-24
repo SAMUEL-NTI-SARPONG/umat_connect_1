@@ -1114,7 +1114,6 @@ function ResitTimetableDisplay({
     if (!parsedData) return;
     const updatedData = { ...parsedData, notice: localNotice };
     setParsedData(updatedData);
-    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
     toast({
       title: "Notice Updated",
       description: "The special resit timetable notice has been saved.",
@@ -1139,7 +1138,6 @@ function ResitTimetableDisplay({
     
     const updatedData = { ...parsedData, sheets: updatedSheets };
     setParsedData(updatedData);
-    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
     closeAllModals();
   };
 
@@ -1153,7 +1151,6 @@ function ResitTimetableDisplay({
 
     const updatedData = { ...parsedData, sheets: updatedSheets };
     setParsedData(updatedData);
-    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
     closeAllModals();
   };
   
@@ -1757,6 +1754,7 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
+  const { specialResitTimetable, setSpecialResitTimetable } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -1777,23 +1775,9 @@ function AdminTimetableView({
   const [examsShowInvalid, setExamsShowInvalid] = useState(false);
 
   // State for Resit Timetable
-  const [resitParsedData, setResitParsedData] = useState<SpecialResitTimetable | null>(null);
   const [isResitLoading, setIsResitLoading] = useState(false);
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
-  
-  // Load resit data from localStorage on initial render
-  useEffect(() => {
-    try {
-        const storedResitData = localStorage.getItem('specialResitSchedule');
-        if (storedResitData) {
-            setResitParsedData(JSON.parse(storedResitData));
-        }
-    } catch(e) {
-        console.error("Failed to parse resit data from localStorage", e);
-        localStorage.removeItem('specialResitSchedule');
-    }
-  }, []);
   
   // Map state to the active tab
   const activeState = useMemo(() => {
@@ -1803,11 +1787,11 @@ function AdminTimetableView({
         case 'exams':
             return { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: examsEmptySlots, setEmptySlots: setExamsEmptySlots, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleFileUpload, cleaner: setExamsEmptySlots };
         case 'resit':
-            return { parsedData: resitParsedData, setParsedData: setResitParsedData, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, handler: handleSpecialResitUpload, cleaner: () => {} };
+            return { parsedData: specialResitTimetable, setParsedData: setSpecialResitTimetable, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, handler: handleSpecialResitUpload, cleaner: () => {} };
         default:
             return { parsedData: null, setParsedData: () => {}, emptySlots: [], setEmptySlots: () => {}, isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {}, handler: async () => [], cleaner: () => {} };
     }
-  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, examsEmptySlots, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, resitParsedData, isResitLoading, resitError, resitSearchTerm]);
+  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, examsEmptySlots, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, specialResitTimetable, isResitLoading, resitError, resitSearchTerm, setSpecialResitTimetable]);
 
   useEffect(() => {
       setClassParsedData(parsedData);
@@ -1849,7 +1833,6 @@ function AdminTimetableView({
              (activeState.setParsedData as Function)(null);
          } else {
              (activeState.setParsedData as Function)(data);
-             localStorage.setItem('specialResitSchedule', JSON.stringify(data));
          }
       }
 
@@ -1880,9 +1863,6 @@ function AdminTimetableView({
     if (activeTab === 'class') {
         setParsedData(null);
         setEmptySlots([]);
-    }
-    if (activeTab === 'resit') {
-        localStorage.removeItem('specialResitSchedule');
     }
   };
   
@@ -2007,9 +1987,9 @@ function AdminTimetableView({
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
            <ResitTimetableDisplay
-            parsedData={resitParsedData}
+            parsedData={specialResitTimetable}
             searchTerm={resitSearchTerm}
-            setParsedData={setResitParsedData}
+            setParsedData={setSpecialResitTimetable}
           />
         </TabsContent>
       </Tabs>
