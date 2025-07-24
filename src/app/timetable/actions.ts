@@ -243,6 +243,8 @@ function extractTimetableData(fileBuffer: Buffer) {
       venue: '',
       sheets: [] as { sheetName: string; entries: any[] }[],
     };
+    
+    let entryIdCounter = 0;
 
     workbook.SheetNames.forEach(sheetName => {
       const worksheet = workbook.Sheets[sheetName];
@@ -284,6 +286,7 @@ function extractTimetableData(fileBuffer: Buffer) {
         }
 
         const entry = {
+          id: entryIdCounter++,
           date: row[0] || null,
           courseCode: row[1] || null,
           courseName: row[2] || null,

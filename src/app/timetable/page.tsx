@@ -984,6 +984,12 @@ function ResitTimetableDisplay({
   const { toast } = useToast();
   const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
   const [isEditingNotice, setIsEditingNotice] = useState(false);
+  
+  const [selectedEntry, setSelectedEntry] = useState<SpecialResitEntry | null>(null);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [editedFormData, setEditedFormData] = useState<SpecialResitEntry | null>(null);
 
   useEffect(() => {
     setLocalNotice(parsedData?.notice || '');
@@ -991,6 +997,17 @@ function ResitTimetableDisplay({
         setIsEditingNotice(true);
     }
   }, [parsedData?.notice]);
+  
+  useEffect(() => {
+    if (selectedEntry && isEditModalOpen) {
+      setEditedFormData(selectedEntry);
+    }
+  }, [selectedEntry, isEditModalOpen]);
+  
+  const handleRowClick = (entry: SpecialResitEntry) => {
+    setSelectedEntry(entry);
+    setIsActionModalOpen(true);
+  };
 
   const handleSaveNotice = () => {
     if (!parsedData) return;
@@ -1003,6 +1020,47 @@ function ResitTimetableDisplay({
     });
     setIsEditingNotice(false);
   };
+  
+  const closeAllModals = () => {
+    setIsActionModalOpen(false);
+    setIsEditModalOpen(false);
+    setIsDeleteConfirmOpen(false);
+    setSelectedEntry(null);
+  };
+  
+  const handleDeleteRow = () => {
+    if (!selectedEntry || !parsedData) return;
+
+    const updatedSheets = parsedData.sheets.map(sheet => ({
+      ...sheet,
+      entries: sheet.entries.filter(item => item.id !== selectedEntry.id),
+    }));
+    
+    const updatedData = { ...parsedData, sheets: updatedSheets };
+    setParsedData(updatedData);
+    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
+    closeAllModals();
+  };
+
+  const handleSaveEdit = () => {
+    if (!editedFormData || !parsedData) return;
+
+    const updatedSheets = parsedData.sheets.map(sheet => ({
+      ...sheet,
+      entries: sheet.entries.map(item => item.id === editedFormData.id ? editedFormData : item),
+    }));
+
+    const updatedData = { ...parsedData, sheets: updatedSheets };
+    setParsedData(updatedData);
+    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
+    closeAllModals();
+  };
+  
+  const handleEditInputChange = (field: keyof SpecialResitEntry, value: string | number | null) => {
+    if (!editedFormData) return;
+    setEditedFormData({ ...editedFormData, [field]: value });
+  };
+
 
   const filteredSheets = useMemo(() => {
     if (!parsedData) return [];
@@ -1030,93 +1088,180 @@ function ResitTimetableDisplay({
   }
   
   const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
-
   const totalEntries = parsedData.sheets.reduce((acc, sheet) => acc + sheet.entries.length, 0);
 
   return (
-    <Card>
-        <CardHeader>
-            <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
-            <CardDescription>Venue: {parsedData.venue}</CardDescription>
-            <div className="space-y-2 pt-2">
-                <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
-                    <span>Administrator's Notice</span>
-                    {!isEditingNotice && (
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
-                            <PenSquare className="h-4 w-4 mr-2" />
-                            Edit Notice
-                        </Button>
-                    )}
-                </Label>
-                {isEditingNotice ? (
-                    <div className="flex items-start gap-2">
-                        <Textarea
-                            id="notice-textarea"
-                            placeholder="Add an important notice for students viewing this timetable..."
-                            value={localNotice}
-                            onChange={(e) => setLocalNotice(e.target.value)}
-                        />
-                        <Button onClick={handleSaveNotice} size="icon" disabled={!localNotice.trim()}>
-                            <Save className="h-4 w-4" />
-                            <span className="sr-only">Save Notice</span>
-                        </Button>
-                    </div>
-                ) : (
-                    parsedData.notice && (
-                        <Alert className="mb-6">
-                            <Info className="h-4 w-4" />
-                            <AlertTitle>Notice</AlertTitle>
-                            <AlertDescription className="whitespace-pre-wrap">
-                                {parsedData.notice}
-                            </AlertDescription>
-                        </Alert>
-                    )
-                )}
-            </div>
-        </CardHeader>
-        <CardContent>
-            {filteredSheets.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].sheetName : undefined}>
-                    {filteredSheets.map((sheet) => (
-                        <AccordionItem value={sheet.sheetName} key={sheet.sheetName}>
-                            <AccordionTrigger>{sheet.sheetName} ({sheet.entries.length} entries)</AccordionTrigger>
-                            <AccordionContent>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                {headers.map((header) => (
-                                                    <TableHead key={header}>{header}</TableHead>
-                                                ))}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {sheet.entries.map((row, rowIndex) => (
-                                                <TableRow key={rowIndex}>
-                                                    <TableCell>{row.date}</TableCell>
-                                                    <TableCell>{row.courseCode}</TableCell>
-                                                    <TableCell>{row.courseName}</TableCell>
-                                                    <TableCell>{row.department}</TableCell>
-                                                    <TableCell>{row.numberOfStudents}</TableCell>
-                                                    <TableCell>{row.room}</TableCell>
-                                                    <TableCell>{row.examiner}</TableCell>
-                                                    <TableCell>{row.session}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
-            ) : (
-              <div className="text-center p-12 text-muted-foreground">
-                <p>No results found for your search term.</p>
+    <>
+      <Card>
+          <CardHeader>
+              <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
+              <CardDescription>Venue: {parsedData.venue}</CardDescription>
+              <div className="space-y-2 pt-2">
+                  <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
+                      <span>Administrator's Notice</span>
+                      {!isEditingNotice && (
+                          <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
+                              <PenSquare className="h-4 w-4 mr-2" />
+                              Edit Notice
+                          </Button>
+                      )}
+                  </Label>
+                  {isEditingNotice ? (
+                      <div className="flex items-start gap-2">
+                          <Textarea
+                              id="notice-textarea"
+                              placeholder="Add an important notice for students viewing this timetable..."
+                              value={localNotice}
+                              onChange={(e) => setLocalNotice(e.target.value)}
+                          />
+                          <Button onClick={handleSaveNotice} size="icon" disabled={!localNotice.trim()}>
+                              <Save className="h-4 w-4" />
+                              <span className="sr-only">Save Notice</span>
+                          </Button>
+                      </div>
+                  ) : (
+                      parsedData.notice && (
+                          <Alert className="mb-6">
+                              <Info className="h-4 w-4" />
+                              <AlertTitle>Notice</AlertTitle>
+                              <AlertDescription className="whitespace-pre-wrap">
+                                  {parsedData.notice}
+                              </AlertDescription>
+                          </Alert>
+                      )
+                  )}
               </div>
-            )}
-        </CardContent>
-    </Card>
+          </CardHeader>
+          <CardContent>
+              {filteredSheets.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].sheetName : undefined}>
+                      {filteredSheets.map((sheet) => (
+                          <AccordionItem value={sheet.sheetName} key={sheet.sheetName}>
+                              <AccordionTrigger>{sheet.sheetName} ({sheet.entries.length} entries)</AccordionTrigger>
+                              <AccordionContent>
+                                  <div className="overflow-x-auto">
+                                      <Table>
+                                          <TableHeader>
+                                              <TableRow>
+                                                  {headers.map((header) => (
+                                                      <TableHead key={`${sheet.sheetName}-${header}`}>{header}</TableHead>
+                                                  ))}
+                                              </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                              {sheet.entries.map((row) => (
+                                                  <TableRow key={row.id} onClick={() => handleRowClick(row)} className="cursor-pointer">
+                                                      <TableCell>{row.date}</TableCell>
+                                                      <TableCell>{row.courseCode}</TableCell>
+                                                      <TableCell>{row.courseName}</TableCell>
+                                                      <TableCell>{row.department}</TableCell>
+                                                      <TableCell>{row.numberOfStudents}</TableCell>
+                                                      <TableCell>{row.room}</TableCell>
+                                                      <TableCell>{row.examiner}</TableCell>
+                                                      <TableCell>{row.session}</TableCell>
+                                                  </TableRow>
+                                              ))}
+                                          </TableBody>
+                                      </Table>
+                                  </div>
+                              </AccordionContent>
+                          </AccordionItem>
+                      ))}
+                  </Accordion>
+              ) : (
+                <div className="text-center p-12 text-muted-foreground">
+                  <p>No results found for your search term.</p>
+                </div>
+              )}
+          </CardContent>
+      </Card>
+
+      {/* Action Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose Action</DialogTitle>
+            <DialogDescription>
+              What would you like to do with this resit entry?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-around py-4">
+             <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
+                <Edit className="mr-2 h-4 w-4" /> Edit
+             </Button>
+             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Resit Entry</DialogTitle>
+            <DialogDescription>
+              Make changes to the entry here. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">Date</Label>
+              <Input id="date" value={editedFormData?.date || ''} onChange={(e) => handleEditInputChange('date', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="courseCode" className="text-right">Course Code</Label>
+              <Input id="courseCode" value={editedFormData?.courseCode || ''} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="courseName" className="text-right">Course Name</Label>
+              <Input id="courseName" value={editedFormData?.courseName || ''} onChange={(e) => handleEditInputChange('courseName', e.target.value)} className="col-span-3" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="department" className="text-right">Department</Label>
+              <Input id="department" value={editedFormData?.department || ''} onChange={(e) => handleEditInputChange('department', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="numberOfStudents" className="text-right"># Students</Label>
+              <Input id="numberOfStudents" type="number" value={editedFormData?.numberOfStudents || ''} onChange={(e) => handleEditInputChange('numberOfStudents', Number(e.target.value))} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="room" className="text-right">Room</Label>
+              <Input id="room" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="examiner" className="text-right">Examiner</Label>
+              <Input id="examiner" value={editedFormData?.examiner || ''} onChange={(e) => handleEditInputChange('examiner', e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="session" className="text-right">Session</Label>
+              <Input id="session" value={editedFormData?.session || ''} onChange={(e) => handleEditInputChange('session', e.target.value)} className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+            <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this timetable entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

@@ -74,6 +74,7 @@ export type Notification = {
 export type RejectedEntries = Record<number, number[]>;
 
 export interface SpecialResitEntry {
+  id: number;
   date: string | null;
   courseCode: string | null;
   courseName: string | null;
