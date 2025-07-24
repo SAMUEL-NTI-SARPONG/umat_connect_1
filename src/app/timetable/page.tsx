@@ -463,11 +463,11 @@ function StaffResitView() {
   const staffResitSchedule = useMemo(() => {
     if (!user || !specialResitTimetable) return [];
     
-    const staffName = user.name.toLowerCase();
+    const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
     const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
     
     return allEntries.filter(entry => 
-      entry.examiner && entry.examiner.toLowerCase().includes(staffName)
+      entry.examiner && staffNameParts.some(part => entry.examiner.toLowerCase().includes(part))
     );
   }, [user, specialResitTimetable]);
 
