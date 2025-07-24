@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,7 @@ import LecturerReviewModal from '@/components/timetable/lecturer-review-modal';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useToast } from '@/hooks/use-toast';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -957,14 +958,22 @@ function ResitTimetableDisplay({
   searchTerm: string;
   setParsedData: (data: SpecialResitTimetable | null) => void;
 }) {
+  const { toast } = useToast();
+  const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
 
-  const handleNoticeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  useEffect(() => {
+    setLocalNotice(parsedData?.notice || '');
+  }, [parsedData?.notice]);
+
+  const handleSaveNotice = () => {
     if (!parsedData) return;
-    const newNotice = e.target.value;
-    const updatedData = { ...parsedData, notice: newNotice };
+    const updatedData = { ...parsedData, notice: localNotice };
     setParsedData(updatedData);
-    // In a real app, you might want to debounce this or save on blur
     localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
+    toast({
+      title: "Notice Updated",
+      description: "The special resit timetable notice has been saved.",
+    });
   };
 
   const filteredSheets = useMemo(() => {
@@ -1003,13 +1012,19 @@ function ResitTimetableDisplay({
             <CardDescription>Venue: {parsedData.venue}</CardDescription>
             <div className="space-y-2 pt-2">
                 <Label htmlFor="notice-textarea" className="font-semibold">Administrator's Notice</Label>
-                <Textarea
-                    id="notice-textarea"
-                    placeholder="Add an important notice for students viewing this timetable..."
-                    value={parsedData.notice || ''}
-                    onChange={handleNoticeChange}
-                    className="text-base"
-                />
+                 <div className="flex items-start gap-2">
+                    <Textarea
+                        id="notice-textarea"
+                        placeholder="Add an important notice for students viewing this timetable..."
+                        value={localNotice}
+                        onChange={(e) => setLocalNotice(e.target.value)}
+                        className="text-base min-h-[80px]"
+                    />
+                    <Button onClick={handleSaveNotice} size="icon">
+                        <Save className="h-4 w-4" />
+                        <span className="sr-only">Save Notice</span>
+                    </Button>
+                </div>
             </div>
         </CardHeader>
         <CardContent>
