@@ -494,7 +494,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setSpecialResitTimetable,
     studentResitSelections,
     updateStudentResitSelection,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, login, logout]);
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, studentResitSelections, updateStudentResitSelection]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

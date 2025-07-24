@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/app/providers/user-provider';
+import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
 import { BookUser } from 'lucide-react';
 import AdminStats from './admin-stats';
@@ -53,25 +53,38 @@ export default function ScheduleSidebar() {
     const today = days[new Date().getDay()];
 
     if (user.role === 'student') {
-        const userDepartments = Array.isArray(user.department) ? user.department : [user.department];
+        const userDepartment = user.department;
         return combinedSchedule.filter(entry =>
             entry.day === today &&
             entry.level === user.level &&
-            entry.departments.some(dep => userDepartments.includes(dep))
+            entry.departments.includes(userDepartment)
         );
     }
     
     if (user.role === 'staff') {
-        const userRejectedIds = rejectedEntries[user.id] || [];
-        const currentStaffNameParts = user.name.toLowerCase().split(' ');
+        const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
         
-        return combinedSchedule.filter(entry => {
-            const isRejected = masterSchedule?.some(ms => ms.id === entry.id) && userRejectedIds.includes(entry.id);
-            
-            return !isRejected &&
-                   entry.day === today &&
-                   currentStaffNameParts.some(part => entry.lecturer.toLowerCase().includes(part));
+        const staffEntries = combinedSchedule.filter(entry => 
+            entry.day === today &&
+            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+        );
+
+        const userRejectedIds = new Set(rejectedEntries[user.id] || []);
+        if (userRejectedIds.size === 0) return staffEntries;
+
+        const staffCourses = (masterSchedule || []).filter(entry =>
+            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+        );
+        
+        const rejectedMasterIds = new Set<number>();
+        staffCourses.forEach(course => {
+            if (userRejectedIds.has(course.id)) { // This id is the group id now
+                const masterEntriesForCourse = (masterSchedule || []).filter(ms => ms.courseCode === course.courseCode && ms.lecturer === course.lecturer);
+                masterEntriesForCourse.forEach(me => rejectedMasterIds.add(me.id));
+            }
         });
+        
+        return staffEntries.filter(entry => !rejectedMasterIds.has(entry.id));
     }
 
     return []; // No personal schedule for admin

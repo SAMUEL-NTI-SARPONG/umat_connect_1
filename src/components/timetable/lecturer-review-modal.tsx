@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 interface LecturerReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  courses: TimetableEntry[];
+  courses: (TimetableEntry & { originalIds?: Set<number> })[];
 }
 
 export default function LecturerReviewModal({
