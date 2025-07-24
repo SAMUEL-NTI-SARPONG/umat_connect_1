@@ -144,131 +144,154 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
 
   return (
-    <>
-      <div className="flex justify-end mb-4">
-        <Button variant="outline" size="sm" onClick={() => setIsFreeRoomModalOpen(true)}>
-            <SearchIcon className="mr-2 h-4 w-4" />
-            Find Free Rooms
-        </Button>
-      </div>
-
-      <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
-          {days.map(day => (
-            <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-          ))}
+    <Tabs defaultValue="class" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="class">Class Timetable</TabsTrigger>
+          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+          <TabsTrigger value="resit">Special Resit</TabsTrigger>
         </TabsList>
-        <div className="py-6">
-          {days.map(day => (
-            <TabsContent key={day} value={day}>
-              {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                  <div className="md:border md:rounded-lg md:overflow-hidden">
-                      <div className="overflow-x-auto">
-                          <Table>
-                              <TableHeader className="hidden md:table-header-group">
-                                  <TableRow>
-                                      <TableHead className="w-[20%]">Time</TableHead>
-                                      <TableHead>Course</TableHead>
-                                      <TableHead className="w-[20%]">Location</TableHead>
-                                      <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
-                                      <TableHead className="w-[15%]">Status</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {dailySchedule[day].map((event, index) => (
-                                      <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
-                                          <TableCell className="block md:hidden p-0 w-full">
-                                            <div className="border rounded-lg p-4 space-y-2 m-2">
-                                              <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                                <div>
-                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
-                                                  <div className="font-medium break-words pl-5">{event.time}</div>
-                                                </div>
-                                                <div>
-                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
-                                                  <div className="font-medium break-words pl-5">{event.courseCode}</div>
-                                                </div>
-                                                <div>
-                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
-                                                  <div className="font-medium break-words pl-5">{event.room}</div>
-                                                </div>
-                                                <div>
-                                                  <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
-                                                   <div className="pl-5">
-                                                      <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                          {statusConfig[event.status].text}
-                                                      </Badge>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                          <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                          <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                          <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
-                                          <TableCell className="hidden md:table-cell">
-                                              <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                  {statusConfig[event.status].text}
-                                              </Badge>
-                                          </TableCell>
-                                      </TableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                      </div>
-                  </div>
-              ) : (
-                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                     <CardContent className="text-center text-muted-foreground">
-                         <p className="font-medium">No classes scheduled for {day}.</p>
-                         <p className="text-sm">Enjoy your day off!</p>
-                     </CardContent>
-                  </Card>
-              )}
-            </TabsContent>
-          ))}
-        </div>
-      </Tabs>
+        <TabsContent value="class" className="mt-6">
+            <div className="flex justify-end mb-4">
+                <Button variant="outline" size="sm" onClick={() => setIsFreeRoomModalOpen(true)}>
+                    <SearchIcon className="mr-2 h-4 w-4" />
+                    Find Free Rooms
+                </Button>
+            </div>
 
-    <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
-        <DialogContent className="max-w-3xl">
-            <DialogHeader>
-                <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
-                <DialogDescription>
-                    Here are the classrooms that are available and their free time slots.
-                </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                {freeRoomsForDay.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {freeRoomsForDay.map(({ room, freeRanges }) => (
-                            <Card key={room}>
-                                <CardHeader className="p-4">
-                                    <CardTitle className="text-base">{room}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4 pt-0">
-                                    <div className="space-y-1">
-                                        {freeRanges.map((range, idx) => (
-                                           <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
+            <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
+                <TabsList className="grid w-full grid-cols-7">
+                {days.map(day => (
+                    <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
+                ))}
+                </TabsList>
+                <div className="py-6">
+                {days.map(day => (
+                    <TabsContent key={day} value={day}>
+                    {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                        <div className="md:border md:rounded-lg md:overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="hidden md:table-header-group">
+                                        <TableRow>
+                                            <TableHead className="w-[20%]">Time</TableHead>
+                                            <TableHead>Course</TableHead>
+                                            <TableHead className="w-[20%]">Location</TableHead>
+                                            <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
+                                            <TableHead className="w-[15%]">Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {dailySchedule[day].map((event, index) => (
+                                            <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
+                                                <TableCell className="block md:hidden p-0 w-full">
+                                                    <div className="border rounded-lg p-4 space-y-2 m-2">
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
+                                                        <div>
+                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
+                                                        <div className="font-medium break-words pl-5">{event.time}</div>
+                                                        </div>
+                                                        <div>
+                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
+                                                        <div className="font-medium break-words pl-5">{event.courseCode}</div>
+                                                        </div>
+                                                        <div>
+                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
+                                                        <div className="font-medium break-words pl-5">{event.room}</div>
+                                                        </div>
+                                                        <div>
+                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
+                                                            <div className="pl-5">
+                                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                                {statusConfig[event.status].text}
+                                                            </Badge>
+                                                        </div>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
+                                                <TableCell className="hidden md:table-cell">
+                                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                                        {statusConfig[event.status].text}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center p-12 text-muted-foreground">
-                        <p>No free classrooms found for {activeDay}.</p>
-                    </div>
-                )}
-            </ScrollArea>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    </>
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    ) : (
+                        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                            <CardContent className="text-center text-muted-foreground">
+                                <p className="font-medium">No classes scheduled for {day}.</p>
+                                <p className="text-sm">Enjoy your day off!</p>
+                            </CardContent>
+                        </Card>
+                    )}
+                    </TabsContent>
+                ))}
+                </div>
+            </Tabs>
+        </TabsContent>
+        <TabsContent value="exams" className="mt-6">
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Exams Timetable Not Available</p>
+                    <p className="text-sm">The exams timetable will appear here once it's published.</p>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="resit" className="mt-6">
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Special Resit Timetable Not Available</p>
+                    <p className="text-sm">Check back here for the special resit schedule if you have registered.</p>
+                </CardContent>
+            </Card>
+        </TabsContent>
+
+        <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
+            <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
+                    <DialogDescription>
+                        Here are the classrooms that are available and their free time slots.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                    {freeRoomsForDay.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {freeRoomsForDay.map(({ room, freeRanges }) => (
+                                <Card key={room}>
+                                    <CardHeader className="p-4">
+                                        <CardTitle className="text-base">{room}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-0">
+                                        <div className="space-y-1">
+                                            {freeRanges.map((range, idx) => (
+                                            <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center p-12 text-muted-foreground">
+                            <p>No free classrooms found for {activeDay}.</p>
+                        </div>
+                    )}
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </Tabs>
   );
 }
 
