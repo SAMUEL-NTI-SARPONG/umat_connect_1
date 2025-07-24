@@ -86,6 +86,7 @@ export interface SpecialResitEntry {
 
 export interface SpecialResitTimetable {
   venue: string;
+  notice?: string;
   sheets: {
     sheetName: string;
     entries: SpecialResitEntry[];

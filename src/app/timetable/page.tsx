@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,7 @@ import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload } from 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -949,11 +950,22 @@ function StaffTimetableView({
 
 function ResitTimetableDisplay({
   parsedData,
-  searchTerm
+  searchTerm,
+  setParsedData
 }: {
   parsedData: SpecialResitTimetable | null;
   searchTerm: string;
+  setParsedData: (data: SpecialResitTimetable | null) => void;
 }) {
+
+  const handleNoticeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (!parsedData) return;
+    const newNotice = e.target.value;
+    const updatedData = { ...parsedData, notice: newNotice };
+    setParsedData(updatedData);
+    // In a real app, you might want to debounce this or save on blur
+    localStorage.setItem('specialResitSchedule', JSON.stringify(updatedData));
+  };
 
   const filteredSheets = useMemo(() => {
     if (!parsedData) return [];
@@ -982,15 +994,37 @@ function ResitTimetableDisplay({
   
   const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
 
+  const totalEntries = parsedData.sheets.reduce((acc, sheet) => acc + sheet.entries.length, 0);
+
   return (
     <Card>
         <CardHeader>
-            <CardTitle>Special Resit Timetable</CardTitle>
+            <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
             <CardDescription>Venue: {parsedData.venue}</CardDescription>
+            <div className="space-y-2 pt-2">
+                <Label htmlFor="notice-textarea" className="font-semibold">Administrator's Notice</Label>
+                <Textarea
+                    id="notice-textarea"
+                    placeholder="Add an important notice for students viewing this timetable..."
+                    value={parsedData.notice || ''}
+                    onChange={handleNoticeChange}
+                    className="text-base"
+                />
+            </div>
         </CardHeader>
         <CardContent>
+            {parsedData.notice && (
+                 <Alert className="mb-6">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Notice</AlertTitle>
+                    <AlertDescription className="whitespace-pre-wrap">
+                        {parsedData.notice}
+                    </AlertDescription>
+                 </Alert>
+            )}
+
             {filteredSheets.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets[0].sheetName}>
+                <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].sheetName : undefined}>
                     {filteredSheets.map((sheet) => (
                         <AccordionItem value={sheet.sheetName} key={sheet.sheetName}>
                             <AccordionTrigger>{sheet.sheetName} ({sheet.entries.length} entries)</AccordionTrigger>
@@ -1450,6 +1484,19 @@ function AdminTimetableView({
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   
+  // Load resit data from localStorage on initial render
+  useEffect(() => {
+    try {
+        const storedResitData = localStorage.getItem('specialResitSchedule');
+        if (storedResitData) {
+            setResitParsedData(JSON.parse(storedResitData));
+        }
+    } catch(e) {
+        console.error("Failed to parse resit data from localStorage", e);
+        localStorage.removeItem('specialResitSchedule');
+    }
+  }, []);
+  
   // Map state to the active tab
   const activeState = useMemo(() => {
     switch (activeTab) {
@@ -1504,6 +1551,7 @@ function AdminTimetableView({
              (activeState.setParsedData as Function)(null);
          } else {
              (activeState.setParsedData as Function)(data);
+             localStorage.setItem('specialResitSchedule', JSON.stringify(data));
          }
       }
 
@@ -1534,6 +1582,9 @@ function AdminTimetableView({
     if (activeTab === 'class') {
         setParsedData(null);
         setEmptySlots([]);
+    }
+    if (activeTab === 'resit') {
+        localStorage.removeItem('specialResitSchedule');
     }
   };
   
@@ -1660,6 +1711,7 @@ function AdminTimetableView({
            <ResitTimetableDisplay
             parsedData={resitParsedData}
             searchTerm={resitSearchTerm}
+            setParsedData={setResitParsedData}
           />
         </TabsContent>
       </Tabs>
