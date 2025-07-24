@@ -482,7 +482,7 @@ function StaffResitView() {
     );
   }
   
-  const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Session'];
+  const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
 
   return (
     <div className="space-y-6">
@@ -521,7 +521,9 @@ function StaffResitView() {
                                     <TableCell>{entry.courseCode}</TableCell>
                                     <TableCell>{entry.courseName}</TableCell>
                                     <TableCell>{entry.department}</TableCell>
+                                    <TableCell>{entry.numberOfStudents}</TableCell>
                                     <TableCell>{entry.room}</TableCell>
+                                    <TableCell>{entry.examiner}</TableCell>
                                     <TableCell>{entry.session}</TableCell>
                                 </TableRow>
                             ))}
