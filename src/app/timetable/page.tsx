@@ -62,6 +62,7 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -70,6 +71,111 @@ const statusConfig = {
 };
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function StudentResitView() {
+  const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
+
+  if (!specialResitTimetable || specialResitTimetable.sheets.length === 0) {
+    return (
+      <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+        <CardContent className="text-center text-muted-foreground">
+          <p className="font-medium">Special Resit Timetable Not Available</p>
+          <p className="text-sm">Check back here for the special resit schedule if you have registered.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
+  const userSelections = (user && studentResitSelections[user.id]) || [];
+  const selectedEntries = allEntries.filter(entry => userSelections.includes(entry.id));
+
+  const handleSelectionChange = (entryId: number, checked: boolean) => {
+    updateStudentResitSelection(entryId, checked);
+  };
+  
+  const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Examiner', 'Session'];
+
+  return (
+    <div className="space-y-6">
+      {specialResitTimetable.notice && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Administrator's Notice</AlertTitle>
+          <AlertDescription className="whitespace-pre-wrap">
+            {specialResitTimetable.notice}
+          </AlertDescription>
+        </Alert>
+      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Your Resit Courses</CardTitle>
+          <CardDescription>Choose the courses you are registered to write from the list below.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-64 border rounded-md p-4">
+            <div className="space-y-2">
+              {allEntries.map(entry => (
+                <div key={entry.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`resit-course-${entry.id}`}
+                    checked={userSelections.includes(entry.id)}
+                    onCheckedChange={(checked) => handleSelectionChange(entry.id, !!checked)}
+                  />
+                  <Label htmlFor={`resit-course-${entry.id}`} className="font-normal cursor-pointer">
+                    {entry.courseCode} - {entry.courseName}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Your Personalized Resit Schedule</CardTitle>
+            <CardDescription>
+                {selectedEntries.length > 0
+                ? `Here are the details for your ${selectedEntries.length} selected course(s).`
+                : "Select courses above to see your schedule."}
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {selectedEntries.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {selectedEntries.map((entry) => (
+                                <TableRow key={entry.id}>
+                                    <TableCell>{entry.date}</TableCell>
+                                    <TableCell>{entry.courseCode}</TableCell>
+                                    <TableCell>{entry.courseName}</TableCell>
+                                    <TableCell>{entry.department}</TableCell>
+                                    <TableCell>{entry.room}</TableCell>
+                                    <TableCell>{entry.examiner}</TableCell>
+                                    <TableCell>{entry.session}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-12">
+                    <p>Your schedule will appear here once you select your courses.</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const { user, emptySlots } = useUser();
@@ -246,12 +352,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </Card>
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
-            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Special Resit Timetable Not Available</p>
-                    <p className="text-sm">Check back here for the special resit schedule if you have registered.</p>
-                </CardContent>
-            </Card>
+            <StudentResitView />
         </TabsContent>
 
         <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>

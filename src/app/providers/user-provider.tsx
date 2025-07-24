@@ -94,6 +94,8 @@ export interface SpecialResitTimetable {
   }[];
 }
 
+export type StudentResitSelections = Record<number, number[]>;
+
 
 interface UserContextType {
   user: User | null;
@@ -123,6 +125,9 @@ interface UserContextType {
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   clearAllNotifications: () => Promise<void>;
+  specialResitTimetable: SpecialResitTimetable | null;
+  studentResitSelections: StudentResitSelections;
+  updateStudentResitSelection: (entryId: number, isSelected: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -138,6 +143,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
   const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [specialResitTimetable, setSpecialResitTimetable] = useState<SpecialResitTimetable | null>(null);
+  const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
 
   // This useEffect handles session-based login persistence.
   useEffect(() => {
@@ -149,6 +156,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [allUsers]);
+
+  // Load resit data from localStorage on initial render
+  useEffect(() => {
+    try {
+        const storedResitData = localStorage.getItem('specialResitSchedule');
+        if (storedResitData) {
+            setSpecialResitTimetable(JSON.parse(storedResitData));
+        }
+        const storedSelections = localStorage.getItem('studentResitSelections');
+        if (storedSelections) {
+            setStudentResitSelections(JSON.parse(storedSelections));
+        }
+    } catch(e) {
+        console.error("Failed to parse data from localStorage", e);
+    }
+  }, []);
 
   const login = (userId: number) => {
     const foundUser = allUsers.find(u => u.id === userId);
@@ -388,6 +411,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
+    if (!user) return;
+    
+    setStudentResitSelections(prev => {
+        const currentUserSelections = prev[user.id] || [];
+        let newSelections;
+        if (isSelected) {
+            newSelections = [...new Set([...currentUserSelections, entryId])];
+        } else {
+            newSelections = currentUserSelections.filter(id => id !== entryId);
+        }
+        
+        const newState = { ...prev, [user.id]: newSelections };
+        localStorage.setItem('studentResitSelections', JSON.stringify(newState));
+        return newState;
+    });
+  }, [user]);
+
   const resetState = () => {
     logout();
     setAllUsers(defaultUsers);
@@ -437,7 +478,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     fetchNotifications,
     markNotificationAsRead,
     clearAllNotifications,
-  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, login, logout]);
+    specialResitTimetable,
+    studentResitSelections,
+    updateStudentResitSelection,
+  }), [user, allUsers, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, studentResitSelections, updateStudentResitSelection, login, logout]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
