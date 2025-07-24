@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,17 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 function StudentResitView() {
   const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  
+  // Local state for selections within the modal
+  const [localSelections, setLocalSelections] = useState<Set<number>>(new Set());
 
+  useEffect(() => {
+    if (user && studentResitSelections[user.id]) {
+      setLocalSelections(new Set(studentResitSelections[user.id]));
+    }
+  }, [studentResitSelections, user]);
+  
   if (!specialResitTimetable || specialResitTimetable.sheets.length === 0) {
     return (
       <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -90,8 +100,38 @@ function StudentResitView() {
   const userSelections = (user && studentResitSelections[user.id]) || [];
   const selectedEntries = allEntries.filter(entry => userSelections.includes(entry.id));
 
-  const handleSelectionChange = (entryId: number, checked: boolean) => {
-    updateStudentResitSelection(entryId, checked);
+  const handleLocalSelectionChange = (entryId: number, checked: boolean) => {
+    setLocalSelections(prev => {
+        const newSet = new Set(prev);
+        if (checked) {
+            newSet.add(entryId);
+        } else {
+            newSet.delete(entryId);
+        }
+        return newSet;
+    });
+  };
+
+  const handleSaveChanges = () => {
+    if (!user) return;
+    const currentSelections = new Set(userSelections);
+    const newSelections = localSelections;
+
+    // Find what to add
+    newSelections.forEach(id => {
+        if (!currentSelections.has(id)) {
+            updateStudentResitSelection(id, true);
+        }
+    });
+
+    // Find what to remove
+    currentSelections.forEach(id => {
+        if (!newSelections.has(id)) {
+            updateStudentResitSelection(id, false);
+        }
+    });
+    
+    setIsSelectionModalOpen(false);
   };
   
   const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Examiner', 'Session'];
@@ -107,39 +147,51 @@ function StudentResitView() {
           </AlertDescription>
         </Alert>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Your Resit Courses</CardTitle>
-          <CardDescription>Choose the courses you are registered to write from the list below.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-64 border rounded-md p-4">
-            <div className="space-y-2">
-              {allEntries.map(entry => (
-                <div key={entry.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`resit-course-${entry.id}`}
-                    checked={userSelections.includes(entry.id)}
-                    onCheckedChange={(checked) => handleSelectionChange(entry.id, !!checked)}
-                  />
-                  <Label htmlFor={`resit-course-${entry.id}`} className="font-normal cursor-pointer">
-                    {entry.courseCode} - {entry.courseName}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
 
       <Card>
-        <CardHeader>
-            <CardTitle>Your Personalized Resit Schedule</CardTitle>
-            <CardDescription>
-                {selectedEntries.length > 0
-                ? `Here are the details for your ${selectedEntries.length} selected course(s).`
-                : "Select courses above to see your schedule."}
-            </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle>Your Personalized Resit Schedule</CardTitle>
+                <CardDescription>
+                    {selectedEntries.length > 0
+                    ? `Here are the details for your ${selectedEntries.length} selected course(s).`
+                    : "Select your courses to see your personalized schedule."}
+                </CardDescription>
+            </div>
+            <Dialog open={isSelectionModalOpen} onOpenChange={setIsSelectionModalOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <ListChecks className="mr-2 h-4 w-4" />
+                        Select / Edit My Courses
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Select Your Resit Courses</DialogTitle>
+                        <DialogDescription>Choose the courses you are registered to write from the list below.</DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-64 border rounded-md p-4">
+                        <div className="space-y-2">
+                        {allEntries.map(entry => (
+                            <div key={entry.id} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`resit-course-${entry.id}`}
+                                checked={localSelections.has(entry.id)}
+                                onCheckedChange={(checked) => handleLocalSelectionChange(entry.id, !!checked)}
+                            />
+                            <Label htmlFor={`resit-course-${entry.id}`} className="font-normal cursor-pointer">
+                                {entry.courseCode} - {entry.courseName}
+                            </Label>
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsSelectionModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSaveChanges}>Save Selections</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </CardHeader>
         <CardContent>
             {selectedEntries.length > 0 ? (
