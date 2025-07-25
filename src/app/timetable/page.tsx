@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
@@ -1335,42 +1336,42 @@ function ResitTimetableDisplay({
         if (!editedFormData) return;
         setEditedFormData({ ...editedFormData, [field]: value });
     };
-  
-    const filteredSheets = useMemo(() => {
+
+    const flattenedAndFilteredData = useMemo(() => {
       if (!parsedData) return [];
   
-      let sheets = parsedData.sheets;
-  
-      const filterFunction = (lecturerSchedule: DistributedResitSchedule) => {
-        if (showInvalid) {
-            return lecturerSchedule.lecturer.toLowerCase() === 'tba';
-        }
-        if (searchTerm) {
-          const lowercasedFilter = searchTerm.toLowerCase();
-          const lecturerMatch = lecturerSchedule.lecturer.toLowerCase().includes(lowercasedFilter);
-          if (lecturerMatch) return true;
-  
-          return lecturerSchedule.courses.some(course =>
-            Object.values(course).some(value =>
+      let allEntries = parsedData.sheets.flatMap(sheet =>
+        sheet.entries.flatMap(lecturerSchedule =>
+          lecturerSchedule.courses.map(course => ({
+            ...course,
+            assignedLecturer: lecturerSchedule.lecturer,
+          }))
+        )
+      );
+
+      if (showInvalid) {
+        allEntries = allEntries.filter(entry => entry.assignedLecturer.toLowerCase() === 'tba');
+      }
+
+      if (searchTerm) {
+        const lowercasedFilter = searchTerm.toLowerCase();
+        allEntries = allEntries.filter(entry =>
+            Object.values(entry).some(value =>
               String(value).toLowerCase().includes(lowercasedFilter)
             )
-          );
-        }
-        return true;
-      };
-      
-      if (!sheets || sheets.length === 0 || !sheets[0].entries) return [];
-
-      const filteredEntries = sheets[0].entries.filter(filterFunction);
-      
-      if (filteredEntries.length === 0 && (searchTerm || showInvalid)) {
-        return [];
+        );
       }
       
-      return [{ ...sheets[0], entries: filteredEntries }];
-  
+      // Sort by date after filtering
+      allEntries.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      return allEntries;
     }, [parsedData, searchTerm, showInvalid]);
-    
+  
     if (!parsedData) {
       return (
         <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
@@ -1380,14 +1381,7 @@ function ResitTimetableDisplay({
     }
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Session'];
-    const cardBorderColors = [
-      "border-blue-200",
-      "border-green-200",
-      "border-yellow-200",
-      "border-purple-200",
-      "border-pink-200",
-    ];
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Assigned Lecturer', 'Session'];
 
     return (
       <div className="space-y-6">
@@ -1467,51 +1461,43 @@ function ResitTimetableDisplay({
                     )}
                 </div>
             </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                {headers.map((header) => (
+                                    <TableHead key={header}>{header}</TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flattenedAndFilteredData.length > 0 ? (
+                                flattenedAndFilteredData.map((row) => (
+                                    <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                        <TableCell>{row.date}</TableCell>
+                                        <TableCell>{row.courseCode}</TableCell>
+                                        <TableCell>{row.courseName}</TableCell>
+                                        <TableCell>{row.department}</TableCell>
+                                        <TableCell>{row.numberOfStudents}</TableCell>
+                                        <TableCell>{row.room}</TableCell>
+                                        <TableCell>{row.examiner}</TableCell>
+                                        <TableCell>{(row as any).assignedLecturer}</TableCell>
+                                        <TableCell>{row.session}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={headers.length} className="h-24 text-center">
+                                        No results found for your filter.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
         </Card>
-
-        <div className="space-y-6 mt-6">
-            {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
-                filteredSheets[0].entries.map((lecturerSchedule, index) => (
-                    <Card key={lecturerSchedule.lecturer} className={cn("border-l-4", cardBorderColors[index % cardBorderColors.length])}>
-                        <CardHeader>
-                            <CardTitle>{lecturerSchedule.lecturer}</CardTitle>
-                            <CardDescription>{lecturerSchedule.courses.length} course(s) assigned.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto border rounded-lg">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            {headers.map((header) => (
-                                                <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
-                                            ))}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {lecturerSchedule.courses.map((row) => (
-                                            <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                                <TableCell>{row.date}</TableCell>
-                                                <TableCell>{row.courseCode}</TableCell>
-                                                <TableCell>{row.courseName}</TableCell>
-                                                <TableCell>{row.department}</TableCell>
-                                                <TableCell>{row.numberOfStudents}</TableCell>
-                                                <TableCell>{row.room}</TableCell>
-                                                <TableCell>{row.examiner}</TableCell>
-                                                <TableCell>{row.session}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))
-            ) : (
-              <div className="text-center p-12 text-muted-foreground border-2 border-dashed rounded-lg">
-                <p>No results found for your search term or filter.</p>
-              </div>
-            )}
-        </div>
 
         {/* Action Modal */}
         <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
@@ -2305,5 +2291,6 @@ export default function TimetablePage() {
 
     
     
+
 
 
