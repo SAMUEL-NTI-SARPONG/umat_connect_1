@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizone } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -1367,7 +1367,7 @@ function ResitTimetableDisplay({
                     <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
                         <AlertDialogTrigger asChild>
                             <Button>
-                                <SendHorizone className="h-4 w-4 mr-2" />
+                                <SendHorizontal className="h-4 w-4 mr-2" />
                                 Distribute Timetable
                             </Button>
                         </AlertDialogTrigger>
@@ -2263,3 +2263,5 @@ export default function TimetablePage() {
     </div>
   );
 }
+
+    
