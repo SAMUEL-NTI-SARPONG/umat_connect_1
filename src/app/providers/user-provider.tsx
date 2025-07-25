@@ -428,9 +428,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (!prev) return null;
       const distributedData = { ...prev, isDistributed: true };
       localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
-      toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
       return distributedData;
     });
+    toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
   }, [toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
