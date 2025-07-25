@@ -74,26 +74,35 @@ export type Notification = {
 export type RejectedEntries = Record<number, number[]>;
 
 export interface SpecialResitEntry {
-  id: number;
-  date: string | null;
-  courseCode: string | null;
-  courseName: string | null;
-  department: string | null;
-  numberOfStudents: number;
-  room: string | null;
-  examiner: string | null;
-  session: string | null;
-}
-
-export interface SpecialResitTimetable {
-  venue: string;
-  notice?: string;
-  isDistributed: boolean;
-  sheets: {
-    sheetName: string;
-    entries: SpecialResitEntry[];
-  }[];
-}
+    id: number;
+    date: string | null;
+    courseCode: string | null;
+    courseName: string | null;
+    department: string | null;
+    numberOfStudents: number;
+    room: string | null;
+    examiner: string | null; // This is the original name from the file
+    session: string | null;
+  }
+  
+  // This represents the courses for a single lecturer after distribution
+  export interface DistributedResitSchedule {
+    lecturer: string; // The canonical/original name for display
+    courses: SpecialResitEntry[];
+  }
+  
+  export interface SpecialResitTimetable {
+    venue: string;
+    notice?: string;
+    isDistributed: boolean;
+    // The sheets will contain the distributed data.
+    // For simplicity, we can assume one sheet named "Distributed"
+    sheets: {
+      sheetName: string;
+      // entries will now be an array of DistributedResitSchedule
+      entries: DistributedResitSchedule[];
+    }[];
+  }
 
 export type StudentResitSelections = Record<number, number[]>;
 
@@ -424,13 +433,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const distributeSpecialResitTimetable = useCallback(() => {
+    let distributedData: SpecialResitTimetable | null = null;
     setSpecialResitTimetableState(prev => {
       if (!prev) return null;
-      const distributedData = { ...prev, isDistributed: true };
-      localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
+      distributedData = { ...prev, isDistributed: true };
       return distributedData;
     });
-    toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+
+    if (distributedData) {
+        localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
+        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+    }
   }, [toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {

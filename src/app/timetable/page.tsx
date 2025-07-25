@@ -5,7 +5,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -96,7 +96,16 @@ function StudentResitView() {
     );
   }
   
-  const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
+  const allEntries = useMemo(() => {
+    if (!specialResitTimetable) return [];
+    // The data is now nested, so we need to flatten it.
+    return specialResitTimetable.sheets.flatMap(sheet => 
+        sheet.entries.flatMap(lecturerSchedule => 
+            lecturerSchedule.courses
+        )
+    );
+  }, [specialResitTimetable]);
+
   const userSelections = (user && studentResitSelections[user.id]) || [];
   const selectedEntries = allEntries.filter(entry => userSelections.includes(entry.id));
 
@@ -458,88 +467,90 @@ const initialCreateFormState = {
 };
 
 function StaffResitView() {
-  const { user, specialResitTimetable } = useUser();
+    const { user, specialResitTimetable } = useUser();
+  
+    const staffResitSchedule = useMemo(() => {
+      if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) return [];
+      
+      const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
+      
+      const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
 
-  const staffResitSchedule = useMemo(() => {
-    if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) return [];
+      const scheduleForStaff = allSchedules.find(lecturerSchedule => 
+        staffNameParts.some(part => lecturerSchedule.lecturer.toLowerCase().includes(part))
+      );
+      
+      return scheduleForStaff ? scheduleForStaff.courses : [];
+    }, [user, specialResitTimetable]);
+  
+    if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
+      return (
+        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+          <CardContent className="text-center text-muted-foreground">
+            <p className="font-medium">Special Resit Timetable Not Yet Published</p>
+            <p className="text-sm">The resit schedule has not been published by the administrator yet.</p>
+          </CardContent>
+        </Card>
+      );
+    }
     
-    const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
-    const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
-    
-    return allEntries.filter(entry => 
-      entry.examiner && staffNameParts.some(part => entry.examiner.toLowerCase().includes(part))
-    );
-  }, [user, specialResitTimetable]);
-
-  if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Session'];
+  
     return (
-      <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-        <CardContent className="text-center text-muted-foreground">
-          <p className="font-medium">Special Resit Timetable Not Yet Published</p>
-          <p className="text-sm">The resit schedule has not been published by the administrator yet.</p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        {specialResitTimetable.notice && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Administrator's Notice</AlertTitle>
+            <AlertDescription className="whitespace-pre-wrap">
+              {specialResitTimetable.notice}
+            </AlertDescription>
+          </Alert>
+        )}
+  
+        <Card>
+          <CardHeader>
+              <CardTitle>Your Resit Supervision Schedule</CardTitle>
+              <CardDescription>
+                  {staffResitSchedule.length > 0
+                  ? `You have ${staffResitSchedule.length} supervision(s) scheduled.`
+                  : "You have no resit supervisions scheduled."}
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+              {staffResitSchedule.length > 0 ? (
+                  <div className="overflow-x-auto">
+                      <Table>
+                          <TableHeader>
+                              <TableRow>
+                                  {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {staffResitSchedule.map((entry) => (
+                                  <TableRow key={entry.id}>
+                                      <TableCell>{entry.date}</TableCell>
+                                      <TableCell>{entry.courseCode}</TableCell>
+                                      <TableCell>{entry.courseName}</TableCell>
+                                      <TableCell>{entry.department}</TableCell>
+                                      <TableCell>{entry.numberOfStudents}</TableCell>
+                                      <TableCell>{entry.room}</TableCell>
+                                      <TableCell>{entry.session}</TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                      <p>No supervision duties found for you in the special resit timetable.</p>
+                  </div>
+              )}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
-  
-  const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
-
-  return (
-    <div className="space-y-6">
-      {specialResitTimetable.notice && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Administrator's Notice</AlertTitle>
-          <AlertDescription className="whitespace-pre-wrap">
-            {specialResitTimetable.notice}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-            <CardTitle>Your Resit Supervision Schedule</CardTitle>
-            <CardDescription>
-                {staffResitSchedule.length > 0
-                ? `You have ${staffResitSchedule.length} supervision(s) scheduled.`
-                : "You have no resit supervisions scheduled."}
-            </CardDescription>
-        </CardHeader>
-        <CardContent>
-            {staffResitSchedule.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {staffResitSchedule.map((entry) => (
-                                <TableRow key={entry.id}>
-                                    <TableCell>{entry.date}</TableCell>
-                                    <TableCell>{entry.courseCode}</TableCell>
-                                    <TableCell>{entry.courseName}</TableCell>
-                                    <TableCell>{entry.department}</TableCell>
-                                    <TableCell>{entry.numberOfStudents}</TableCell>
-                                    <TableCell>{entry.room}</TableCell>
-                                    <TableCell>{entry.examiner}</TableCell>
-                                    <TableCell>{entry.session}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground py-12">
-                    <p>No supervision duties found for you in the special resit timetable.</p>
-                </div>
-            )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 function StaffTimetableView({
   schedule,
@@ -1230,334 +1241,199 @@ function StaffTimetableView({
 }
 
 function ResitTimetableDisplay({
-  parsedData,
-  searchTerm,
-  setParsedData
-}: {
-  parsedData: SpecialResitTimetable | null;
-  searchTerm: string;
-  setParsedData: (data: SpecialResitTimetable | null) => void;
-}) {
-  const { toast } = useToast();
-  const { distributeSpecialResitTimetable } = useUser();
-  const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
-  const [isEditingNotice, setIsEditingNotice] = useState(false);
-  
-  const [selectedEntry, setSelectedEntry] = useState<SpecialResitEntry | null>(null);
-  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
-  const [editedFormData, setEditedFormData] = useState<SpecialResitEntry | null>(null);
-
-  useEffect(() => {
-    setLocalNotice(parsedData?.notice || '');
-    if (parsedData && !parsedData.notice && !parsedData.isDistributed) {
-        setIsEditingNotice(true);
-    }
-  }, [parsedData]);
-  
-  useEffect(() => {
-    if (selectedEntry && isEditModalOpen) {
-      setEditedFormData(selectedEntry);
-    }
-  }, [selectedEntry, isEditModalOpen]);
-  
-  const handleRowClick = (entry: SpecialResitEntry) => {
-    if (parsedData?.isDistributed) return;
-    setSelectedEntry(entry);
-    setIsActionModalOpen(true);
-  };
-
-  const handleSaveNotice = () => {
-    if (!parsedData) return;
-    const updatedData = { ...parsedData, notice: localNotice };
-    setParsedData(updatedData);
-    toast({
-      title: "Notice Updated",
-      description: "The special resit timetable notice has been saved.",
-    });
-    setIsEditingNotice(false);
-  };
-  
-  const closeAllModals = () => {
-    setIsActionModalOpen(false);
-    setIsEditModalOpen(false);
-    setIsDeleteConfirmOpen(false);
-    setIsDistributeConfirmOpen(false);
-    setSelectedEntry(null);
-  };
-  
-  const handleDeleteRow = () => {
-    if (!selectedEntry || !parsedData) return;
-
-    const updatedSheets = parsedData.sheets.map(sheet => ({
-      ...sheet,
-      entries: sheet.entries.filter(item => item.id !== selectedEntry.id),
-    }));
+    parsedData,
+    searchTerm,
+    setParsedData
+  }: {
+    parsedData: SpecialResitTimetable | null;
+    searchTerm: string;
+    setParsedData: (data: SpecialResitTimetable | null) => void;
+  }) {
+    const { toast } = useToast();
+    const { distributeSpecialResitTimetable } = useUser();
+    const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
+    const [isEditingNotice, setIsEditingNotice] = useState(false);
     
-    const updatedData = { ...parsedData, sheets: updatedSheets };
-    setParsedData(updatedData);
-    closeAllModals();
-  };
-
-  const handleSaveEdit = () => {
-    if (!editedFormData || !parsedData) return;
-
-    const updatedSheets = parsedData.sheets.map(sheet => ({
-      ...sheet,
-      entries: sheet.entries.map(item => item.id === editedFormData.id ? editedFormData : item),
-    }));
-
-    const updatedData = { ...parsedData, sheets: updatedSheets };
-    setParsedData(updatedData);
-    closeAllModals();
-  };
+    // The data structure has changed. We no longer edit individual entries.
+    // The distribution is now the atomic unit.
+    const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   
-  const handleEditInputChange = (field: keyof SpecialResitEntry, value: string | number | null) => {
-    if (!editedFormData) return;
-    setEditedFormData({ ...editedFormData, [field]: value });
-  };
-
-
-  const filteredSheets = useMemo(() => {
-    if (!parsedData) return [];
-    if (!searchTerm) return parsedData.sheets;
-
-    const lowercasedFilter = searchTerm.toLowerCase();
-
-    return parsedData.sheets.map(sheet => {
-      const filteredEntries = sheet.entries.filter(entry =>
-        Object.values(entry).some(value =>
-            String(value).toLowerCase().includes(lowercasedFilter)
-        )
+    useEffect(() => {
+      setLocalNotice(parsedData?.notice || '');
+      if (parsedData && !parsedData.notice && !parsedData.isDistributed) {
+          setIsEditingNotice(true);
+      }
+    }, [parsedData]);
+    
+    const handleSaveNotice = () => {
+      if (!parsedData) return;
+      const updatedData = { ...parsedData, notice: localNotice };
+      setParsedData(updatedData);
+      toast({
+        title: "Notice Updated",
+        description: "The special resit timetable notice has been saved.",
+      });
+      setIsEditingNotice(false);
+    };
+  
+    const filteredSheets = useMemo(() => {
+        if (!parsedData) return [];
+        if (!searchTerm) return parsedData.sheets;
+    
+        const lowercasedFilter = searchTerm.toLowerCase();
+    
+        // We filter based on the lecturer name and the courses within their schedule
+        const filteredEntries = parsedData.sheets[0].entries.filter(lecturerSchedule => {
+            const lecturerMatch = lecturerSchedule.lecturer.toLowerCase().includes(lowercasedFilter);
+            if (lecturerMatch) return true;
+    
+            return lecturerSchedule.courses.some(course =>
+                Object.values(course).some(value =>
+                    String(value).toLowerCase().includes(lowercasedFilter)
+                )
+            );
+        });
+    
+        if (filteredEntries.length === 0) return [];
+    
+        return [{ ...parsedData.sheets[0], entries: filteredEntries }];
+    
+      }, [parsedData, searchTerm]);
+    
+    if (!parsedData) {
+      return (
+        <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground">Upload a special resit timetable to begin.</p>
+        </div>
       );
-      return { ...sheet, entries: filteredEntries };
-    }).filter(sheet => sheet.entries.length > 0);
-
-  }, [parsedData, searchTerm]);
+    }
+    
+    const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Session'];
   
-  if (!parsedData) {
     return (
-      <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-        <p className="text-muted-foreground">Upload a special resit timetable to begin.</p>
-      </div>
+      <>
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Special Resit Timetable ({totalEntries} total entries)</CardTitle>
+                    <CardDescription>Venue: {parsedData.venue}</CardDescription>
+                  </div>
+                  <div>
+                  {parsedData.isDistributed ? (
+                      <Badge variant="secondary" className="text-green-600 border-green-600">
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Distributed
+                      </Badge>
+                  ) : (
+                      <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
+                          <AlertDialogTrigger asChild>
+                              <Button>
+                                  <SendHorizontal className="h-4 w-4 mr-2" />
+                                  Distribute Timetable
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                                  <AlertDialogTitle>Distribute Timetable?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      This will make the timetable visible to all relevant staff and students. This action cannot be undone. Are you sure you want to proceed?
+                                  </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => {
+                                      distributeSpecialResitTimetable();
+                                      setIsDistributeConfirmOpen(false);
+                                  }}>Distribute</AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                  )}
+                  </div>
+                </div>
+                <div className="space-y-2 pt-4">
+                    <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
+                        <span>Administrator's Notice</span>
+                        {!isEditingNotice && !parsedData.isDistributed && (
+                            <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
+                                <PenSquare className="h-4 w-4 mr-2" />
+                                Edit Notice
+                            </Button>
+                        )}
+                    </Label>
+                    {isEditingNotice && !parsedData.isDistributed ? (
+                        <div className="flex items-start gap-2">
+                            <Textarea
+                                id="notice-textarea"
+                                placeholder="Add an important notice for students viewing this timetable..."
+                                value={localNotice}
+                                onChange={(e) => setLocalNotice(e.target.value)}
+                            />
+                            <Button onClick={handleSaveNotice} size="icon" disabled={!localNotice.trim()}>
+                                <Save className="h-4 w-4" />
+                                <span className="sr-only">Save Notice</span>
+                            </Button>
+                        </div>
+                    ) : (
+                        parsedData.notice && (
+                            <Alert className="mb-6">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>Notice</AlertTitle>
+                                <AlertDescription className="whitespace-pre-wrap">
+                                    {parsedData.notice}
+                                </AlertDescription>
+                            </Alert>
+                        )
+                    )}
+                </div>
+            </CardHeader>
+            <CardContent>
+                {filteredSheets.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].entries[0].lecturer : undefined}>
+                        {filteredSheets[0].entries.map((lecturerSchedule) => (
+                            <AccordionItem value={lecturerSchedule.lecturer} key={lecturerSchedule.lecturer}>
+                                <AccordionTrigger>{lecturerSchedule.lecturer} ({lecturerSchedule.courses.length} entries)</AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    {headers.map((header) => (
+                                                        <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
+                                                    ))}
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {lecturerSchedule.courses.map((row) => (
+                                                    <TableRow key={row.id}>
+                                                        <TableCell>{row.date}</TableCell>
+                                                        <TableCell>{row.courseCode}</TableCell>
+                                                        <TableCell>{row.courseName}</TableCell>
+                                                        <TableCell>{row.department}</TableCell>
+                                                        <TableCell>{row.numberOfStudents}</TableCell>
+                                                        <TableCell>{row.room}</TableCell>
+                                                        <TableCell>{row.session}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                ) : (
+                  <div className="text-center p-12 text-muted-foreground">
+                    <p>No results found for your search term.</p>
+                  </div>
+                )}
+            </CardContent>
+        </Card>
+      </>
     );
   }
-  
-  const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Examiner', 'Session'];
-  const totalEntries = parsedData.sheets.reduce((acc, sheet) => acc + sheet.entries.length, 0);
-
-  return (
-    <>
-      <Card>
-          <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
-                  <CardDescription>Venue: {parsedData.venue}</CardDescription>
-                </div>
-                <div>
-                {parsedData.isDistributed ? (
-                    <Badge variant="secondary" className="text-green-600 border-green-600">
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Distributed
-                    </Badge>
-                ) : (
-                    <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button>
-                                <SendHorizontal className="h-4 w-4 mr-2" />
-                                Distribute Timetable
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Distribute Timetable?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This will make the timetable visible to all relevant staff and students. This action cannot be undone. Are you sure you want to proceed?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => {
-                                    distributeSpecialResitTimetable();
-                                    setIsDistributeConfirmOpen(false);
-                                }}>Distribute</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
-                </div>
-              </div>
-              <div className="space-y-2 pt-4">
-                  <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
-                      <span>Administrator's Notice</span>
-                      {!isEditingNotice && !parsedData.isDistributed && (
-                          <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
-                              <PenSquare className="h-4 w-4 mr-2" />
-                              Edit Notice
-                          </Button>
-                      )}
-                  </Label>
-                  {isEditingNotice && !parsedData.isDistributed ? (
-                      <div className="flex items-start gap-2">
-                          <Textarea
-                              id="notice-textarea"
-                              placeholder="Add an important notice for students viewing this timetable..."
-                              value={localNotice}
-                              onChange={(e) => setLocalNotice(e.target.value)}
-                          />
-                          <Button onClick={handleSaveNotice} size="icon" disabled={!localNotice.trim()}>
-                              <Save className="h-4 w-4" />
-                              <span className="sr-only">Save Notice</span>
-                          </Button>
-                      </div>
-                  ) : (
-                      parsedData.notice && (
-                          <Alert className="mb-6">
-                              <Info className="h-4 w-4" />
-                              <AlertTitle>Notice</AlertTitle>
-                              <AlertDescription className="whitespace-pre-wrap">
-                                  {parsedData.notice}
-                              </AlertDescription>
-                          </Alert>
-                      )
-                  )}
-              </div>
-          </CardHeader>
-          <CardContent>
-              {filteredSheets.length > 0 ? (
-                  <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].sheetName : undefined}>
-                      {filteredSheets.map((sheet) => (
-                          <AccordionItem value={sheet.sheetName} key={sheet.sheetName}>
-                              <AccordionTrigger>{sheet.sheetName} ({sheet.entries.length} entries)</AccordionTrigger>
-                              <AccordionContent>
-                                  <div className="overflow-x-auto">
-                                      <Table>
-                                          <TableHeader>
-                                              <TableRow>
-                                                  {headers.map((header) => (
-                                                      <TableHead key={`${sheet.sheetName}-${header}`}>{header}</TableHead>
-                                                  ))}
-                                              </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                              {sheet.entries.map((row) => (
-                                                  <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                                      <TableCell>{row.date}</TableCell>
-                                                      <TableCell>{row.courseCode}</TableCell>
-                                                      <TableCell>{row.courseName}</TableCell>
-                                                      <TableCell>{row.department}</TableCell>
-                                                      <TableCell>{row.numberOfStudents}</TableCell>
-                                                      <TableCell>{row.room}</TableCell>
-                                                      <TableCell>{row.examiner}</TableCell>
-                                                      <TableCell>{row.session}</TableCell>
-                                                  </TableRow>
-                                              ))}
-                                          </TableBody>
-                                      </Table>
-                                  </div>
-                              </AccordionContent>
-                          </AccordionItem>
-                      ))}
-                  </Accordion>
-              ) : (
-                <div className="text-center p-12 text-muted-foreground">
-                  <p>No results found for your search term.</p>
-                </div>
-              )}
-          </CardContent>
-      </Card>
-
-      {/* Action Modal */}
-      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Choose Action</DialogTitle>
-            <DialogDescription>
-              What would you like to do with this resit entry?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-around py-4">
-             <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
-                <Edit className="mr-2 h-4 w-4" /> Edit
-             </Button>
-             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Resit Entry</DialogTitle>
-            <DialogDescription>
-              Make changes to the entry here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">Date</Label>
-              <Input id="date" value={editedFormData?.date || ''} onChange={(e) => handleEditInputChange('date', e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="courseCode" className="text-right">Course Code</Label>
-              <Input id="courseCode" value={editedFormData?.courseCode || ''} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="courseName" className="text-right">Course Name</Label>
-              <Input id="courseName" value={editedFormData?.courseName || ''} onChange={(e) => handleEditInputChange('courseName', e.target.value)} className="col-span-3" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="department" className="text-right">Department</Label>
-              <Input id="department" value={editedFormData?.department || ''} onChange={(e) => handleEditInputChange('department', e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="numberOfStudents" className="text-right"># Students</Label>
-              <Input id="numberOfStudents" type="number" value={editedFormData?.numberOfStudents || ''} onChange={(e) => handleEditInputChange('numberOfStudents', Number(e.target.value))} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="room" className="text-right">Room</Label>
-              <Input id="room" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="examiner" className="text-right">Examiner</Label>
-              <Input id="examiner" value={editedFormData?.examiner || ''} onChange={(e) => handleEditInputChange('examiner', e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="session" className="text-right">Session</Label>
-              <Input id="session" value={editedFormData?.session || ''} onChange={(e) => handleEditInputChange('session', e.target.value)} className="col-span-3" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-            <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this timetable entry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-}
 
 function TimetableDisplay({
   parsedData,
