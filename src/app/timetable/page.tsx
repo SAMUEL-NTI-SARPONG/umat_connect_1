@@ -495,7 +495,7 @@ function StaffResitView() {
       );
     }
     
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Session'];
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Session'];
   
     return (
       <div className="space-y-6">
@@ -536,6 +536,7 @@ function StaffResitView() {
                                       <TableCell>{entry.department}</TableCell>
                                       <TableCell>{entry.numberOfStudents}</TableCell>
                                       <TableCell>{entry.room}</TableCell>
+                                      <TableCell>{entry.examiner}</TableCell>
                                       <TableCell>{entry.session}</TableCell>
                                   </TableRow>
                               ))}
@@ -1321,7 +1322,7 @@ function ResitTimetableDisplay({
     }
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Session'];
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Session'];
   
     return (
       <>
@@ -1426,6 +1427,7 @@ function ResitTimetableDisplay({
                                                         <TableCell>{row.department}</TableCell>
                                                         <TableCell>{row.numberOfStudents}</TableCell>
                                                         <TableCell>{row.room}</TableCell>
+                                                        <TableCell>{row.examiner}</TableCell>
                                                         <TableCell>{row.session}</TableCell>
                                                     </TableRow>
                                                 ))}

@@ -232,122 +232,136 @@ export async function findEmptyClassrooms(fileData: string) {
   return result;
 }
 
-// Function to normalize and tokenize a name
-function normalizeAndTokenizeName(name: string) {
-  if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-    return null;
-  }
-
-  // Normalize: lowercase, remove extra spaces, remove punctuation
-  let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
-  
-  // Tokenize: split by spaces or commas
-  let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
-  
-  // Handle cases like "surname, firstname" or "firstname surname"
-  let surname: string, firstName: string, middleInitials: string[] = [];
-  if (name.includes(',')) {
-    // Format: "surname, firstname [initials]"
-    surname = tokens[0];
-    firstName = tokens[1] || '';
-    middleInitials = tokens.slice(2);
-  } else {
-    // Format: "firstname surname" or "surname initials"
-    surname = tokens[tokens.length - 1];
-    firstName = tokens[0] || '';
-    middleInitials = tokens.slice(1, -1);
-  }
-
-  return {
-    original: name,
-    normalized: normalized.replace(/\s/g, ''), // For hash key (e.g., "dumenyajamesk")
-    surname,
-    firstName,
-    middleInitials,
-    variants: [
-      normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
-      `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
-      `${surname}${middleInitials.join('')}`.replace(/\s/g, '') // e.g., "dumenyak" for initials
-    ].filter(v => v.length > 0)
-  };
-}
-
 // Function to distribute courses to lecturers
 function distributeCourses(entries: any[]) {
-  // Initialize hash set for name indexing
-  const nameIndex = new Map(); // Maps normalized name/variant to lecturer details
-  const lecturerCourses = new Map(); // Maps normalized name to courses
+    // This function is provided by the user to handle name normalization and distribution.
+    
+    // Function to normalize and tokenize a name
+    function normalizeAndTokenizeName(name: string) {
+        if (!name || typeof name !== 'string') {
+            return null;
+        }
+        if (name.trim().toLowerCase() === 'department, gm') {
+            return {
+                original: name,
+                normalized: 'tba',
+                surname: 'TBA',
+                firstName: '',
+                middleInitials: [],
+                variants: ['tba'],
+            };
+        }
+    
+        // Normalize: lowercase, remove extra spaces, remove punctuation
+        let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
+      
+        // Tokenize: split by spaces or commas
+        let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
+      
+        // Handle cases like "surname, firstname" or "firstname surname"
+        let surname: string, firstName: string, middleInitials: string[] = [];
+        if (name.includes(',')) {
+            // Format: "surname, firstname [initials]"
+            surname = tokens[0];
+            firstName = tokens[1] || '';
+            middleInitials = tokens.slice(2);
+        } else {
+            // Format: "firstname surname" or "surname initials"
+            surname = tokens[tokens.length - 1];
+            firstName = tokens[0] || '';
+            middleInitials = tokens.slice(1, -1);
+        }
+    
+        return {
+            original: name,
+            normalized: normalized.replace(/\s/g, ''), // For hash key (e.g., "dumenyajamesk")
+            surname,
+            firstName,
+            middleInitials,
+            variants: [
+                normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
+                `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
+                `${surname}${middleInitials.join('')}`.replace(/\s/g, '') // e.g., "dumenyak" for initials
+            ].filter(v => v.length > 0)
+        };
+    }
 
-  for (const entry of entries) {
-    // Normalize and tokenize examiner name
-    const nameData = normalizeAndTokenizeName(entry.examiner);
+    // Initialize hash set for name indexing
+    const nameIndex = new Map(); // Maps normalized name/variant to lecturer details
+    const lecturerCourses = new Map(); // Maps normalized name to courses
 
-    // If name is invalid, assign to a "TBA" group for review
-    if (!nameData) {
-        const tbaKey = 'TBA';
-        if (!lecturerCourses.has(tbaKey)) {
-            lecturerCourses.set(tbaKey, {
-                lecturer: 'TBA', // Canonical name for this group
+    for (const entry of entries) {
+        // Normalize and tokenize examiner name
+        const nameData = normalizeAndTokenizeName(entry.examiner);
+
+        if (!nameData) {
+            continue; // Skip invalid examiners
+        }
+
+        if (nameData.normalized === 'tba') {
+            const tbaKey = 'TBA';
+            if (!lecturerCourses.has(tbaKey)) {
+                lecturerCourses.set(tbaKey, {
+                    lecturer: 'TBA',
+                    courses: []
+                });
+            }
+            lecturerCourses.get(tbaKey).courses.push({ ...entry, examiner: entry.examiner });
+            continue;
+        }
+
+        // Index name variants
+        let matchedName = null;
+        for (const variant of nameData.variants) {
+            if (nameIndex.has(variant)) {
+                matchedName = nameIndex.get(variant).normalized;
+                break;
+            }
+        }
+
+        // If no match, check token-based matching
+        if (!matchedName) {
+            for (const existingData of nameIndex.values()) {
+                if (
+                    existingData.surname === nameData.surname &&
+                    (existingData.firstName === nameData.firstName ||
+                        nameData.variants.includes(existingData.firstName) ||
+                        existingData.middleInitials.some((initial: string) => existingData.firstName.startsWith(initial)) ||
+                        existingData.middleInitials.some((initial: string) => nameData.firstName.startsWith(initial)))
+                ) {
+                    matchedName = existingData.normalized;
+                    break;
+                }
+            }
+        }
+
+        // If still no match, add as new lecturer
+        if (!matchedName) {
+            matchedName = nameData.normalized;
+            nameData.variants.forEach(variant => {
+                nameIndex.set(variant, nameData);
+            });
+        }
+
+        // Initialize lecturer's course array if not exists
+        if (!lecturerCourses.has(matchedName)) {
+            lecturerCourses.set(matchedName, {
+                lecturer: nameData.original, // Use original name for display
                 courses: []
             });
         }
-        lecturerCourses.get(tbaKey).courses.push(entry);
-        continue; // Skip to next entry
+        
+        // Add course to lecturer's courses
+        lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
     }
 
+    // Convert to array for output
+    const result = Array.from(lecturerCourses.values());
 
-    // Index name variants
-    let matchedName = null;
-    for (const variant of nameData.variants) {
-      if (nameIndex.has(variant)) {
-        matchedName = nameIndex.get(variant).normalized;
-        break;
-      }
-    }
+    // Sort lecturers alphabetically by original name
+    result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
 
-    // If no match, check token-based matching
-    if (!matchedName) {
-      for (const existingData of nameIndex.values()) {
-        if (
-          existingData.surname === nameData.surname &&
-          (existingData.firstName === nameData.firstName ||
-            nameData.variants.includes(existingData.firstName) ||
-            nameData.middleInitials.some((initial: string) => existingData.firstName.startsWith(initial)) ||
-            existingData.middleInitials.some((initial: string) => nameData.firstName.startsWith(initial)))
-        ) {
-          matchedName = existingData.normalized;
-          break;
-        }
-      }
-    }
-
-    // If still no match, add as new lecturer
-    if (!matchedName) {
-      matchedName = nameData.normalized;
-      nameData.variants.forEach(variant => {
-        nameIndex.set(variant, nameData);
-      });
-    }
-
-    // Initialize lecturer's course array if not exists
-    if (!lecturerCourses.has(matchedName)) {
-      lecturerCourses.set(matchedName, {
-        lecturer: nameData.original, // Use original name for display
-        courses: []
-      });
-    }
-
-    // Add course to lecturer's courses
-    lecturerCourses.get(matchedName).courses.push(entry);
-  }
-
-  // Convert to array for output
-  const result = Array.from(lecturerCourses.values());
-
-  // Sort lecturers alphabetically by original name
-  result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
-
-  return result;
+    return result;
 }
 
 /**
@@ -396,6 +410,7 @@ function extractTimetableData(fileBuffer: Buffer) {
     let entryIdCounter = 0;
     for (let i = headerRowIndex + 1; i < sheetData.length; i++) {
       const row = sheetData[i];
+      // Basic validation: ensure at least the first cell (date) is not empty.
       if (!row[0] || row[0].toString().trim() === '' || row[0].toString().toUpperCase().includes('FOR ANY ISSUES')) {
         continue;
       }
@@ -412,9 +427,8 @@ function extractTimetableData(fileBuffer: Buffer) {
         session: row[7] || null
       };
 
-      if (entry.date && entry.courseCode && entry.courseName) {
-        entries.push(entry);
-      }
+      // Push even if some fields are null, as distribution will handle it
+      entries.push(entry);
     }
 
     const distributedData = distributeCourses(entries);
@@ -451,5 +465,3 @@ export async function handleSpecialResitUpload(fileData: string) {
     throw new Error("Failed to parse the special resit Excel file. Please ensure it is in the correct format.");
   }
 }
-
-    
