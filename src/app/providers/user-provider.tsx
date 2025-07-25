@@ -88,6 +88,7 @@ export interface SpecialResitEntry {
 export interface SpecialResitTimetable {
   venue: string;
   notice?: string;
+  isDistributed: boolean;
   sheets: {
     sheetName: string;
     entries: SpecialResitEntry[];
@@ -127,6 +128,7 @@ interface UserContextType {
   clearAllNotifications: () => Promise<void>;
   specialResitTimetable: SpecialResitTimetable | null;
   setSpecialResitTimetable: (data: SpecialResitTimetable | null) => void;
+  distributeSpecialResitTimetable: () => void;
   studentResitSelections: StudentResitSelections;
   updateStudentResitSelection: (entryId: number, isSelected: boolean) => void;
 }
@@ -421,6 +423,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const distributeSpecialResitTimetable = useCallback(() => {
+    setSpecialResitTimetableState(prev => {
+      if (!prev) return null;
+      const distributedData = { ...prev, isDistributed: true };
+      localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
+      toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+      return distributedData;
+    });
+  }, [toast]);
+
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
     
@@ -492,9 +504,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     clearAllNotifications,
     specialResitTimetable,
     setSpecialResitTimetable,
+    distributeSpecialResitTimetable,
     studentResitSelections,
     updateStudentResitSelection,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, studentResitSelections, updateStudentResitSelection]);
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

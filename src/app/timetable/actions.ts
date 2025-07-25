@@ -241,6 +241,7 @@ function extractTimetableData(fileBuffer: Buffer) {
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const timetableData = {
       venue: '',
+      isDistributed: false, // Initially not distributed
       sheets: [] as { sheetName: string; entries: any[] }[],
     };
     

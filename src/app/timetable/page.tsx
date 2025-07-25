@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizone } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -85,12 +85,12 @@ function StudentResitView() {
     }
   }, [studentResitSelections, user]);
   
-  if (!specialResitTimetable || specialResitTimetable.sheets.length === 0) {
+  if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
     return (
       <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
         <CardContent className="text-center text-muted-foreground">
-          <p className="font-medium">Special Resit Timetable Not Available</p>
-          <p className="text-sm">Check back here for the special resit schedule if you have registered.</p>
+          <p className="font-medium">Special Resit Timetable Not Yet Published</p>
+          <p className="text-sm">The timetable will appear here once the administrator distributes it. Please check back later.</p>
         </CardContent>
       </Card>
     );
@@ -461,7 +461,7 @@ function StaffResitView() {
   const { user, specialResitTimetable } = useUser();
 
   const staffResitSchedule = useMemo(() => {
-    if (!user || !specialResitTimetable) return [];
+    if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) return [];
     
     const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
     const allEntries = specialResitTimetable.sheets.flatMap(sheet => sheet.entries);
@@ -471,11 +471,11 @@ function StaffResitView() {
     );
   }, [user, specialResitTimetable]);
 
-  if (!specialResitTimetable || specialResitTimetable.sheets.length === 0) {
+  if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
     return (
       <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
         <CardContent className="text-center text-muted-foreground">
-          <p className="font-medium">Special Resit Timetable Not Available</p>
+          <p className="font-medium">Special Resit Timetable Not Yet Published</p>
           <p className="text-sm">The resit schedule has not been published by the administrator yet.</p>
         </CardContent>
       </Card>
@@ -1239,6 +1239,7 @@ function ResitTimetableDisplay({
   setParsedData: (data: SpecialResitTimetable | null) => void;
 }) {
   const { toast } = useToast();
+  const { distributeSpecialResitTimetable } = useUser();
   const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   
@@ -1246,14 +1247,15 @@ function ResitTimetableDisplay({
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   const [editedFormData, setEditedFormData] = useState<SpecialResitEntry | null>(null);
 
   useEffect(() => {
     setLocalNotice(parsedData?.notice || '');
-    if (!parsedData?.notice) {
+    if (parsedData && !parsedData.notice && !parsedData.isDistributed) {
         setIsEditingNotice(true);
     }
-  }, [parsedData?.notice]);
+  }, [parsedData]);
   
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
@@ -1262,6 +1264,7 @@ function ResitTimetableDisplay({
   }, [selectedEntry, isEditModalOpen]);
   
   const handleRowClick = (entry: SpecialResitEntry) => {
+    if (parsedData?.isDistributed) return;
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
   };
@@ -1281,6 +1284,7 @@ function ResitTimetableDisplay({
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteConfirmOpen(false);
+    setIsDistributeConfirmOpen(false);
     setSelectedEntry(null);
   };
   
@@ -1348,19 +1352,55 @@ function ResitTimetableDisplay({
     <>
       <Card>
           <CardHeader>
-              <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
-              <CardDescription>Venue: {parsedData.venue}</CardDescription>
-              <div className="space-y-2 pt-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Special Resit Timetable ({totalEntries} entries)</CardTitle>
+                  <CardDescription>Venue: {parsedData.venue}</CardDescription>
+                </div>
+                <div>
+                {parsedData.isDistributed ? (
+                    <Badge variant="secondary" className="text-green-600 border-green-600">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Distributed
+                    </Badge>
+                ) : (
+                    <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button>
+                                <SendHorizone className="h-4 w-4 mr-2" />
+                                Distribute Timetable
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Distribute Timetable?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will make the timetable visible to all relevant staff and students. This action cannot be undone. Are you sure you want to proceed?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => {
+                                    distributeSpecialResitTimetable();
+                                    setIsDistributeConfirmOpen(false);
+                                }}>Distribute</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
+                </div>
+              </div>
+              <div className="space-y-2 pt-4">
                   <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
                       <span>Administrator's Notice</span>
-                      {!isEditingNotice && (
+                      {!isEditingNotice && !parsedData.isDistributed && (
                           <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
                               <PenSquare className="h-4 w-4 mr-2" />
                               Edit Notice
                           </Button>
                       )}
                   </Label>
-                  {isEditingNotice ? (
+                  {isEditingNotice && !parsedData.isDistributed ? (
                       <div className="flex items-start gap-2">
                           <Textarea
                               id="notice-textarea"
@@ -1404,7 +1444,7 @@ function ResitTimetableDisplay({
                                           </TableHeader>
                                           <TableBody>
                                               {sheet.entries.map((row) => (
-                                                  <TableRow key={row.id} onClick={() => handleRowClick(row)} className="cursor-pointer">
+                                                  <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
                                                       <TableCell>{row.date}</TableCell>
                                                       <TableCell>{row.courseCode}</TableCell>
                                                       <TableCell>{row.courseName}</TableCell>
