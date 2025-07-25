@@ -235,7 +235,14 @@ export async function findEmptyClassrooms(fileData: string) {
 // Function to normalize and tokenize a name
 function normalizeAndTokenizeName(name: string) {
   if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-    return null; // Skip invalid names
+    return {
+        original: name,
+        normalized: 'tba',
+        surname: 'TBA',
+        firstName: '',
+        middleInitials: [],
+        variants: ['tba']
+      };
   }
 
   // Normalize: lowercase, remove extra spaces, remove punctuation
