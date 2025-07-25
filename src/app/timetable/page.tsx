@@ -1359,6 +1359,8 @@ function ResitTimetableDisplay({
         return true;
       };
       
+      if (!sheets || sheets.length === 0 || !sheets[0].entries) return [];
+
       const filteredEntries = sheets[0].entries.filter(filterFunction);
       
       if (filteredEntries.length === 0 && (searchTerm || showInvalid)) {
@@ -1458,47 +1460,51 @@ function ResitTimetableDisplay({
                     )}
                 </div>
             </CardHeader>
-            <CardContent>
-                {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
-                    <div className="space-y-6">
-                        {filteredSheets[0].entries.map((lecturerSchedule) => (
-                             <div key={lecturerSchedule.lecturer}>
-                                <h3 className="text-lg font-semibold mb-2">{lecturerSchedule.lecturer} ({lecturerSchedule.courses.length} entries)</h3>
-                                <div className="overflow-x-auto border rounded-lg">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                {headers.map((header) => (
-                                                    <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
-                                                ))}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {lecturerSchedule.courses.map((row) => (
-                                                <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                                    <TableCell>{row.date}</TableCell>
-                                                    <TableCell>{row.courseCode}</TableCell>
-                                                    <TableCell>{row.courseName}</TableCell>
-                                                    <TableCell>{row.department}</TableCell>
-                                                    <TableCell>{row.numberOfStudents}</TableCell>
-                                                    <TableCell>{row.room}</TableCell>
-                                                    <TableCell>{row.examiner}</TableCell>
-                                                    <TableCell>{row.session}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                  <div className="text-center p-12 text-muted-foreground">
-                    <p>No results found for your search term or filter.</p>
-                  </div>
-                )}
-            </CardContent>
         </Card>
+
+        <div className="space-y-6 mt-6">
+            {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
+                filteredSheets[0].entries.map((lecturerSchedule) => (
+                    <Card key={lecturerSchedule.lecturer}>
+                        <CardHeader>
+                            <CardTitle>{lecturerSchedule.lecturer}</CardTitle>
+                            <CardDescription>{lecturerSchedule.courses.length} course(s) assigned.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto border rounded-lg">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {headers.map((header) => (
+                                                <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {lecturerSchedule.courses.map((row) => (
+                                            <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                                <TableCell>{row.date}</TableCell>
+                                                <TableCell>{row.courseCode}</TableCell>
+                                                <TableCell>{row.courseName}</TableCell>
+                                                <TableCell>{row.department}</TableCell>
+                                                <TableCell>{row.numberOfStudents}</TableCell>
+                                                <TableCell>{row.room}</TableCell>
+                                                <TableCell>{row.examiner}</TableCell>
+                                                <TableCell>{row.session}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+            ) : (
+              <div className="text-center p-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                <p>No results found for your search term or filter.</p>
+              </div>
+            )}
+        </div>
 
         {/* Action Modal */}
         <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
@@ -2292,3 +2298,4 @@ export default function TimetablePage() {
 
     
     
+
