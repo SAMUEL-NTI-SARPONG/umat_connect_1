@@ -235,14 +235,7 @@ export async function findEmptyClassrooms(fileData: string) {
 // Function to normalize and tokenize a name
 function normalizeAndTokenizeName(name: string) {
   if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-    return {
-        original: name,
-        normalized: 'tba',
-        surname: 'TBA',
-        firstName: '',
-        middleInitials: [],
-        variants: ['tba']
-      };
+    return null;
   }
 
   // Normalize: lowercase, remove extra spaces, remove punctuation
@@ -288,7 +281,20 @@ function distributeCourses(entries: any[]) {
   for (const entry of entries) {
     // Normalize and tokenize examiner name
     const nameData = normalizeAndTokenizeName(entry.examiner);
-    if (!nameData) continue; // Skip invalid examiners
+
+    // If name is invalid, assign to a "TBA" group for review
+    if (!nameData) {
+        const tbaKey = 'TBA';
+        if (!lecturerCourses.has(tbaKey)) {
+            lecturerCourses.set(tbaKey, {
+                lecturer: 'TBA', // Canonical name for this group
+                courses: []
+            });
+        }
+        lecturerCourses.get(tbaKey).courses.push(entry);
+        continue; // Skip to next entry
+    }
+
 
     // Index name variants
     let matchedName = null;

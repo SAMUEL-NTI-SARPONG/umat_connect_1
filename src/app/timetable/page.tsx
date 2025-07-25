@@ -1286,7 +1286,7 @@ function ResitTimetableDisplay({
   
       const filterFunction = (lecturerSchedule: DistributedResitSchedule) => {
         if (showInvalid) {
-            return lecturerSchedule.lecturer.toLowerCase() === 'tba' || lecturerSchedule.lecturer.toLowerCase() === 'unknown';
+            return lecturerSchedule.lecturer.toLowerCase() === 'tba';
         }
         if (searchTerm) {
           const lowercasedFilter = searchTerm.toLowerCase();
