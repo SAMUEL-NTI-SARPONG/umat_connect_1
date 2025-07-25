@@ -1244,11 +1244,13 @@ function StaffTimetableView({
 function ResitTimetableDisplay({
     parsedData,
     searchTerm,
-    setParsedData
+    setParsedData,
+    showInvalid,
   }: {
     parsedData: SpecialResitTimetable | null;
     searchTerm: string;
     setParsedData: (data: SpecialResitTimetable | null) => void;
+    showInvalid: boolean;
   }) {
     const { toast } = useToast();
     const { distributeSpecialResitTimetable } = useUser();
@@ -1278,28 +1280,37 @@ function ResitTimetableDisplay({
     };
   
     const filteredSheets = useMemo(() => {
-        if (!parsedData) return [];
-        if (!searchTerm) return parsedData.sheets;
-    
-        const lowercasedFilter = searchTerm.toLowerCase();
-    
-        // We filter based on the lecturer name and the courses within their schedule
-        const filteredEntries = parsedData.sheets[0].entries.filter(lecturerSchedule => {
-            const lecturerMatch = lecturerSchedule.lecturer.toLowerCase().includes(lowercasedFilter);
-            if (lecturerMatch) return true;
-    
-            return lecturerSchedule.courses.some(course =>
-                Object.values(course).some(value =>
-                    String(value).toLowerCase().includes(lowercasedFilter)
-                )
-            );
-        });
-    
-        if (filteredEntries.length === 0) return [];
-    
-        return [{ ...parsedData.sheets[0], entries: filteredEntries }];
-    
-      }, [parsedData, searchTerm]);
+      if (!parsedData) return [];
+  
+      let sheets = parsedData.sheets;
+  
+      const filterFunction = (lecturerSchedule: DistributedResitSchedule) => {
+        if (showInvalid) {
+            return lecturerSchedule.lecturer.toLowerCase() === 'tba' || lecturerSchedule.lecturer.toLowerCase() === 'unknown';
+        }
+        if (searchTerm) {
+          const lowercasedFilter = searchTerm.toLowerCase();
+          const lecturerMatch = lecturerSchedule.lecturer.toLowerCase().includes(lowercasedFilter);
+          if (lecturerMatch) return true;
+  
+          return lecturerSchedule.courses.some(course =>
+            Object.values(course).some(value =>
+              String(value).toLowerCase().includes(lowercasedFilter)
+            )
+          );
+        }
+        return true;
+      };
+      
+      const filteredEntries = sheets[0].entries.filter(filterFunction);
+      
+      if (filteredEntries.length === 0 && (searchTerm || showInvalid)) {
+        return [];
+      }
+      
+      return [{ ...sheets[0], entries: filteredEntries }];
+  
+    }, [parsedData, searchTerm, showInvalid]);
     
     if (!parsedData) {
       return (
@@ -1391,8 +1402,8 @@ function ResitTimetableDisplay({
                 </div>
             </CardHeader>
             <CardContent>
-                {filteredSheets.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets.length > 0 ? filteredSheets[0].entries[0].lecturer : undefined}>
+                {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets[0].entries.length > 0 ? filteredSheets[0].entries[0].lecturer : undefined}>
                         {filteredSheets[0].entries.map((lecturerSchedule) => (
                             <AccordionItem value={lecturerSchedule.lecturer} key={lecturerSchedule.lecturer}>
                                 <AccordionTrigger>{lecturerSchedule.lecturer} ({lecturerSchedule.courses.length} entries)</AccordionTrigger>
@@ -1427,7 +1438,7 @@ function ResitTimetableDisplay({
                     </Accordion>
                 ) : (
                   <div className="text-center p-12 text-muted-foreground">
-                    <p>No results found for your search term.</p>
+                    <p>No results found for your search term or filter.</p>
                   </div>
                 )}
             </CardContent>
@@ -1851,6 +1862,7 @@ function AdminTimetableView({
   const [isResitLoading, setIsResitLoading] = useState(false);
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
+  const [resitShowInvalid, setResitShowInvalid] = useState(false);
   
   // Map state to the active tab
   const activeState = useMemo(() => {
@@ -1860,11 +1872,11 @@ function AdminTimetableView({
         case 'exams':
             return { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: examsEmptySlots, setEmptySlots: setExamsEmptySlots, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleFileUpload, cleaner: setExamsEmptySlots };
         case 'resit':
-            return { parsedData: specialResitTimetable, setParsedData: setSpecialResitTimetable, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, handler: handleSpecialResitUpload, cleaner: () => {} };
+            return { parsedData: specialResitTimetable, setParsedData: setSpecialResitTimetable, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid, handler: handleSpecialResitUpload, cleaner: () => {} };
         default:
             return { parsedData: null, setParsedData: () => {}, emptySlots: [], setEmptySlots: () => {}, isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {}, handler: async () => [], cleaner: () => {} };
     }
-  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, examsEmptySlots, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, specialResitTimetable, isResitLoading, resitError, resitSearchTerm, setSpecialResitTimetable]);
+  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, examsEmptySlots, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, specialResitTimetable, isResitLoading, resitError, resitSearchTerm, resitShowInvalid, setSpecialResitTimetable]);
 
   useEffect(() => {
       setClassParsedData(parsedData);
@@ -1963,19 +1975,17 @@ function AdminTimetableView({
               </TooltipContent>
             </Tooltip>
             
-            {activeTab !== 'resit' && (
-                <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
-                    <FilterX className="h-4 w-4" />
-                    <span className="sr-only">Filter for review</span>
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Filter for review</p>
-                </TooltipContent>
-                </Tooltip>
-            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
+                  <FilterX className="h-4 w-4" />
+                  <span className="sr-only">Filter for review</span>
+                  </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                  <p>Filter for review</p>
+              </TooltipContent>
+            </Tooltip>
 
             <AlertDialog>
               <Tooltip>
@@ -2063,6 +2073,7 @@ function AdminTimetableView({
             parsedData={specialResitTimetable}
             searchTerm={resitSearchTerm}
             setParsedData={setSpecialResitTimetable}
+            showInvalid={resitShowInvalid}
           />
         </TabsContent>
       </Tabs>
@@ -2080,7 +2091,6 @@ export default function TimetablePage() {
     setEmptySlots,
     staffSchedules,
     addStaffSchedule,
-    specialResitTimetable,
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
