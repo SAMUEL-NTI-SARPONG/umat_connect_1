@@ -1460,40 +1460,38 @@ function ResitTimetableDisplay({
             </CardHeader>
             <CardContent>
                 {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full" defaultValue={filteredSheets[0].entries.length > 0 ? filteredSheets[0].entries[0].lecturer : undefined}>
+                    <div className="space-y-6">
                         {filteredSheets[0].entries.map((lecturerSchedule) => (
-                            <AccordionItem value={lecturerSchedule.lecturer} key={lecturerSchedule.lecturer}>
-                                <AccordionTrigger>{lecturerSchedule.lecturer} ({lecturerSchedule.courses.length} entries)</AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    {headers.map((header) => (
-                                                        <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
-                                                    ))}
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {lecturerSchedule.courses.map((row) => (
-                                                    <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                                        <TableCell>{row.date}</TableCell>
-                                                        <TableCell>{row.courseCode}</TableCell>
-                                                        <TableCell>{row.courseName}</TableCell>
-                                                        <TableCell>{row.department}</TableCell>
-                                                        <TableCell>{row.numberOfStudents}</TableCell>
-                                                        <TableCell>{row.room}</TableCell>
-                                                        <TableCell>{row.examiner}</TableCell>
-                                                        <TableCell>{row.session}</TableCell>
-                                                    </TableRow>
+                             <div key={lecturerSchedule.lecturer}>
+                                <h3 className="text-lg font-semibold mb-2">{lecturerSchedule.lecturer} ({lecturerSchedule.courses.length} entries)</h3>
+                                <div className="overflow-x-auto border rounded-lg">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                {headers.map((header) => (
+                                                    <TableHead key={`${lecturerSchedule.lecturer}-${header}`}>{header}</TableHead>
                                                 ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {lecturerSchedule.courses.map((row) => (
+                                                <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                                    <TableCell>{row.date}</TableCell>
+                                                    <TableCell>{row.courseCode}</TableCell>
+                                                    <TableCell>{row.courseName}</TableCell>
+                                                    <TableCell>{row.department}</TableCell>
+                                                    <TableCell>{row.numberOfStudents}</TableCell>
+                                                    <TableCell>{row.room}</TableCell>
+                                                    <TableCell>{row.examiner}</TableCell>
+                                                    <TableCell>{row.session}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
                         ))}
-                    </Accordion>
+                    </div>
                 ) : (
                   <div className="text-center p-12 text-muted-foreground">
                     <p>No results found for your search term or filter.</p>
