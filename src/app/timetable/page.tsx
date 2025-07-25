@@ -1381,9 +1381,16 @@ function ResitTimetableDisplay({
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
     const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Session'];
-  
+    const cardBorderColors = [
+      "border-blue-200",
+      "border-green-200",
+      "border-yellow-200",
+      "border-purple-200",
+      "border-pink-200",
+    ];
+
     return (
-      <>
+      <div className="space-y-6">
         <Card>
             <CardHeader>
                 <div className="flex justify-between items-start">
@@ -1464,8 +1471,8 @@ function ResitTimetableDisplay({
 
         <div className="space-y-6 mt-6">
             {filteredSheets.length > 0 && filteredSheets[0].entries.length > 0 ? (
-                filteredSheets[0].entries.map((lecturerSchedule) => (
-                    <Card key={lecturerSchedule.lecturer}>
+                filteredSheets[0].entries.map((lecturerSchedule, index) => (
+                    <Card key={lecturerSchedule.lecturer} className={cn("border-l-4", cardBorderColors[index % cardBorderColors.length])}>
                         <CardHeader>
                             <CardTitle>{lecturerSchedule.lecturer}</CardTitle>
                             <CardDescription>{lecturerSchedule.courses.length} course(s) assigned.</CardDescription>
@@ -1587,7 +1594,7 @@ function ResitTimetableDisplay({
             </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-      </>
+      </div>
     );
   }
 
@@ -2298,4 +2305,5 @@ export default function TimetablePage() {
 
     
     
+
 
