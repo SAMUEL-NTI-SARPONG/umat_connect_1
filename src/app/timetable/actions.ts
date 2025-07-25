@@ -232,64 +232,63 @@ export async function findEmptyClassrooms(fileData: string) {
   return result;
 }
 
-// Function to distribute courses to lecturers
-function distributeCourses(entries: any[]) {
-    // This function is provided by the user to handle name normalization and distribution.
-    
-    // Function to normalize and tokenize a name
-    function normalizeAndTokenizeName(name: string) {
-        if (!name || typeof name !== 'string') {
-            return null;
-        }
-        if (name.trim().toLowerCase() === 'department, gm') {
-            return {
-                original: name,
-                normalized: 'tba',
-                surname: 'TBA',
-                firstName: '',
-                middleInitials: [],
-                variants: ['tba'],
-            };
-        }
-    
-        // Normalize: lowercase, remove extra spaces, remove punctuation
-        let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
-      
-        // Tokenize: split by spaces or commas
-        let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
-      
-        // Handle cases like "surname, firstname" or "firstname surname"
-        let surname: string, firstName: string, middleInitials: string[] = [];
-        if (name.includes(',')) {
-            // Format: "surname, firstname [initials]"
-            surname = tokens[0];
-            firstName = tokens[1] || '';
-            middleInitials = tokens.slice(2);
-        } else {
-            // Format: "firstname surname" or "surname initials"
-            surname = tokens[tokens.length - 1];
-            firstName = tokens[0] || '';
-            middleInitials = tokens.slice(1, -1);
-        }
-    
-        return {
-            original: name,
-            normalized: normalized.replace(/\s/g, ''), // For hash key (e.g., "dumenyajamesk")
-            surname,
-            firstName,
-            middleInitials,
-            variants: [
-                normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
-                `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
-                `${surname}${middleInitials.join('')}`.replace(/\s/g, '') // e.g., "dumenyak" for initials
-            ].filter(v => v.length > 0)
-        };
+// Function to normalize and tokenize a name
+function normalizeAndTokenizeName(name: string | null) {
+    if (!name || typeof name !== 'string') {
+      return null;
     }
-
+  
+    if (name.trim().toLowerCase() === 'department, gm') {
+      return {
+        original: name,
+        normalized: 'tba',
+        surname: 'TBA',
+        firstName: '',
+        middleInitials: [],
+        variants: ['tba'],
+      };
+    }
+  
+    // Normalize: lowercase, remove extra spaces, remove punctuation
+    let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
+    
+    // Tokenize: split by spaces or commas
+    let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
+    
+    // Handle cases like "surname, firstname" or "firstname surname"
+    let surname: string, firstName: string, middleInitials: string[] = [];
+    if (name.includes(',')) {
+      // Format: "surname, firstname [initials]"
+      surname = tokens[0];
+      firstName = tokens[1] || '';
+      middleInitials = tokens.slice(2);
+    } else {
+      // Format: "firstname surname" or "surname initials"
+      surname = tokens[tokens.length - 1];
+      firstName = tokens[0] || '';
+      middleInitials = tokens.slice(1, -1);
+    }
+  
+    return {
+      original: name,
+      normalized: normalized.replace(/\s/g, ''), // For hash key (e.g., "dumenyajamesk")
+      surname,
+      firstName,
+      middleInitials,
+      variants: [
+        normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
+        `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
+        `${surname}${middleInitials.join('')}`.replace(/\s/g, '') // e.g., "dumenyak" for initials
+      ].filter(v => v.length > 0)
+    };
+  }
+  
+  // Function to distribute courses to lecturers
+  function distributeCourses(entries: any[]) {
     // Initialize hash set for name indexing
     const nameIndex = new Map(); // Maps normalized name/variant to lecturer details
     const lecturerCourses = new Map(); // Maps normalized name to courses
-
+  
     for (const entry of entries) {
         // Normalize and tokenize examiner name
         const nameData = normalizeAndTokenizeName(entry.examiner);
@@ -297,7 +296,7 @@ function distributeCourses(entries: any[]) {
         if (!nameData) {
             continue; // Skip invalid examiners
         }
-
+        
         if (nameData.normalized === 'tba') {
             const tbaKey = 'TBA';
             if (!lecturerCourses.has(tbaKey)) {
@@ -325,9 +324,9 @@ function distributeCourses(entries: any[]) {
                 if (
                     existingData.surname === nameData.surname &&
                     (existingData.firstName === nameData.firstName ||
-                        nameData.variants.includes(existingData.firstName) ||
-                        existingData.middleInitials.some((initial: string) => existingData.firstName.startsWith(initial)) ||
-                        existingData.middleInitials.some((initial: string) => nameData.firstName.startsWith(initial)))
+                    nameData.variants.includes(existingData.firstName) ||
+                    existingData.middleInitials.some((initial: string) => existingData.firstName.startsWith(initial)) ||
+                    existingData.middleInitials.some((initial: string) => nameData.firstName.startsWith(initial)))
                 ) {
                     matchedName = existingData.normalized;
                     break;
@@ -363,6 +362,7 @@ function distributeCourses(entries: any[]) {
 
     return result;
 }
+
 
 /**
  * Extracts timetable data from an Excel file with a structure similar to the provided example.

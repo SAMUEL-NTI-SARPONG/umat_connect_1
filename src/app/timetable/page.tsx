@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
@@ -1258,8 +1257,13 @@ function ResitTimetableDisplay({
     const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
     const [isEditingNotice, setIsEditingNotice] = useState(false);
     
-    // The data structure has changed. We no longer edit individual entries.
-    // The distribution is now the atomic unit.
+    // State for modals
+    const [selectedEntry, setSelectedEntry] = useState<SpecialResitEntry | null>(null);
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [editedFormData, setEditedFormData] = useState<SpecialResitEntry | null>(null);
+
     const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   
     useEffect(() => {
@@ -1269,6 +1273,12 @@ function ResitTimetableDisplay({
       }
     }, [parsedData]);
     
+    useEffect(() => {
+        if (selectedEntry && isEditModalOpen) {
+          setEditedFormData(selectedEntry);
+        }
+    }, [selectedEntry, isEditModalOpen]);
+
     const handleSaveNotice = () => {
       if (!parsedData) return;
       const updatedData = { ...parsedData, notice: localNotice };
@@ -1278,6 +1288,52 @@ function ResitTimetableDisplay({
         description: "The special resit timetable notice has been saved.",
       });
       setIsEditingNotice(false);
+    };
+
+    const closeAllModals = () => {
+        setIsActionModalOpen(false);
+        setIsEditModalOpen(false);
+        setIsDeleteConfirmOpen(false);
+        setSelectedEntry(null);
+    };
+
+    const handleRowClick = (entry: SpecialResitEntry) => {
+        if (parsedData?.isDistributed) return;
+        setSelectedEntry(entry);
+        setIsActionModalOpen(true);
+    };
+
+    const handleDeleteRow = () => {
+        if (!selectedEntry || !parsedData) return;
+        const newSheets = parsedData.sheets.map(sheet => ({
+            ...sheet,
+            entries: sheet.entries.map(lecturerSchedule => ({
+                ...lecturerSchedule,
+                courses: lecturerSchedule.courses.filter(course => course.id !== selectedEntry.id)
+            })).filter(lecturerSchedule => lecturerSchedule.courses.length > 0)
+        }));
+        setParsedData({ ...parsedData, sheets: newSheets });
+        closeAllModals();
+    };
+
+    const handleSaveEdit = () => {
+        if (!editedFormData || !parsedData) return;
+        const newSheets = parsedData.sheets.map(sheet => ({
+            ...sheet,
+            entries: sheet.entries.map(lecturerSchedule => ({
+                ...lecturerSchedule,
+                courses: lecturerSchedule.courses.map(course => 
+                    course.id === editedFormData.id ? editedFormData : course
+                )
+            }))
+        }));
+        setParsedData({ ...parsedData, sheets: newSheets });
+        closeAllModals();
+    };
+
+    const handleEditInputChange = (field: keyof SpecialResitEntry, value: string | number | null) => {
+        if (!editedFormData) return;
+        setEditedFormData({ ...editedFormData, [field]: value });
     };
   
     const filteredSheets = useMemo(() => {
@@ -1420,7 +1476,7 @@ function ResitTimetableDisplay({
                                             </TableHeader>
                                             <TableBody>
                                                 {lecturerSchedule.courses.map((row) => (
-                                                    <TableRow key={row.id}>
+                                                    <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
                                                         <TableCell>{row.date}</TableCell>
                                                         <TableCell>{row.courseCode}</TableCell>
                                                         <TableCell>{row.courseName}</TableCell>
@@ -1445,6 +1501,88 @@ function ResitTimetableDisplay({
                 )}
             </CardContent>
         </Card>
+
+        {/* Action Modal */}
+        <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Choose Action</DialogTitle>
+                <DialogDescription>
+                What would you like to do with this timetable entry?
+                </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-around py-4">
+                <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+                <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+            </div>
+            </DialogContent>
+        </Dialog>
+        
+        {/* Edit Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Edit Resit Entry</DialogTitle>
+                <DialogDescription>
+                Make changes to the entry here. Click save when you're done.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date-edit" className="text-right">Date</Label>
+                    <Input id="date-edit" value={editedFormData?.date || ''} onChange={(e) => handleEditInputChange('date', e.target.value)} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="courseCode-edit" className="text-right">Course Code</Label>
+                    <Input id="courseCode-edit" value={editedFormData?.courseCode || ''} onChange={(e) => handleEditInputChange('courseCode', e.target.value)} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="courseName-edit" className="text-right">Course Name</Label>
+                    <Input id="courseName-edit" value={editedFormData?.courseName || ''} onChange={(e) => handleEditInputChange('courseName', e.target.value)} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="department-edit" className="text-right">Department</Label>
+                    <Input id="department-edit" value={editedFormData?.department || ''} onChange={(e) => handleEditInputChange('department', e.target.value)} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="room-edit" className="text-right">Room</Label>
+                    <Input id="room-edit" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="examiner-edit" className="text-right">Examiner</Label>
+                    <Input id="examiner-edit" value={editedFormData?.examiner || ''} onChange={(e) => handleEditInputChange('examiner', e.target.value)} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="session-edit" className="text-right">Session</Label>
+                    <Input id="session-edit" value={editedFormData?.session || ''} onChange={(e) => handleEditInputChange('session', e.target.value)} className="col-span-3" />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+                <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
+            </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete this resit entry.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       </>
     );
   }
