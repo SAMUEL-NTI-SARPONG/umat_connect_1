@@ -1350,7 +1350,7 @@ function ResitTimetableDisplay({
       );
 
       if (showInvalid) {
-        allEntries = allEntries.filter(entry => entry.assignedLecturer.toLowerCase() === 'tba');
+        allEntries = allEntries.filter(entry => entry.assignedLecturer.toLowerCase() === 'unassigned');
       }
 
       if (searchTerm) {
@@ -1361,7 +1361,11 @@ function ResitTimetableDisplay({
             )
         );
       }
-      return allEntries;
+      return allEntries.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateA.getTime() - dateB.getTime();
+      });
     }, [parsedData, searchTerm, showInvalid]);
   
     if (!parsedData) {
@@ -2278,6 +2282,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
