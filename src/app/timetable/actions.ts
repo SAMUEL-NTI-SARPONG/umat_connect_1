@@ -498,7 +498,81 @@ export async function handleSpecialResitUpload(fileData: string) {
   }
 }
 
+function excelDateToJSDate(serial: number) {
+    const utc_days = Math.floor(serial - 25569); // Excel epoch starts at Jan 1, 1900
+    const date = new Date(utc_days * 86400 * 1000);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${day}-${month}-${year}`;
+}
+  
+function mapPeriod(period: string) {
+    switch (period) {
+        case 'M': return 'Morning';
+        case 'A': return 'Afternoon';
+        case 'E': return 'Evening';
+        default: return period || 'Unknown';
+    }
+}
+
+function cleanName(name: string | null) {
+    if (!name) return '';
+    return name.trim().replace(/\s+/g, ' ');
+}
+
 export async function handleExamsUpload(fileData: string) {
-  // This function is intentionally left empty to disable the upload feature for the exams tab.
-  return null;
+    const fileBuffer = Buffer.from(fileData, 'base64');
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const sheets = ['CLASS', 'GENERAL'];
+    const timetableData: any[] = [];
+    let idCounter = 0;
+
+    for (const sheetName of sheets) {
+        if (!workbook.SheetNames.includes(sheetName)) continue;
+
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: ['date', 'courseCode', 'courseName', 'class', 'number', 'lecturer', 'room', 'invigilator', 'period'] });
+
+        // Find the starting row of actual data
+        let dataStartIndex = -1;
+        for (let i = 0; i < rows.length; i++) {
+            const row: any = rows[i];
+            if (String(row.date).trim().toUpperCase() === 'DATE' && String(row.courseCode).trim().toUpperCase() === 'COURSE NO') {
+                dataStartIndex = i + 1;
+                break;
+            }
+        }
+
+        if (dataStartIndex === -1) continue;
+
+        const sheetRows = rows.slice(dataStartIndex);
+        
+        sheetRows.forEach((row: any) => {
+            if (row.date && row.courseCode) {
+                timetableData.push({
+                    id: idCounter++,
+                    date: row.date,
+                    dateStr: typeof row.date === 'number' ? excelDateToJSDate(row.date) : row.date,
+                    day: new Date(excelDateToJSDate(row.date).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
+                    courseCode: row.courseCode,
+                    courseName: row.courseName,
+                    class: row.class,
+                    lecturer: cleanName(row.lecturer),
+                    room: row.room,
+                    invigilator: cleanName(row.invigilator),
+                    period: mapPeriod(row.period),
+                });
+            }
+        });
+    }
+
+    if (timetableData.length === 0) {
+        throw new Error("No valid exam data found in 'CLASS' or 'GENERAL' sheets.");
+    }
+
+    // Sort by date
+    timetableData.sort((a, b) => a.date - b.date);
+
+    return timetableData;
 }
