@@ -1685,21 +1685,7 @@ function TimetableDisplay({
 
   const groupedByDate = useMemo(() => {
     if (!filteredData) return {};
-  
-    // Define the desired order for periods
-    const periodOrder = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3 };
-  
-    // Sort the filtered data first by period
-    if (isExamsTimetable) {
-      filteredData.sort((a, b) => {
-        const aPeriod = (a as any).period || 'Unknown';
-        const bPeriod = (b as any).period || 'Unknown';
-        const aOrder = periodOrder[aPeriod as keyof typeof periodOrder] || 4;
-        const bOrder = periodOrder[bPeriod as keyof typeof periodOrder] || 4;
-        return aOrder - bOrder;
-      });
-    }
-  
+    
     return filteredData.reduce((acc, entry) => {
       const key = isExamsTimetable ? (entry as any).dateStr : entry.day;
       if (!acc[key]) {
@@ -1784,52 +1770,67 @@ function TimetableDisplay({
           </CardHeader>
           <CardContent>
             <Accordion type="multiple" className="w-full">
-              {groupKeys.map(key => (
-                <AccordionItem value={key} key={key}>
-                  <AccordionTrigger>
-                    {key} ({groupedByDate[key]?.length || 0} exams)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="overflow-x-auto border rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
-                              <TableHead key={header}>{header}</TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {groupedByDate[key]?.map((entry: any) => (
-                            <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                              {isExamsTimetable ? (
-                                <>
-                                  <TableCell>{entry.period}</TableCell>
-                                  <TableCell>{entry.courseCode}</TableCell>
-                                  <TableCell>{entry.courseName}</TableCell>
-                                  <TableCell>{entry.class}</TableCell>
-                                  <TableCell>{entry.room}</TableCell>
-                                  <TableCell>{entry.lecturer}</TableCell>
-                                  <TableCell>{entry.invigilator}</TableCell>
-                                </>
-                              ) : (
-                                <>
-                                  <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
-                                  <TableCell>{entry.room}</TableCell>
-                                  <TableCell>{entry.courseCode}</TableCell>
-                                  <TableCell>{entry.lecturer}</TableCell>
-                                  <TableCell>{(entry.departments || []).join(', ')}</TableCell>
-                                  <TableCell>{entry.level}</TableCell>
-                                </>
-                              )}
+              {groupKeys.map(key => {
+                // Correct sorting logic starts here
+                const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3 };
+                const sortedEntries = isExamsTimetable 
+                  ? [...groupedByDate[key]].sort((a, b) => {
+                      const aPeriod = (a as any).period || 'Unknown';
+                      const bPeriod = (b as any).period || 'Unknown';
+                      const aOrder = periodOrder[aPeriod] || 4;
+                      const bOrder = periodOrder[bPeriod] || 4;
+                      return aOrder - bOrder;
+                    })
+                  : groupedByDate[key];
+                // Correct sorting logic ends here
+                
+                return (
+                  <AccordionItem value={key} key={key}>
+                    <AccordionTrigger>
+                      {key} ({groupedByDate[key]?.length || 0} exams)
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="overflow-x-auto border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
+                                <TableHead key={header}>{header}</TableHead>
+                              ))}
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                          </TableHeader>
+                          <TableBody>
+                            {sortedEntries.map((entry: any) => (
+                              <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                {isExamsTimetable ? (
+                                  <>
+                                    <TableCell>{entry.period}</TableCell>
+                                    <TableCell>{entry.courseCode}</TableCell>
+                                    <TableCell>{entry.courseName}</TableCell>
+                                    <TableCell>{entry.class}</TableCell>
+                                    <TableCell>{entry.room}</TableCell>
+                                    <TableCell>{entry.lecturer}</TableCell>
+                                    <TableCell>{entry.invigilator}</TableCell>
+                                  </>
+                                ) : (
+                                  <>
+                                    <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
+                                    <TableCell>{entry.room}</TableCell>
+                                    <TableCell>{entry.courseCode}</TableCell>
+                                    <TableCell>{entry.lecturer}</TableCell>
+                                    <TableCell>{(entry.departments || []).join(', ')}</TableCell>
+                                    <TableCell>{entry.level}</TableCell>
+                                  </>
+                                )}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
              {groupKeys.length === 0 && (searchTerm || showInvalid) && (
                 <div className="text-center p-12 text-muted-foreground">
@@ -2339,6 +2340,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
