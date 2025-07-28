@@ -495,7 +495,7 @@ function StaffResitView() {
       );
     }
     
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Session'];
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Original Examiner', 'Session'];
   
     return (
       <div className="space-y-6">
@@ -1361,14 +1361,6 @@ function ResitTimetableDisplay({
             )
         );
       }
-      
-      // Sort by date after filtering
-      allEntries.sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return dateA - dateB;
-      });
-
       return allEntries;
     }, [parsedData, searchTerm, showInvalid]);
   
@@ -1381,7 +1373,7 @@ function ResitTimetableDisplay({
     }
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', '# Students', 'Room', 'Original Examiner', 'Assigned Lecturer', 'Session'];
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Assigned Lecturer', 'Session'];
 
     return (
       <div className="space-y-6">
@@ -1462,44 +1454,43 @@ function ResitTimetableDisplay({
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {headers.map((header) => (
-                                    <TableHead key={header}>{header}</TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {flattenedAndFilteredData.length > 0 ? (
-                                flattenedAndFilteredData.map((row) => (
-                                    <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                        <TableCell>{row.date}</TableCell>
-                                        <TableCell>{row.courseCode}</TableCell>
-                                        <TableCell>{row.courseName}</TableCell>
-                                        <TableCell>{row.department}</TableCell>
-                                        <TableCell>{row.numberOfStudents}</TableCell>
-                                        <TableCell>{row.room}</TableCell>
-                                        <TableCell>{row.examiner}</TableCell>
-                                        <TableCell>{(row as any).assignedLecturer}</TableCell>
-                                        <TableCell>{row.session}</TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
+                <Accordion type="multiple" className="w-full">
+                    <div className="overflow-x-auto border rounded-lg">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={headers.length} className="h-24 text-center">
-                                        No results found for your filter.
-                                    </TableCell>
+                                    {headers.map((header) => (
+                                        <TableHead key={header}>{header}</TableHead>
+                                    ))}
                                 </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+                            </TableHeader>
+                            <TableBody>
+                                {flattenedAndFilteredData.length > 0 ? (
+                                    flattenedAndFilteredData.map((row) => (
+                                        <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                            <TableCell>{row.date}</TableCell>
+                                            <TableCell>{row.courseCode}</TableCell>
+                                            <TableCell>{row.courseName}</TableCell>
+                                            <TableCell>{row.department}</TableCell>
+                                            <TableCell>{row.numberOfStudents}</TableCell>
+                                            <TableCell>{row.room}</TableCell>
+                                            <TableCell>{(row as any).assignedLecturer}</TableCell>
+                                            <TableCell>{row.session}</TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={headers.length} className="h-24 text-center">
+                                            No results found for your filter.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </Accordion>
             </CardContent>
         </Card>
-
-        {/* Action Modal */}
         <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
             <DialogContent>
             <DialogHeader>
@@ -1518,8 +1509,6 @@ function ResitTimetableDisplay({
             </div>
             </DialogContent>
         </Dialog>
-        
-        {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
             <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -1564,8 +1553,6 @@ function ResitTimetableDisplay({
             </DialogFooter>
             </DialogContent>
         </Dialog>
-        
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
             <AlertDialogContent>
             <AlertDialogHeader>
@@ -2291,6 +2278,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
