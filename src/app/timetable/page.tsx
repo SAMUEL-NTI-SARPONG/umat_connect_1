@@ -5,7 +5,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -1742,7 +1742,17 @@ function TimetableDisplay({
     return continuousEndTimes;
   }, [startTime, availableSlotsForRoomAndDay]);
 
-  const groupKeys = Object.keys(groupedByDate);
+  const groupKeys = Object.keys(groupedByDate).sort((a, b) => {
+    if (isExamsTimetable) {
+        try {
+            const dateA = new Date(a.split('-').reverse().join('-')).getTime();
+            const dateB = new Date(b.split('-').reverse().join('-')).getTime();
+            return dateA - dateB;
+        } catch(e) { return 0; }
+    }
+    return days.indexOf(a) - days.indexOf(b);
+  });
+
   const examsTableHeaders = ['Period', 'Course Code', 'Course Name', 'Class', 'Room', 'Lecturer', 'Invigilator'];
   const classTableHeaders = ['Time', 'Room', 'Course', 'Lecturer', 'Departments', 'Level'];
 
@@ -1769,66 +1779,68 @@ function TimetableDisplay({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Accordion type="multiple" className="w-full">
+            <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
-                // Correct sorting logic starts here
-                const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3 };
                 const sortedEntries = isExamsTimetable 
                   ? [...groupedByDate[key]].sort((a, b) => {
+                      const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
                       const aPeriod = (a as any).period || 'Unknown';
                       const bPeriod = (b as any).period || 'Unknown';
-                      const aOrder = periodOrder[aPeriod] || 4;
-                      const bOrder = periodOrder[bPeriod] || 4;
-                      return aOrder - bOrder;
+                      return periodOrder[aPeriod] - periodOrder[bPeriod];
                     })
                   : groupedByDate[key];
-                // Correct sorting logic ends here
                 
                 return (
-                  <AccordionItem value={key} key={key}>
-                    <AccordionTrigger>
-                      {key} ({groupedByDate[key]?.length || 0} exams)
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="overflow-x-auto border rounded-lg">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
-                                <TableHead key={header}>{header}</TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {sortedEntries.map((entry: any) => (
-                              <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                                {isExamsTimetable ? (
-                                  <>
-                                    <TableCell>{entry.period}</TableCell>
-                                    <TableCell>{entry.courseCode}</TableCell>
-                                    <TableCell>{entry.courseName}</TableCell>
-                                    <TableCell>{entry.class}</TableCell>
-                                    <TableCell>{entry.room}</TableCell>
-                                    <TableCell>{entry.lecturer}</TableCell>
-                                    <TableCell>{entry.invigilator}</TableCell>
-                                  </>
-                                ) : (
-                                  <>
-                                    <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
-                                    <TableCell>{entry.room}</TableCell>
-                                    <TableCell>{entry.courseCode}</TableCell>
-                                    <TableCell>{entry.lecturer}</TableCell>
-                                    <TableCell>{(entry.departments || []).join(', ')}</TableCell>
-                                    <TableCell>{entry.level}</TableCell>
-                                  </>
-                                )}
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
+                  <Card key={key} className="overflow-hidden">
+                    <AccordionItem value={key} className="border-b-0">
+                      <AccordionTrigger className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors [&[data-state=open]>svg]:rotate-180">
+                        <div className="flex items-center gap-4">
+                          <span className="font-semibold text-base">{key}</span>
+                          <Badge variant="secondary">{groupedByDate[key]?.length || 0} exams</Badge>
+                        </div>
+                        <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="overflow-x-auto">
+                            <Table>
+                            <TableHeader>
+                                <TableRow>
+                                {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
+                                    <TableHead key={header}>{header}</TableHead>
+                                ))}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedEntries.map((entry: any) => (
+                                <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                    {isExamsTimetable ? (
+                                    <>
+                                        <TableCell>{entry.period}</TableCell>
+                                        <TableCell>{entry.courseCode}</TableCell>
+                                        <TableCell>{entry.courseName}</TableCell>
+                                        <TableCell>{entry.class}</TableCell>
+                                        <TableCell>{entry.room}</TableCell>
+                                        <TableCell>{entry.lecturer}</TableCell>
+                                        <TableCell>{entry.invigilator}</TableCell>
+                                    </>
+                                    ) : (
+                                    <>
+                                        <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
+                                        <TableCell>{entry.room}</TableCell>
+                                        <TableCell>{entry.courseCode}</TableCell>
+                                        <TableCell>{entry.lecturer}</TableCell>
+                                        <TableCell>{(entry.departments || []).join(', ')}</TableCell>
+                                        <TableCell>{entry.level}</TableCell>
+                                    </>
+                                    )}
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                            </Table>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Card>
                 );
               })}
             </Accordion>
@@ -2340,6 +2352,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
