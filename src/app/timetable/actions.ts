@@ -324,16 +324,16 @@ function normalizeAndTokenizeName(name: string | null) {
       const nameData = normalizeAndTokenizeName(entry.examiner);
   
       if (!nameData) {
-        // Handle invalid/TBA examiners
-        const tbaKey = 'tba';
-        if (!lecturerCourses.has(tbaKey)) {
-          lecturerCourses.set(tbaKey, {
-            lecturer: 'TBA',
+        // Handle invalid examiners by using their original name as the key
+        const originalExaminer = entry.examiner || 'Unassigned';
+        if (!lecturerCourses.has(originalExaminer)) {
+          lecturerCourses.set(originalExaminer, {
+            lecturer: originalExaminer,
             courses: [],
           });
         }
-        lecturerCourses.get(tbaKey).courses.push({ ...entry, examiner: entry.examiner });
-        continue; // Go to the next entry
+        lecturerCourses.get(originalExaminer).courses.push({ ...entry, examiner: entry.examiner });
+        continue;
       }
   
       // Try to find a matching lecturer
@@ -441,7 +441,8 @@ function extractTimetableData(fileBuffer: Buffer) {
       let dateStr;
       if(typeof row[0] === 'number') {
         const jsDate = XLSX.SSF.parse_date_code(row[0]);
-        dateStr = `${String(jsDate.d).padStart(2, '0')}-${String(jsDate.m).padStart(2, '0')}-${jsDate.y}`;
+        // Format as YYYY-MM-DD for reliable sorting
+        dateStr = `${jsDate.y}-${String(jsDate.m).padStart(2, '0')}-${String(jsDate.d).padStart(2, '0')}`;
       } else {
         dateStr = row[0] || null;
       }
@@ -496,3 +497,4 @@ export async function handleSpecialResitUpload(fileData: string) {
     throw new Error("Failed to parse the special resit Excel file. Please ensure it is in the correct format.");
   }
 }
+
