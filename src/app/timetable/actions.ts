@@ -317,14 +317,24 @@ function normalizeAndTokenizeName(name: string | null) {
   
   // Function to distribute courses to lecturers
   function distributeCourses(entries: any[]) {
-    // Initialize hash set for name indexing
-    const nameIndex = new Map(); // Maps normalized name/variant to lecturer details
-    const lecturerCourses = new Map(); // Maps normalized name to courses
+    const nameIndex = new Map();
+    const lecturerCourses = new Map();
   
     for (const entry of entries) {
-      // Normalize and tokenize examiner name
       const nameData = normalizeAndTokenizeName(entry.examiner);
-      if (!nameData) continue; // Skip invalid examiners
+  
+      if (!nameData) {
+        // Handle invalid/TBA examiners
+        const tbaKey = 'tba';
+        if (!lecturerCourses.has(tbaKey)) {
+          lecturerCourses.set(tbaKey, {
+            lecturer: 'TBA',
+            courses: [],
+          });
+        }
+        lecturerCourses.get(tbaKey).courses.push({ ...entry, examiner: entry.examiner });
+        continue; // Go to the next entry
+      }
   
       // Try to find a matching lecturer
       let matchedName = null;
@@ -338,7 +348,7 @@ function normalizeAndTokenizeName(name: string | null) {
         }
       }
   
-      // If no direct match, check all indexed names for token-based matching
+      // If no direct match, check all indexed names
       if (!matchedName) {
         for (const [existingVariant, existingData] of nameIndex) {
           if (namesMatch(nameData, existingData)) {
