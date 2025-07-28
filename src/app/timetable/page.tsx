@@ -1350,7 +1350,7 @@ function ResitTimetableDisplay({
       );
 
       if (showInvalid) {
-        allEntries = allEntries.filter(entry => entry.assignedLecturer.toLowerCase() === 'unassigned');
+        allEntries = allEntries.filter(entry => String(entry.assignedLecturer).toLowerCase().includes('unassigned'));
       }
 
       if (searchTerm) {
@@ -1362,9 +1362,19 @@ function ResitTimetableDisplay({
         );
       }
       return allEntries.sort((a, b) => {
-        const dateA = new Date(a.date || 0);
-        const dateB = new Date(b.date || 0);
-        return dateA.getTime() - dateB.getTime();
+        try {
+            const [dayA, monthA, yearA] = a.date!.split('-').map(Number);
+            const [dayB, monthB, yearB] = b.date!.split('-').map(Number);
+            
+            const dateA = new Date(yearA, monthA - 1, dayA);
+            const dateB = new Date(yearB, monthB - 1, dayB);
+
+            if (dateA.getTime() > dateB.getTime()) return 1;
+            if (dateA.getTime() < dateB.getTime()) return -1;
+            return 0;
+        } catch (e) {
+            return 0;
+        }
       });
     }, [parsedData, searchTerm, showInvalid]);
   
@@ -2103,17 +2113,19 @@ function AdminTimetableView({
               </TooltipContent>
             </Tooltip>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                  <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
-                  <FilterX className="h-4 w-4" />
-                  <span className="sr-only">Filter for review</span>
-                  </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                  <p>Filter for review</p>
-              </TooltipContent>
-            </Tooltip>
+            {activeTab !== 'resit' && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
+                    <FilterX className="h-4 w-4" />
+                    <span className="sr-only">Filter for review</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Filter for review</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
             <AlertDialog>
               <Tooltip>
@@ -2282,6 +2294,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
