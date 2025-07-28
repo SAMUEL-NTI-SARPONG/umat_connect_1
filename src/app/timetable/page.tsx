@@ -573,6 +573,7 @@ function StaffTimetableView({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeDay, setActiveDay] = useState("Monday");
   const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
@@ -1814,8 +1815,8 @@ function TimetableDisplay({
                                 <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
                                     {isExamsTimetable ? (
                                     <>
-                                        <TableCell className="font-medium">
-                                          <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'}>{entry.period}</Badge>
+                                        <TableCell>
+                                          <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                         </TableCell>
                                         <TableCell className="font-medium">{entry.courseCode}</TableCell>
                                         <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
@@ -2353,6 +2354,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
