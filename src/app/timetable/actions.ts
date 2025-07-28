@@ -234,19 +234,8 @@ export async function findEmptyClassrooms(fileData: string) {
 
 // Function to normalize and tokenize a name
 function normalizeAndTokenizeName(name: string | null) {
-    if (!name || typeof name !== 'string') {
-      return null;
-    }
-  
-    if (name.trim().toLowerCase() === 'department, gm') {
-      return {
-        original: name,
-        normalized: 'tba',
-        surname: 'TBA',
-        firstName: '',
-        middleInitials: [],
-        variants: ['tba'],
-      };
+    if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
+      return null; // Skip invalid names
     }
   
     // Normalize: lowercase, remove extra spaces, remove punctuation
@@ -255,32 +244,75 @@ function normalizeAndTokenizeName(name: string | null) {
     // Tokenize: split by spaces or commas
     let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
     
-    // Handle cases like "surname, firstname" or "firstname surname"
-    let surname: string, firstName: string, middleInitials: string[] = [];
+    // Handle formats: "surname, firstname [initials]" or "firstname surname"
+    let surname = '', firstName = '', middleInitials: string[] = [];
     if (name.includes(',')) {
       // Format: "surname, firstname [initials]"
-      surname = tokens[0];
+      surname = tokens[0] || '';
       firstName = tokens[1] || '';
       middleInitials = tokens.slice(2);
     } else {
       // Format: "firstname surname" or "surname initials"
-      surname = tokens[tokens.length - 1];
+      surname = tokens[tokens.length - 1] || '';
       firstName = tokens[0] || '';
       middleInitials = tokens.slice(1, -1);
     }
   
+    // Determine if tokens are full names or initials
+    const components: { type: 'name' | 'initial', value: string }[] = [];
+    if (surname.length > 1) components.push({ type: 'name', value: surname });
+    if (firstName.length > 1) components.push({ type: 'name', value: firstName });
+    middleInitials.forEach(initial => {
+      if (initial.length === 1) components.push({ type: 'initial', value: initial });
+      else if (initial.length > 1) components.push({ type: 'name', value: initial });
+    });
+  
     return {
       original: name,
-      normalized: normalized.replace(/\s/g, ''), // For hash key (e.g., "dumenyajamesk")
+      normalized: normalized.replace(/\s/g, ''),
       surname,
       firstName,
       middleInitials,
+      components,
       variants: [
         normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
         `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
-        `${surname}${middleInitials.join('')}`.replace(/\s/g, '') // e.g., "dumenyak" for initials
+        ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, '')) // e.g., "dumenyak"
       ].filter(v => v.length > 0)
     };
+  }
+  
+  // Function to check if two names match based on the "two names or name and initial" rule
+  function namesMatch(nameData1: any, nameData2: any) {
+    if (!nameData1 || !nameData2) return false;
+  
+    const components1 = nameData1.components;
+    const components2 = nameData2.components;
+  
+    // Count matching components (full names or initials)
+    let matches = 0;
+    const matchedValues = new Set();
+  
+    for (const comp1 of components1) {
+      for (const comp2 of components2) {
+        if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
+  
+        if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
+          matches++;
+          matchedValues.add(comp1.value);
+        } else if (
+          (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
+          (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
+        ) {
+          matches++;
+          matchedValues.add(comp1.value);
+          matchedValues.add(comp2.value);
+        }
+      }
+    }
+  
+    // Require at least two full names or one full name and one initial
+    return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
   }
   
   // Function to distribute courses to lecturers
@@ -290,80 +322,61 @@ function normalizeAndTokenizeName(name: string | null) {
     const lecturerCourses = new Map(); // Maps normalized name to courses
   
     for (const entry of entries) {
-        // Normalize and tokenize examiner name
-        const nameData = normalizeAndTokenizeName(entry.examiner);
-
-        if (!nameData) {
-            continue; // Skip invalid examiners
+      // Normalize and tokenize examiner name
+      const nameData = normalizeAndTokenizeName(entry.examiner);
+      if (!nameData) continue; // Skip invalid examiners
+  
+      // Try to find a matching lecturer
+      let matchedName = null;
+      for (const variant of nameData.variants) {
+        if (nameIndex.has(variant)) {
+          const existingData = nameIndex.get(variant);
+          if (namesMatch(nameData, existingData)) {
+            matchedName = existingData.normalized;
+            break;
+          }
         }
-        
-        if (nameData.normalized === 'tba') {
-            const tbaKey = 'TBA';
-            if (!lecturerCourses.has(tbaKey)) {
-                lecturerCourses.set(tbaKey, {
-                    lecturer: 'TBA',
-                    courses: []
-                });
-            }
-            lecturerCourses.get(tbaKey).courses.push({ ...entry, examiner: entry.examiner });
-            continue;
+      }
+  
+      // If no direct match, check all indexed names for token-based matching
+      if (!matchedName) {
+        for (const [existingVariant, existingData] of nameIndex) {
+          if (namesMatch(nameData, existingData)) {
+            matchedName = existingData.normalized;
+            break;
+          }
         }
-
-        // Index name variants
-        let matchedName = null;
-        for (const variant of nameData.variants) {
-            if (nameIndex.has(variant)) {
-                matchedName = nameIndex.get(variant).normalized;
-                break;
-            }
-        }
-
-        // If no match, check token-based matching
-        if (!matchedName) {
-            for (const existingData of nameIndex.values()) {
-                if (
-                    existingData.surname === nameData.surname &&
-                    (existingData.firstName === nameData.firstName ||
-                    nameData.variants.includes(existingData.firstName) ||
-                    existingData.middleInitials.some((initial: string) => existingData.firstName.startsWith(initial)) ||
-                    existingData.middleInitials.some((initial: string) => nameData.firstName.startsWith(initial)))
-                ) {
-                    matchedName = existingData.normalized;
-                    break;
-                }
-            }
-        }
-
-        // If still no match, add as new lecturer
-        if (!matchedName) {
-            matchedName = nameData.normalized;
-            nameData.variants.forEach(variant => {
-                nameIndex.set(variant, nameData);
-            });
-        }
-
-        // Initialize lecturer's course array if not exists
-        if (!lecturerCourses.has(matchedName)) {
-            lecturerCourses.set(matchedName, {
-                lecturer: nameData.original, // Use original name for display
-                courses: []
-            });
-        }
-        
-        // Add course to lecturer's courses
-        lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
+      }
+  
+      // If still no match, add as new lecturer
+      if (!matchedName) {
+        matchedName = nameData.normalized;
+        nameData.variants.forEach(variant => {
+          nameIndex.set(variant, nameData);
+        });
+      }
+  
+      // Initialize lecturer's course array if not exists
+      if (!lecturerCourses.has(matchedName)) {
+        lecturerCourses.set(matchedName, {
+          lecturer: nameData.original,
+          courses: []
+        });
+      }
+      
+      // Add course to lecturer's courses
+      lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
     }
-
+  
     // Convert to array for output
     const result = Array.from(lecturerCourses.values());
-
-    // Sort lecturers alphabetically by original name
+  
+    // Sort lecturers alphabetically
     result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
-
+  
     return result;
-}
-
-
+  }
+  
 /**
  * Extracts timetable data from an Excel file with a structure similar to the provided example.
  * @param {Buffer} fileBuffer - The uploaded Excel file buffer.
@@ -378,7 +391,7 @@ function extractTimetableData(fileBuffer: Buffer) {
         throw new Error("Sheet 'SPECIAL RESIT' not found in the Excel file.");
     }
 
-    const sheetData = XLSX.utils.sheet_to_json(resitSheet, { header: 1, raw: true, blankrows: false }) as any[][];
+    const sheetData = XLSX.utils.sheet_to_json(resitSheet, { header: 1, raw: false, blankrows: false }) as any[][];
     
     let venue = 'Not specified';
     for(let i = 0; i < sheetData.length; i++) {
@@ -395,7 +408,7 @@ function extractTimetableData(fileBuffer: Buffer) {
     for (let i = 0; i < sheetData.length; i++) {
       const row = sheetData[i];
       if (row.length >= expectedHeaders.length && row.slice(0, expectedHeaders.length).every((cell, idx) => 
-        cell && typeof cell === 'string' && cell.trim().toUpperCase() === expectedHeaders[idx]
+        cell && typeof cell === 'string' && cell.trim().toUpperCase().replace(/\s/g, '') === expectedHeaders[idx].replace(/\s/g, '')
       )) {
         headerRowIndex = i;
         break;
@@ -411,13 +424,21 @@ function extractTimetableData(fileBuffer: Buffer) {
     for (let i = headerRowIndex + 1; i < sheetData.length; i++) {
       const row = sheetData[i];
       // Basic validation: ensure at least the first cell (date) is not empty.
-      if (!row[0] || row[0].toString().trim() === '' || row[0].toString().toUpperCase().includes('FOR ANY ISSUES')) {
+      if (!row[0] || (typeof row[0] === 'string' && row[0].trim() === '') || (typeof row[0] === 'string' && row[0].toUpperCase().includes('FOR ANY ISSUES'))) {
         continue;
+      }
+
+      let dateStr;
+      if(typeof row[0] === 'number') {
+        const jsDate = XLSX.SSF.parse_date_code(row[0]);
+        dateStr = `${String(jsDate.d).padStart(2, '0')}-${String(jsDate.m).padStart(2, '0')}-${jsDate.y}`;
+      } else {
+        dateStr = row[0] || null;
       }
 
       const entry = {
         id: entryIdCounter++,
-        date: row[0] || null,
+        date: dateStr,
         courseCode: row[1] || null,
         courseName: row[2] || null,
         department: row[3] || null,
