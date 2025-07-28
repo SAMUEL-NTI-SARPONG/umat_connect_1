@@ -441,8 +441,8 @@ function extractTimetableData(fileBuffer: Buffer) {
       let dateStr;
       if(typeof row[0] === 'number') {
         const jsDate = XLSX.SSF.parse_date_code(row[0]);
-        // Format as YYYY-MM-DD for reliable sorting
-        dateStr = `${jsDate.y}-${String(jsDate.m).padStart(2, '0')}-${String(jsDate.d).padStart(2, '0')}`;
+        // Format as DD-MM-YYYY for reliable matching
+        dateStr = `${String(jsDate.d).padStart(2, '0')}-${String(jsDate.m).padStart(2, '0')}-${jsDate.y}`;
       } else {
         dateStr = row[0] || null;
       }
@@ -498,3 +498,7 @@ export async function handleSpecialResitUpload(fileData: string) {
   }
 }
 
+export async function handleExamsUpload(fileData: string) {
+  // This function is intentionally left empty to disable the upload feature for the exams tab.
+  return null;
+}
