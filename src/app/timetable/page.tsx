@@ -1685,6 +1685,21 @@ function TimetableDisplay({
 
   const groupedByDate = useMemo(() => {
     if (!filteredData) return {};
+  
+    // Define the desired order for periods
+    const periodOrder = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3 };
+  
+    // Sort the filtered data first by period
+    if (isExamsTimetable) {
+      filteredData.sort((a, b) => {
+        const aPeriod = (a as any).period || 'Unknown';
+        const bPeriod = (b as any).period || 'Unknown';
+        const aOrder = periodOrder[aPeriod as keyof typeof periodOrder] || 4;
+        const bOrder = periodOrder[bPeriod as keyof typeof periodOrder] || 4;
+        return aOrder - bOrder;
+      });
+    }
+  
     return filteredData.reduce((acc, entry) => {
       const key = isExamsTimetable ? (entry as any).dateStr : entry.day;
       if (!acc[key]) {
@@ -2142,7 +2157,7 @@ function AdminTimetableView({
               </TooltipContent>
             </Tooltip>
             
-            {(activeTab === 'class') && (
+            {(activeTab !== 'resit') && (
               <Tooltip>
                 <TooltipTrigger asChild>
                     <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
@@ -2324,6 +2339,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
