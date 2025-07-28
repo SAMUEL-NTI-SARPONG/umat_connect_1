@@ -571,7 +571,6 @@ function StaffTimetableView({
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [activeDay, setActiveDay] = useState("Monday");
@@ -1806,7 +1805,7 @@ function TimetableDisplay({
                             <TableHeader>
                                 <TableRow>
                                 {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
-                                    <TableHead key={header}>{header}</TableHead>
+                                    <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
                                 ))}
                                 </TableRow>
                             </TableHeader>
@@ -1815,22 +1814,24 @@ function TimetableDisplay({
                                 <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
                                     {isExamsTimetable ? (
                                     <>
-                                        <TableCell>{entry.period}</TableCell>
-                                        <TableCell>{entry.courseCode}</TableCell>
-                                        <TableCell>{entry.courseName}</TableCell>
-                                        <TableCell>{entry.class}</TableCell>
-                                        <TableCell>{entry.room}</TableCell>
-                                        <TableCell>{entry.lecturer}</TableCell>
-                                        <TableCell>{entry.invigilator}</TableCell>
+                                        <TableCell className="font-medium">
+                                          <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'}>{entry.period}</Badge>
+                                        </TableCell>
+                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.class}</TableCell>
+                                        <TableCell className="font-medium">{entry.room}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.invigilator}</TableCell>
                                     </>
                                     ) : (
                                     <>
-                                        <TableCell className="whitespace-nowrap">{entry.time}</TableCell>
-                                        <TableCell>{entry.room}</TableCell>
-                                        <TableCell>{entry.courseCode}</TableCell>
-                                        <TableCell>{entry.lecturer}</TableCell>
-                                        <TableCell>{(entry.departments || []).join(', ')}</TableCell>
-                                        <TableCell>{entry.level}</TableCell>
+                                        <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
+                                        <TableCell className="font-medium">{entry.room}</TableCell>
+                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
+                                        <TableCell className="text-muted-foreground">{(entry.departments || []).join(', ')}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.level}</TableCell>
                                     </>
                                     )}
                                 </TableRow>
@@ -2312,7 +2313,7 @@ export default function TimetablePage() {
     return combinedSchedule.filter(entry =>
         entry.level === user.level &&
         user.department &&
-        entry.departments.includes(user.department)
+        (entry.departments || []).includes(user.department)
       );
   }, [combinedSchedule, user]);
 
@@ -2352,6 +2353,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
