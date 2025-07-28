@@ -1803,7 +1803,7 @@ function TimetableDisplay({
                                   <TableCell>{entry.room}</TableCell>
                                   <TableCell>{entry.courseCode}</TableCell>
                                   <TableCell>{entry.lecturer}</TableCell>
-                                  <TableCell>{entry.departments.join(', ')}</TableCell>
+                                  <TableCell>{(entry.departments || []).join(', ')}</TableCell>
                                   <TableCell>{entry.level}</TableCell>
                                 </>
                               )}
@@ -1935,7 +1935,7 @@ function TimetableDisplay({
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="departments" className="text-right">Depts</Label>
                     <Select
-                        value={editedFormData?.departments[0] || ''}
+                        value={(editedFormData?.departments || [])[0] || ''}
                         onValueChange={(value) => handleEditInputChange('departments', [value])}
                     >
                         <SelectTrigger className="col-span-3">
@@ -2324,6 +2324,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
