@@ -1617,6 +1617,26 @@ function TimetableDisplay({
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
   
+  const availableSlotsForEdit = useMemo(() => {
+    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
+    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    const rooms = [...new Set(daySlots.map(slot => slot.location))];
+    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
+    
+    let endTimes: string[] = [];
+    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
+    if (startTime && startIndex !== -1) {
+      for (let i = startIndex; i < roomDaySlots.length; i++) {
+        const currentSlot = roomDaySlots[i];
+        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
+        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        endTimes.push(currentSlot.split(' - ')[1].trim());
+      }
+    }
+    return { rooms, times: roomDaySlots, startTimes, endTimes };
+  }, [emptySlots, editedFormData, startTime]);
+
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
       setEditedFormData(selectedEntry);
@@ -1698,26 +1718,6 @@ function TimetableDisplay({
     }, {} as Record<string, TimetableEntry[]>);
   }, [filteredData, isExamsTimetable]);
   
-    const availableSlotsForEdit = useMemo(() => {
-    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
-    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
-    const rooms = [...new Set(daySlots.map(slot => slot.location))];
-    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
-    
-    let endTimes: string[] = [];
-    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
-    if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
-        const currentSlot = roomDaySlots[i];
-        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
-        endTimes.push(currentSlot.split(' - ')[1].trim());
-      }
-    }
-    return { rooms, times: roomDaySlots, startTimes, endTimes };
-  }, [emptySlots, editedFormData, startTime]);
-
   const groupKeys = Object.keys(groupedByDate).sort((a, b) => {
     if (isExamsTimetable) {
         try {
@@ -2220,6 +2220,26 @@ function AdminTimetableView({
         setLastUploadedFile(null);
     }
   };
+
+  const groupedPracticals = useMemo(() => {
+    if (!practicalsData) return {};
+    return practicalsData.reduce((acc, entry) => {
+        const key = entry.dateStr;
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push(entry);
+        return acc;
+    }, {} as Record<string, any[]>);
+  }, [practicalsData]);
+
+  const practicalGroupKeys = Object.keys(groupedPracticals).sort((a, b) => {
+    try {
+        const dateA = new Date(a.split('-').reverse().join('-')).getTime();
+        const dateB = new Date(b.split('-').reverse().join('-')).getTime();
+        return dateA - dateB;
+    } catch(e) { return 0; }
+  });
   
   return (
     <div className="space-y-6">
@@ -2370,31 +2390,52 @@ function AdminTimetableView({
             )}
             {practicalsData && (
               practicalsData.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Room</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {practicalsData.map((prac: any) => (
-                      <TableRow key={prac.id}>
-                        <TableCell>{prac.dateStr}</TableCell>
-                        <TableCell><Badge variant={prac.period === 'Morning' ? 'default' : prac.period === 'Afternoon' ? 'secondary' : 'outline'}>{prac.period}</Badge></TableCell>
-                        <TableCell>
-                          <div className="font-medium">{prac.courseCode}</div>
-                          <div className="text-sm text-muted-foreground">{prac.courseName}</div>
-                        </TableCell>
-                        <TableCell>{prac.class}</TableCell>
-                        <TableCell>{prac.room}</TableCell>
-                      </TableRow>
+                <Accordion type="multiple" className="w-full space-y-4">
+                    {practicalGroupKeys.map(key => (
+                        <Card key={key} className="overflow-hidden">
+                            <AccordionItem value={key} className="border-b-0">
+                                <AccordionTrigger className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors [&[data-state=open]>svg]:rotate-180">
+                                    <div className="flex items-center gap-4">
+                                        <span className="font-semibold text-base">{key}</span>
+                                        <Badge variant="secondary">{groupedPracticals[key]?.length || 0} practicals</Badge>
+                                    </div>
+                                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Period</TableHead>
+                                                    <TableHead>Course</TableHead>
+                                                    <TableHead>Class</TableHead>
+                                                    <TableHead>Room</TableHead>
+                                                    <TableHead>Examiner</TableHead>
+                                                    <TableHead>Invigilator</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {groupedPracticals[key].map((prac: any) => (
+                                                <TableRow key={prac.id}>
+                                                    <TableCell><Badge variant={prac.period === 'Morning' ? 'default' : prac.period === 'Afternoon' ? 'secondary' : 'outline'}>{prac.period}</Badge></TableCell>
+                                                    <TableCell>
+                                                        <div className="font-medium">{prac.courseCode}</div>
+                                                        <div className="text-sm text-muted-foreground">{prac.courseName}</div>
+                                                    </TableCell>
+                                                    <TableCell>{prac.class}</TableCell>
+                                                    <TableCell>{prac.room}</TableCell>
+                                                    <TableCell>{prac.lecturer}</TableCell>
+                                                    <TableCell>{prac.invigilator}</TableCell>
+                                                </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                </Accordion>
               ) : (
                 <div className="text-center p-12 text-muted-foreground">
                   <p>No practical exams found in the 'PRACTICAL' sheet of the uploaded file.</p>
@@ -2484,6 +2525,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
