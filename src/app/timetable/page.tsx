@@ -1696,51 +1696,25 @@ function TimetableDisplay({
     }, {} as Record<string, TimetableEntry[]>);
   }, [filteredData, isExamsTimetable]);
   
-  const availableSlotsForRoomAndDay = useMemo(() => {
-    if (!editedFormData) return [];
-    return emptySlots
-      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
-      .map(slot => slot.time)
-      .sort((a, b) => {
-        const timeA = parseInt(a.split(':')[0]);
-        const timeB = parseInt(b.split(':')[0]);
-        return timeA - timeB;
-      });
-  }, [emptySlots, editedFormData]);
-
-  const availableRoomsForDay = useMemo(() => {
-    if (!editedFormData) return [];
+  const availableSlotsForEdit = useMemo(() => {
+    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
     const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
-    return [...new Set(daySlots.map(slot => slot.location))];
-  }, [emptySlots, editedFormData]);
-
-  const availableStartTimes = useMemo(() => {
-    return [...new Set(availableSlotsForRoomAndDay.map(time => time.split(' - ')[0].trim()))];
-  }, [availableSlotsForRoomAndDay]);
-
-  const availableEndTimes = useMemo(() => {
-    if (!startTime) return [];
+    const rooms = [...new Set(daySlots.map(slot => slot.location))];
+    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
     
-    const startIndex = availableSlotsForRoomAndDay.findIndex(slot => slot.startsWith(startTime));
-    if (startIndex === -1) return [];
-
-    let continuousEndTimes: string[] = [];
-    for (let i = startIndex; i < availableSlotsForRoomAndDay.length; i++) {
-        const currentSlot = availableSlotsForRoomAndDay[i];
-        const prevSlot = i > startIndex ? availableSlotsForRoomAndDay[i - 1] : null;
-
-        if (prevSlot) {
-            const prevEndTime = prevSlot.split(' - ')[1].trim();
-            const currentStartTime = currentSlot.split(' - ')[0].trim();
-            if (prevEndTime !== currentStartTime) {
-                break; // Break if not continuous
-            }
-        }
-        continuousEndTimes.push(currentSlot.split(' - ')[1].trim());
+    let endTimes: string[] = [];
+    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
+    if (startTime && startIndex !== -1) {
+      for (let i = startIndex; i < roomDaySlots.length; i++) {
+        const currentSlot = roomDaySlots[i];
+        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
+        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        endTimes.push(currentSlot.split(' - ')[1].trim());
+      }
     }
-    
-    return continuousEndTimes;
-  }, [startTime, availableSlotsForRoomAndDay]);
+    return { rooms, times: roomDaySlots, startTimes, endTimes };
+  }, [emptySlots, editedFormData, startTime]);
 
   const groupKeys = Object.keys(groupedByDate).sort((a, b) => {
     if (isExamsTimetable) {
@@ -1781,14 +1755,14 @@ function TimetableDisplay({
           <CardContent>
             <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
-                const sortedEntries = isExamsTimetable 
-                  ? [...groupedByDate[key]].sort((a, b) => {
-                      const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
-                      const aPeriod = (a as any).period || 'Unknown';
-                      const bPeriod = (b as any).period || 'Unknown';
-                      return periodOrder[aPeriod] - periodOrder[bPeriod];
-                    })
-                  : groupedByDate[key];
+                 const sortedEntries = isExamsTimetable 
+                 ? [...groupedByDate[key]].sort((a, b) => {
+                     const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
+                     const aPeriod = (a as any).period || 'Unknown';
+                     const bPeriod = (b as any).period || 'Unknown';
+                     return periodOrder[aPeriod] - periodOrder[bPeriod];
+                   })
+                 : groupedByDate[key];
                 
                 return (
                   <Card key={key} className="overflow-hidden">
@@ -1818,7 +1792,7 @@ function TimetableDisplay({
                                         <TableCell>
                                           <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                         </TableCell>
-                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                        <TableCell className="font-medium">{entry.courseCode} {(entry.is_practical) && <Badge variant="destructive" className='ml-2'>Practical</Badge>}</TableCell>
                                         <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
                                         <TableCell className="text-muted-foreground">{entry.class}</TableCell>
                                         <TableCell className="font-medium">{entry.room}</TableCell>
@@ -1912,7 +1886,7 @@ function TimetableDisplay({
                             {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
                                 {editedFormData.room} (Current)
                             </SelectItem>}
-                            {availableRoomsForDay.map(room => (
+                            {availableSlotsForEdit.rooms.map(room => (
                                 <SelectItem key={room} value={room}>{room}</SelectItem>
                             ))}
                         </SelectContent>
@@ -1933,7 +1907,7 @@ function TimetableDisplay({
                             <SelectValue placeholder="Start" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableStartTimes.map(time => (
+                            {availableSlotsForEdit.startTimes.map(time => (
                             <SelectItem key={time} value={time}>{time}</SelectItem>
                             ))}
                         </SelectContent>
@@ -1947,7 +1921,7 @@ function TimetableDisplay({
                             <SelectValue placeholder="End" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableEndTimes.map(time => (
+                            {availableSlotsForEdit.endTimes.map(time => (
                             <SelectItem key={time} value={time}>{time}</SelectItem>
                             ))}
                         </SelectContent>
@@ -2354,6 +2328,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
