@@ -1661,7 +1661,7 @@ function TimetableDisplay({
   
   const handleSaveEdit = () => {
      if (!editedFormData || !parsedData) return;
-     const updatedEntry = { ...editedFormData, time: isExamsTimetable ? editedFormData.time : `${startTime} - ${endTime}` };
+     const updatedEntry = { ...editedFormData, time: isExamsTimetable ? (editedFormData as any).period : `${startTime} - ${endTime}` };
      setParsedData(parsedData.map(item => item.id === updatedEntry.id ? updatedEntry : item));
      closeAllModals();
   };
@@ -1692,7 +1692,7 @@ function TimetableDisplay({
     let data = [...parsedData];
 
     if (showInvalid) {
-        data = data.filter(entry => entry.lecturer?.toLowerCase() === 'tba' || entry.lecturer?.toLowerCase() === 'unknown');
+        data = data.filter(entry => entry.lecturer?.toLowerCase() === 'tba' || entry.lecturer?.toLowerCase() === 'unknown' || (entry as any).invigilator?.toLowerCase() === 'tba' || (entry as any).invigilator?.toLowerCase() === 'unknown');
     }
     
     if (!searchTerm) return data;
@@ -1802,7 +1802,10 @@ function TimetableDisplay({
                                     <TableCell>
                                       <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                     </TableCell>
-                                    <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                    <TableCell>
+                                        <div className="font-medium">{entry.courseCode}</div>
+                                        {entry.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
+                                    </TableCell>
                                     <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.class}</TableCell>
                                     <TableCell className="font-medium">{entry.room}</TableCell>
@@ -1926,14 +1929,33 @@ function TimetableDisplay({
           <div className="grid gap-4 py-4">
             {isExamsTimetable ? (
                 <>
-                    {/* Simplified edit form for exams */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="exam-courseCode" className="text-right">Course</Label>
+                        <Label htmlFor="exam-period" className="text-right">Period</Label>
+                        <Input id="exam-period" value={(editedFormData as any)?.period || ''} onChange={(e) => handleEditInputChange('period' as any, e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exam-courseCode" className="text-right">Course Code</Label>
                         <Input id="exam-courseCode" value={(editedFormData as any)?.courseCode || ''} onChange={(e) => handleEditInputChange('courseCode' as any, e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exam-courseName" className="text-right">Course Name</Label>
+                        <Input id="exam-courseName" value={(editedFormData as any)?.courseName || ''} onChange={(e) => handleEditInputChange('courseName' as any, e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exam-class" className="text-right">Class</Label>
+                        <Input id="exam-class" value={(editedFormData as any)?.class || ''} onChange={(e) => handleEditInputChange('class' as any, e.target.value)} className="col-span-3" />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="exam-room" className="text-right">Room</Label>
                         <Input id="exam-room" value={(editedFormData as any)?.room || ''} onChange={(e) => handleEditInputChange('room' as any, e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exam-lecturer" className="text-right">Lecturer</Label>
+                        <Input id="exam-lecturer" value={(editedFormData as any)?.lecturer || ''} onChange={(e) => handleEditInputChange('lecturer' as any, e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exam-invigilator" className="text-right">Invigilator</Label>
+                        <Input id="exam-invigilator" value={(editedFormData as any)?.invigilator || ''} onChange={(e) => handleEditInputChange('invigilator' as any, e.target.value)} className="col-span-3" />
                     </div>
                 </>
             ) : (
@@ -2625,6 +2647,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
