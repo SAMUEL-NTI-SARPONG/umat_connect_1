@@ -499,6 +499,7 @@ export async function handleSpecialResitUpload(fileData: string) {
 }
 
 function excelDateToJSDate(serial: number) {
+    if (typeof serial !== 'number') return serial;
     const utc_days = Math.floor(serial - 25569); // Excel epoch starts at Jan 1, 1900
     const date = new Date(utc_days * 86400 * 1000);
     const year = date.getUTCFullYear();
@@ -508,7 +509,8 @@ function excelDateToJSDate(serial: number) {
 }
   
 function mapPeriod(period: string) {
-    switch (period) {
+    if (!period) return 'Unknown';
+    switch (period.toUpperCase()) {
         case 'M': return 'Morning';
         case 'A': return 'Afternoon';
         case 'E': return 'Evening';
@@ -534,33 +536,34 @@ export async function handleExamsUpload(fileData: string) {
         if (!workbook.SheetNames.includes(sheetName)) continue;
 
         const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: ['date', 'courseCode', 'courseName', 'class', 'number', 'lecturer', 'room', 'invigilator', 'period'] });
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
         let dataStartIndex = -1;
-        for (let i = 0; i < rows.length; i++) {
-            const row: any = rows[i];
-            if (String(row.date).trim().toUpperCase() === 'DATE' && String(row.courseCode).trim().toUpperCase() === 'COURSE NO') {
+        for (let i = 0; i < jsonData.length; i++) {
+            const row: any = jsonData[i];
+            if (row && String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase().includes('COURSE')) {
                 dataStartIndex = i + 1;
                 break;
             }
         }
         if (dataStartIndex === -1) continue;
 
-        const sheetRows = rows.slice(dataStartIndex);
-        sheetRows.forEach((row: any) => {
-            if (row.date && row.courseCode) {
+        const rows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex -1 });
+        
+        rows.forEach((row: any) => {
+            if (row.DATE && (row['COURSE NO'] || row['COURSE NO.'])) {
                 examsData.push({
                     id: idCounter++,
-                    date: row.date,
-                    dateStr: typeof row.date === 'number' ? excelDateToJSDate(row.date) : row.date,
-                    day: new Date(excelDateToJSDate(row.date).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
-                    courseCode: row.courseCode,
-                    courseName: row.courseName,
-                    class: row.class,
-                    lecturer: cleanName(row.lecturer),
-                    room: row.room,
-                    invigilator: cleanName(row.invigilator),
-                    period: mapPeriod(row.period),
+                    date: row.DATE,
+                    dateStr: excelDateToJSDate(row.DATE),
+                    day: new Date(excelDateToJSDate(row.DATE).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
+                    courseCode: row['COURSE NO'] || row['COURSE NO.'],
+                    courseName: row['COURSE NAME'],
+                    class: row.CLASS,
+                    lecturer: cleanName(row.LECTURER),
+                    room: row['LECTURE HALL'],
+                    invigilator: cleanName(row.INVIGILATOR),
+                    period: mapPeriod(row.PERIOD),
                 });
             }
         });
@@ -570,25 +573,25 @@ export async function handleExamsUpload(fileData: string) {
     const practicalsSheetName = 'PRACTICAL';
     if (workbook.SheetNames.includes(practicalsSheetName)) {
         const sheet = workbook.Sheets[practicalsSheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         
         let dataStartIndex = -1;
-        for (let i = 0; i < rows.length; i++) {
-            const row: any = rows[i];
-            if (String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
+        for (let i = 0; i < jsonData.length; i++) {
+            const row: any = jsonData[i];
+            if (row && String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
                 dataStartIndex = i + 1;
                 break;
             }
         }
     
         if (dataStartIndex !== -1) {
-            const sheetRows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex - 1 });
-            sheetRows.forEach((row: any) => {
+            const rows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex - 1 });
+            rows.forEach((row: any) => {
                 if (row['DATE'] && row['CRS NO.']) {
                     practicalsData.push({
                         id: idCounter++,
                         date: row['DATE'],
-                        dateStr: typeof row['DATE'] === 'number' ? excelDateToJSDate(row['DATE']) : row['DATE'],
+                        dateStr: excelDateToJSDate(row['DATE']),
                         day: new Date(excelDateToJSDate(row['DATE']).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
                         courseCode: row['CRS NO.'],
                         courseName: row['COURSE TITLE'],
@@ -652,7 +655,7 @@ export async function handlePracticalsUpload(fileData: string) {
     let dataStartIndex = -1;
     for (let i = 0; i < rows.length; i++) {
       const row: any = rows[i];
-      if (String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
+      if (row && String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
         dataStartIndex = i + 1;
         break;
       }

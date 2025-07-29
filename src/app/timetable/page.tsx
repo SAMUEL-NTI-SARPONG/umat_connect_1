@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload, handleExamsUpload } from './actions';
+import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -2629,6 +2629,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
