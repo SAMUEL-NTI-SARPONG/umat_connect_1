@@ -1745,24 +1745,24 @@ function TimetableDisplay({
     );
   }
 
-  if (isExamsTimetable) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>
-                  {
-                    showInvalid 
-                      ? `Found ${filteredData?.length || 0} entries for review.`
-                      : searchTerm 
-                        ? `Found ${filteredData?.length || 0} matching entries.`
-                        : description
-                  }
-                </CardDescription>
-              </div>
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <div className={cn("flex justify-between items-start", isExamsTimetable && "flex-col sm:flex-row gap-2")}>
+            <div>
+              <CardTitle>{title}</CardTitle>
+              <CardDescription>
+                {
+                  showInvalid 
+                    ? `Found ${filteredData?.length || 0} entries for review.`
+                    : searchTerm 
+                      ? `Found ${filteredData?.length || 0} matching entries.`
+                      : description
+                }
+              </CardDescription>
+            </div>
+            {isExamsTimetable && (
               <div className='flex gap-2'>
                 {onAddExam && (
                     <Button variant="outline" onClick={onAddExam}>
@@ -1777,9 +1777,11 @@ function TimetableDisplay({
                     </Button>
                 )}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isExamsTimetable ? (
             <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
                 const sortedEntries = [...groupedByDate[key]].sort((a, b) => {
@@ -1834,83 +1836,65 @@ function TimetableDisplay({
                   </Card>
                 );
               })}
+              {groupKeys.length === 0 && (searchTerm || showInvalid) && (
+                  <div className="text-center p-12 text-muted-foreground">
+                    <p>No results found for your filter criteria.</p>
+                  </div>
+              )}
             </Accordion>
-             {groupKeys.length === 0 && (searchTerm || showInvalid) && (
-                <div className="text-center p-12 text-muted-foreground">
-                  <p>No results found for your filter criteria.</p>
-                </div>
-             )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Fallback for Class Timetable
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>
-          {
-            showInvalid 
-              ? `Found ${filteredData?.length || 0} entries for review.`
-              : searchTerm 
-                ? `Found ${filteredData?.length || 0} matching entries.`
-                : description
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={days[0]} className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
-            {days.map(day => (
-                <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-            ))}
-            </TabsList>
-            <div className="py-6">
-            {days.map(day => (
-                <TabsContent key={day} value={day}>
-                {groupedByDate[day] && groupedByDate[day].length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                {classTableHeaders.map(header => (
-                                    <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
-                                ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {groupedByDate[day].map((entry: any) => (
-                                    <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                                        <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
-                                        <TableCell className="font-medium">{entry.room}</TableCell>
-                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
-                                        <TableCell className="text-muted-foreground">{(entry.departments || []).join(', ')}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.level}</TableCell>
+          ) : (
+            <Tabs defaultValue={days[0]} className="w-full">
+                <TabsList className="grid w-full grid-cols-7">
+                {days.map(day => (
+                    <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
+                ))}
+                </TabsList>
+                <div className="py-6">
+                {days.map(day => (
+                    <TabsContent key={day} value={day}>
+                    {groupedByDate[day] && groupedByDate[day].length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                    {classTableHeaders.map(header => (
+                                        <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
+                                    ))}
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                ) : (
-                    <div className="text-center p-12 text-muted-foreground">
-                        <p>No classes scheduled for {day}.</p>
-                    </div>
-                )}
-                </TabsContent>
-            ))}
-            </div>
-        </Tabs>
-        {groupKeys.length === 0 && (searchTerm || showInvalid) && (
-            <div className="text-center p-12 text-muted-foreground">
-              <p>No results found for your filter criteria.</p>
-            </div>
-         )}
-      </CardContent>
-      {/* Modals remain here */}
+                                </TableHeader>
+                                <TableBody>
+                                    {groupedByDate[day].map((entry: any) => (
+                                        <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                            <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
+                                            <TableCell className="font-medium">{entry.room}</TableCell>
+                                            <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                            <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
+                                            <TableCell className="text-muted-foreground">{(entry.departments || []).join(', ')}</TableCell>
+                                            <TableCell className="text-muted-foreground">{entry.level}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="text-center p-12 text-muted-foreground">
+                            <p>No classes scheduled for {day}.</p>
+                        </div>
+                    )}
+                    </TabsContent>
+                ))}
+                </div>
+            </Tabs>
+          )}
+          {groupKeys.length === 0 && (searchTerm || showInvalid) && (
+              <div className="text-center p-12 text-muted-foreground">
+                <p>No results found for your filter criteria.</p>
+              </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Modals */}
        <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
         <DialogContent>
           <DialogHeader>
@@ -1923,9 +1907,11 @@ function TimetableDisplay({
              <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
              </Button>
-             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-             </Button>
+             <AlertDialogTrigger asChild>
+                <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+             </AlertDialogTrigger>
           </div>
         </DialogContent>
       </Dialog>
@@ -1939,7 +1925,7 @@ function TimetableDisplay({
               Make changes to the entry here. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
             {isExamsTimetable ? (
                 <div className="space-y-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -2080,7 +2066,7 @@ function TimetableDisplay({
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -2094,7 +2080,7 @@ function TimetableDisplay({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </>
   );
 }
 
@@ -2806,3 +2792,4 @@ export default function TimetablePage() {
 
 
     
+
