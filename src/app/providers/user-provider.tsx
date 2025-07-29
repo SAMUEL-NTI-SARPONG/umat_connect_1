@@ -106,6 +106,28 @@ export interface SpecialResitEntry {
 
 export type StudentResitSelections = Record<number, number[]>;
 
+export interface ExamEntry {
+    id: number;
+    date: any;
+    dateStr: string;
+    day: string;
+    courseCode: string;
+    courseName: string;
+    class: string;
+    lecturer: string;
+    room: string;
+    invigilator: string;
+    period: string;
+    is_practical?: boolean;
+    level?: number;
+    departments?: string[];
+  }
+  
+  export interface ExamsTimetable {
+    exams: ExamEntry[];
+    practicals: ExamEntry[];
+    isDistributed: boolean;
+  }
 
 interface UserContextType {
   user: User | null;
@@ -140,6 +162,9 @@ interface UserContextType {
   distributeSpecialResitTimetable: () => void;
   studentResitSelections: StudentResitSelections;
   updateStudentResitSelection: (entryId: number, isSelected: boolean) => void;
+  examsTimetable: ExamsTimetable | null;
+  setExamsTimetable: (data: ExamsTimetable | null) => void;
+  distributeExamsTimetable: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -157,6 +182,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [specialResitTimetable, setSpecialResitTimetableState] = useState<SpecialResitTimetable | null>(null);
   const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
+  const [examsTimetable, setExamsTimetableState] = useState<ExamsTimetable | null>(null);
 
   // This useEffect handles session-based login persistence.
   useEffect(() => {
@@ -169,7 +195,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [allUsers]);
 
-  // Load resit data from localStorage on initial render
+  // Load data from localStorage on initial render
   useEffect(() => {
     try {
         const storedResitData = localStorage.getItem('specialResitSchedule');
@@ -179,6 +205,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const storedSelections = localStorage.getItem('studentResitSelections');
         if (storedSelections) {
             setStudentResitSelections(JSON.parse(storedSelections));
+        }
+        const storedExamsData = localStorage.getItem('examsTimetable');
+        if (storedExamsData) {
+            setExamsTimetableState(JSON.parse(storedExamsData));
         }
     } catch(e) {
         console.error("Failed to parse data from localStorage", e);
@@ -445,6 +475,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
         toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
     }
   }, [toast]);
+  
+  const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
+    setExamsTimetableState(data);
+    if (data) {
+      localStorage.setItem('examsTimetable', JSON.stringify(data));
+    } else {
+      localStorage.removeItem('examsTimetable');
+    }
+  }, []);
+
+  const distributeExamsTimetable = useCallback(() => {
+    setExamsTimetableState(prev => {
+      if (!prev) return prev;
+      const distributedData = { ...prev, isDistributed: true };
+      localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
+      toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
+      return distributedData;
+    });
+  }, [toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
@@ -476,11 +525,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setNotifications([]);
     setSpecialResitTimetableState(null);
     setStudentResitSelections({});
+    setExamsTimetableState(null);
     
-    // Clear local storage for resit data as well
+    // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
         localStorage.removeItem('specialResitSchedule');
         localStorage.removeItem('studentResitSelections');
+        localStorage.removeItem('examsTimetable');
     }
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
@@ -520,7 +571,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     distributeSpecialResitTimetable,
     studentResitSelections,
     updateStudentResitSelection,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection]);
+    examsTimetable,
+    setExamsTimetable,
+    distributeExamsTimetable,
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

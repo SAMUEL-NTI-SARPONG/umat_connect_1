@@ -6,8 +6,8 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry } from '../providers/user-provider';
-import { departments as allDepartments } from '@/lib/data';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry } from '../providers/user-provider';
+import { departments as allDepartments, departmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -75,6 +75,78 @@ const statusConfig = {
 };
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function StudentExamsView() {
+    const { user, examsTimetable } = useUser();
+  
+    const studentExams = useMemo(() => {
+      if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
+  
+      const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+      
+      return allExams.filter(exam => {
+        const examLevel = exam.level || 0;
+        const examDepts = exam.departments || [];
+        return user.level === examLevel && examDepts.includes(user.department);
+      });
+    }, [user, examsTimetable]);
+  
+    if (!examsTimetable || !examsTimetable.isDistributed) {
+      return (
+        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+          <CardContent className="text-center text-muted-foreground">
+            <p className="font-medium">Exams Timetable Not Available</p>
+            <p className="text-sm">The exams timetable will appear here once it's published.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    const headers = ['Date', 'Period', 'Course Code', 'Course Name', 'Room', 'Lecturer'];
+  
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Personalized Exam Schedule</CardTitle>
+          <CardDescription>
+            {studentExams.length > 0
+              ? `Here are your ${studentExams.length} scheduled exam(s).`
+              : "No exams found for your level and department."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {studentExams.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>{headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
+                </TableHeader>
+                <TableBody>
+                  {studentExams.map(exam => (
+                    <TableRow key={exam.id}>
+                      <TableCell>{exam.dateStr}</TableCell>
+                      <TableCell><Badge variant="outline">{exam.period}</Badge></TableCell>
+                      <TableCell>
+                        <div className="font-medium">{exam.courseCode}</div>
+                        {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
+                      </TableCell>
+                      <TableCell>{exam.courseName}</TableCell>
+                      <TableCell>{exam.room}</TableCell>
+                      <TableCell>{exam.lecturer}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-12">
+              <p>No exams found for your schedule.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
 function StudentResitView() {
   const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
@@ -409,12 +481,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </Tabs>
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
-            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Exams Timetable Not Available</p>
-                    <p className="text-sm">The exams timetable will appear here once it's published.</p>
-                </CardContent>
-            </Card>
+             <StudentExamsView />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StudentResitView />
@@ -469,6 +536,88 @@ const initialCreateFormState = {
   room: '',
   time: '',
 };
+
+function StaffExamsView() {
+    const { user, examsTimetable } = useUser();
+  
+    const staffExams = useMemo(() => {
+      if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
+  
+      const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+      const staffName = user.name.toLowerCase();
+      
+      return allExams.filter(exam => 
+        exam.lecturer.toLowerCase().includes(staffName) || 
+        exam.invigilator.toLowerCase().includes(staffName)
+      );
+    }, [user, examsTimetable]);
+  
+    if (!examsTimetable || !examsTimetable.isDistributed) {
+      return (
+        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+          <CardContent className="text-center text-muted-foreground">
+            <p className="font-medium">Exams Timetable Not Available</p>
+            <p className="text-sm">The exams timetable will appear here once it's published.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    const headers = ['Date', 'Period', 'Role', 'Course Code', 'Course Name', 'Room'];
+  
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Exam Duties Schedule</CardTitle>
+          <CardDescription>
+            {staffExams.length > 0
+              ? `You have ${staffExams.length} scheduled exam duties.`
+              : "No exam duties found for you."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {staffExams.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>{headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffExams.map(exam => {
+                    const staffName = user!.name.toLowerCase();
+                    const isLecturer = exam.lecturer.toLowerCase().includes(staffName);
+                    const isInvigilator = exam.invigilator.toLowerCase().includes(staffName);
+                    let role = '';
+                    if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
+                    else if (isLecturer) role = 'Lecturer';
+                    else if (isInvigilator) role = 'Invigilator';
+
+                    return (
+                        <TableRow key={exam.id}>
+                        <TableCell>{exam.dateStr}</TableCell>
+                        <TableCell><Badge variant="outline">{exam.period}</Badge></TableCell>
+                        <TableCell><Badge variant="secondary">{role}</Badge></TableCell>
+                        <TableCell>
+                            <div className="font-medium">{exam.courseCode}</div>
+                            {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
+                        </TableCell>
+                        <TableCell>{exam.courseName}</TableCell>
+                        <TableCell>{exam.room}</TableCell>
+                        </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-12">
+              <p>No exam duties found for you in the timetable.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
 
 function StaffResitView() {
     const { user, specialResitTimetable } = useUser();
@@ -1231,12 +1380,7 @@ function StaffTimetableView({
         </>
       </TabsContent>
        <TabsContent value="exams" className="mt-6">
-            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Exams Timetable Not Available</p>
-                    <p className="text-sm">The exams timetable will appear here once it's published.</p>
-                </CardContent>
-            </Card>
+            <StaffExamsView />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StaffResitView />
@@ -1907,23 +2051,23 @@ function TimetableDisplay({
                 <Edit className="mr-2 h-4 w-4" /> Edit
             </Button>
             <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete this timetable entry.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete this timetable entry.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
             </AlertDialog>
           </div>
         </DialogContent>
@@ -2092,9 +2236,10 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
-  const { specialResitTimetable, setSpecialResitTimetable } = useUser();
+  const { specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   
   // State for Class Timetable
   const [classParsedData, setClassParsedData] = useState<TimetableEntry[] | null>(parsedData);
@@ -2105,7 +2250,8 @@ function AdminTimetableView({
   const [classShowInvalid, setClassShowInvalid] = useState(false);
 
   // State for Exams Timetable
-  const [examsParsedData, setExamsParsedData] = useState<any[] | null>(null);
+  const [examsParsedData, setExamsParsedData] = useState<ExamEntry[] | null>(examsTimetable?.exams ?? null);
+  const [practicalsData, setPracticalsData] = useState<ExamEntry[] | null>(examsTimetable?.practicals ?? null);
   const [isExamsLoading, setIsExamsLoading] = useState(false);
   const [examsError, setExamsError] = useState<string | null>(null);
   const [examsSearchTerm, setExamsSearchTerm] = useState('');
@@ -2114,7 +2260,6 @@ function AdminTimetableView({
   
   // State for Practical Exams
   const [isPracticalsModalOpen, setIsPracticalsModalOpen] = useState(false);
-  const [practicalsData, setPracticalsData] = useState<any[] | null>(null);
   const [isPracticalsLoading, setIsPracticalsLoading] = useState(false);
   const [practicalsError, setPracticalsError] = useState<string | null>(null);
   const [isAddPracticalModalOpen, setIsAddPracticalModalOpen] = useState(false);
@@ -2130,6 +2275,17 @@ function AdminTimetableView({
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
+
+  useEffect(() => {
+    if (examsParsedData || practicalsData) {
+      const updatedExamsTimetable: ExamsTimetable = {
+        exams: examsParsedData || [],
+        practicals: practicalsData || [],
+        isDistributed: examsTimetable?.isDistributed || false,
+      };
+      setExamsTimetable(updatedExamsTimetable);
+    }
+  }, [examsParsedData, practicalsData, setExamsTimetable, examsTimetable?.isDistributed]);
   
   const handleAddExam = (newExam: any) => {
     setExamsParsedData(prev => {
@@ -2149,15 +2305,15 @@ function AdminTimetableView({
   const activeState = useMemo(() => {
     switch (activeTab) {
         case 'class':
-            return { parsedData: classParsedData, setParsedData: setClassParsedData, emptySlots: classEmptySlots, setEmptySlots: setClassEmptySlots, isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid, handler: handleFileUpload, cleaner: setClassEmptySlots };
+            return { isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid, handler: handleFileUpload };
         case 'exams':
-            return { parsedData: examsParsedData, setParsedData: setExamsParsedData, emptySlots: [], setEmptySlots: () => {}, isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleExamsUpload, cleaner: () => {} };
+            return { isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleExamsUpload };
         case 'resit':
-            return { parsedData: specialResitTimetable, setParsedData: setSpecialResitTimetable, isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid, handler: handleSpecialResitUpload, cleaner: () => {} };
+            return { isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid, handler: handleSpecialResitUpload };
         default:
-            return { parsedData: null, setParsedData: () => {}, emptySlots: [], setEmptySlots: () => {}, isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, handler: async () => [], cleaner: () => {} };
+            return { isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, handler: async () => [] };
     }
-  }, [activeTab, classParsedData, classEmptySlots, isClassLoading, classError, classSearchTerm, classShowInvalid, examsParsedData, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, specialResitTimetable, isResitLoading, resitError, resitSearchTerm, resitShowInvalid, setSpecialResitTimetable]);
+  }, [activeTab, isClassLoading, classError, classSearchTerm, classShowInvalid, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, isResitLoading, resitError, resitSearchTerm, resitShowInvalid]);
 
   useEffect(() => {
       setClassParsedData(parsedData);
@@ -2225,23 +2381,35 @@ function AdminTimetableView({
   };
 
   const handleDeleteAll = () => {
-    (activeState.setParsedData as Function)(null);
-    if ('setEmptySlots' in activeState) {
-        (activeState.setEmptySlots as Function)([]);
-    }
-    activeState.setError(null);
-    activeState.setSearchTerm('');
-    if ('setShowInvalid' in activeState) {
-        (activeState.setShowInvalid as Function)(false);
-    }
-    if (activeTab === 'class') {
+    if(activeTab === 'class') {
+        setClassParsedData(null);
+        setClassEmptySlots([]);
         setParsedData(null);
         setEmptySlots([]);
-    }
-    if (activeTab === 'exams') {
+        setClassError(null);
+        setClassSearchTerm('');
+        setClassShowInvalid(false);
+    } else if (activeTab === 'exams') {
+        setExamsParsedData(null);
         setPracticalsData(null);
+        setExamsTimetable(null);
+        setExamsError(null);
+        setExamsSearchTerm('');
+        setExamsShowInvalid(false);
+    } else if (activeTab === 'resit') {
+        setSpecialResitTimetable(null);
+        setResitError(null);
+        setResitSearchTerm('');
+        setResitShowInvalid(false);
     }
   };
+
+  const currentParsedData = useMemo(() => {
+    if (activeTab === 'class') return classParsedData;
+    if (activeTab === 'exams') return examsParsedData;
+    if (activeTab === 'resit') return specialResitTimetable;
+    return null;
+  }, [activeTab, classParsedData, examsParsedData, specialResitTimetable]);
 
   const groupedPracticals = useMemo(() => {
     if (!practicalsData) return {};
@@ -2321,7 +2489,7 @@ function AdminTimetableView({
             {(activeTab !== 'resit') && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!activeState.parsedData}>
+                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!currentParsedData}>
                     <FilterX className="h-4 w-4" />
                     <span className="sr-only">Filter for review</span>
                     </Button>
@@ -2336,7 +2504,7 @@ function AdminTimetableView({
               <Tooltip>
                   <TooltipTrigger asChild>
                       <AlertDialogTrigger asChild>
-                          <Button variant="destructive" size="icon" disabled={!activeState.parsedData}>
+                          <Button variant="destructive" size="icon" disabled={!currentParsedData}>
                               <Trash2 className="h-4 w-4" />
                               <span className="sr-only">Delete</span>
                           </Button>
@@ -2360,16 +2528,49 @@ function AdminTimetableView({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            
+            {activeTab === 'exams' && examsParsedData && (
+                <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                    <Button disabled={examsTimetable?.isDistributed}>
+                                        <SendHorizontal className="mr-2 h-4 w-4"/>
+                                        {examsTimetable?.isDistributed ? 'Distributed' : 'Distribute'}
+                                    </Button>
+                                </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Distribute Exams Timetable</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Distribute Exams Timetable?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will make the timetable available to all students and staff based on their roles and departments. This action cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => {
+                            distributeExamsTimetable();
+                            setIsDistributeConfirmOpen(false);
+                        }}>Distribute</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
           </div>
         </TooltipProvider>
-        {activeState.parsedData && (
+        {currentParsedData && (
           <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Search course, lecturer, room, department..."
               className="pl-10"
               value={activeState.searchTerm}
-              onChange={(e) => activeState.setSearchTerm(e.target.value)}
+              onChange={(e) => 'setSearchTerm' in activeState && activeState.setSearchTerm(e.target.value)}
             />
           </div>
         )}
@@ -2403,7 +2604,7 @@ function AdminTimetableView({
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
            <TimetableDisplay
-            parsedData={examsParsedData}
+            parsedData={examsParsedData as any}
             setParsedData={setExamsParsedData as any}
             emptySlots={[]}
             searchTerm={examsSearchTerm}
@@ -2918,6 +3119,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 

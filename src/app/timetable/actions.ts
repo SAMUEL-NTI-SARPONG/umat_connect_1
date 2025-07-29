@@ -4,6 +4,7 @@
 
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { departmentMap } from '@/lib/data';
 
 // This is a new, robust parser based entirely on the user-provided implementation.
 // It correctly handles merged cells, multiple courses within a single cell, and complex formats.
@@ -87,40 +88,6 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
         }
     }
   }
-
-  const departmentMap = new Map([
-    // Faculty of mining and minerals
-    ['MN', 'Mining Engineering'],
-    ['MR', 'Minerals Engineering'],
-    // Faculty of Engineering
-    ['MC', 'Mechanical Engineering'],
-    ['EL', 'Electrical and Electronic Engineering'],
-    ['RN', 'Renewable Energy Engineering'],
-    ['TC', 'Telecommunication Engineering'],
-    ['PM', 'Plant and Maintenance Engineering'],
-    // Faculty of computing and mathematical sciences
-    ['CY', 'Cyber Security'],
-    ['CE', 'Computer Science And Engineering'],
-    ['IS', 'Information Systems and Technology'],
-    ['MA', 'Mathematics'],
-    ['SD', 'Statistical Data Science'],
-    // Faculty of integrate management studies
-    ['LT', 'Logistics and Transport Management'],
-    ['EC', 'Economics and Industrial Organisation'],
-    // Faculty of geosciences and environmental studies
-    ['GM', 'Geomatic Engineering'],
-    ['GL', 'Geological Engineering'],
-    ['SP', 'Spatial Planning'],
-    ['ES', 'Environmental and Safety Engineering'],
-    ['LA', 'Land Administration and Information Systems'],
-    // School of Petroleum studies
-    ['PE', 'Petroleum Engineering'],
-    ['NG', 'Natural Gas Engineering'],
-    ['PG', 'Petroleum Geosciences and Engineering'],
-    ['RP', 'Petroleum Refining and Petrochemical Engineering'],
-    ['CH', 'Chemical Engineering'],
-  ]);
-
 
   // Post-process to add level and departments
   return finalSchedule.map(entry => {
@@ -523,6 +490,28 @@ function cleanName(name: string | null) {
     return name.trim().replace(/\s+/g, ' ');
 }
 
+function addDistributionFields(entry: any) {
+    const courseNumMatch = entry.courseCode.match(/\d+/);
+    const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
+    
+    const courseParts = entry.courseCode.trim().split(/\s+/);
+    const deptInitialParts: string[] = [];
+  
+    courseParts.forEach(part => {
+      if (/[a-zA-Z]/.test(part) && !/^\d/.test(part)) {
+        deptInitialParts.push(part.replace(/[.-]/g, ''));
+      }
+    });
+  
+    const uniqueDeptInitials = [...new Set(deptInitialParts)];
+  
+    const departments = uniqueDeptInitials
+      .map(initial => departmentMap.get(initial) || initial)
+      .filter(Boolean);
+  
+    return { ...entry, level, departments };
+  }
+
 export async function handleExamsUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -552,7 +541,7 @@ export async function handleExamsUpload(fileData: string) {
         
         rows.forEach((row: any) => {
             if (row.DATE && (row['COURSE NO'] || row['COURSE NO.'])) {
-                examsData.push({
+                const examEntry = {
                     id: idCounter++,
                     date: row.DATE,
                     dateStr: excelDateToJSDate(row.DATE),
@@ -564,7 +553,8 @@ export async function handleExamsUpload(fileData: string) {
                     room: row['LECTURE HALL'],
                     invigilator: cleanName(row.INVIGILATOR),
                     period: mapPeriod(row.PERIOD),
-                });
+                };
+                examsData.push(addDistributionFields(examEntry));
             }
         });
     }
@@ -588,7 +578,7 @@ export async function handleExamsUpload(fileData: string) {
             const rows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex - 1 });
             rows.forEach((row: any) => {
                 if (row['DATE'] && row['CRS NO.']) {
-                    practicalsData.push({
+                    const practicalEntry = {
                         id: idCounter++,
                         date: row['DATE'],
                         dateStr: excelDateToJSDate(row['DATE']),
@@ -601,7 +591,8 @@ export async function handleExamsUpload(fileData: string) {
                         invigilator: cleanName(row['INVIGILATOR']),
                         period: mapPeriod(row['MORN/NOON']),
                         is_practical: true,
-                    });
+                    };
+                    practicalsData.push(addDistributionFields(practicalEntry));
                 }
             });
         }
