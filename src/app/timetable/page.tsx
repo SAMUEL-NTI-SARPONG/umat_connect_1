@@ -78,18 +78,36 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 function StudentExamsView() {
     const { user, examsTimetable } = useUser();
   
-    const studentExams = useMemo(() => {
-      if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
-  
-      const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
-      
-      return allExams.filter(exam => {
-        const examLevel = exam.level || 0;
-        const examDepts = exam.departments || [];
-        return user.level === examLevel && examDepts.includes(user.department);
-      });
+    const groupedExams = useMemo(() => {
+        if (!user || !examsTimetable || !examsTimetable.isDistributed) return {};
+    
+        const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+        
+        const studentExams = allExams.filter(exam => {
+            const examLevel = exam.level || 0;
+            const examDepts = exam.departments || [];
+            return user.level === examLevel && examDepts.includes(user.department);
+        });
+
+        return studentExams.reduce((acc, exam) => {
+            const key = exam.dateStr;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(exam);
+            return acc;
+        }, {} as Record<string, ExamEntry[]>);
+
     }, [user, examsTimetable]);
-  
+
+    const groupKeys = Object.keys(groupedExams).sort((a, b) => {
+        try {
+            const dateA = new Date(a.split('-').reverse().join('-')).getTime();
+            const dateB = new Date(b.split('-').reverse().join('-')).getTime();
+            return dateA - dateB;
+        } catch(e) { return 0; }
+    });
+
     if (!examsTimetable || !examsTimetable.isDistributed) {
       return (
         <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -101,42 +119,74 @@ function StudentExamsView() {
       );
     }
     
-    const headers = ['Date', 'Period', 'Course Code', 'Course Name', 'Room', 'Lecturer'];
+    const headers = ['Period', 'Course Code', 'Course Name', 'Class', 'Room', 'Lecturer'];
   
     return (
       <Card>
         <CardHeader>
           <CardTitle>Your Personalized Exam Schedule</CardTitle>
           <CardDescription>
-            {studentExams.length > 0
-              ? `Here are your ${studentExams.length} scheduled exam(s).`
+            {groupKeys.length > 0
+              ? `Your exams are grouped by date. Expand each date to see details.`
               : "No exams found for your level and department."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {studentExams.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>{headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
-                </TableHeader>
-                <TableBody>
-                  {studentExams.map(exam => (
-                    <TableRow key={exam.id}>
-                      <TableCell>{exam.dateStr}</TableCell>
-                      <TableCell><Badge variant="outline">{exam.period}</Badge></TableCell>
-                      <TableCell>
-                        <div className="font-medium">{exam.courseCode}</div>
-                        {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
-                      </TableCell>
-                      <TableCell>{exam.courseName}</TableCell>
-                      <TableCell>{exam.room}</TableCell>
-                      <TableCell>{exam.lecturer}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+          {groupKeys.length > 0 ? (
+            <Accordion type="multiple" className="w-full space-y-4">
+              {groupKeys.map(key => {
+                const sortedEntries = [...(groupedExams[key] as ExamEntry[])].sort((a, b) => {
+                    const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
+                    const aPeriod = a.period || 'Unknown';
+                    const bPeriod = b.period || 'Unknown';
+                    return periodOrder[aPeriod] - periodOrder[bPeriod];
+                });
+                
+                return (
+                  <Card key={key} className="overflow-hidden">
+                    <AccordionItem value={key} className="border-b-0">
+                      <AccordionTrigger className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors [&[data-state=open]>svg]:rotate-180">
+                        <div className="flex items-center gap-4">
+                          <span className="font-semibold text-base">{key}</span>
+                          <Badge variant="secondary">{groupedExams[key]?.length || 0} exams</Badge>
+                        </div>
+                        <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="overflow-x-auto">
+                            <Table>
+                            <TableHeader>
+                                <TableRow>
+                                {headers.map(header => (
+                                    <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
+                                ))}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedEntries.map((exam: any) => (
+                                <TableRow key={exam.id}>
+                                    <TableCell>
+                                      <Badge variant={exam.period === 'Morning' ? 'default' : exam.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{exam.period}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="font-medium">{exam.courseCode}</div>
+                                        {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{exam.courseName}</TableCell>
+                                    <TableCell className="text-muted-foreground">{exam.class}</TableCell>
+                                    <TableCell className="font-medium">{exam.room}</TableCell>
+                                    <TableCell className="text-muted-foreground">{exam.lecturer}</TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                            </Table>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Card>
+                );
+              })}
+            </Accordion>
           ) : (
             <div className="text-center text-muted-foreground py-12">
               <p>No exams found for your schedule.</p>
@@ -711,14 +761,16 @@ function StaffTimetableView({
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
+  examsTimetable,
 }: {
   schedule: TimetableEntry[];
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
+  examsTimetable: ExamsTimetable | null;
 }) {
-  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, examsTimetable } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -1790,13 +1842,13 @@ function TimetableDisplay({
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
       setEditedFormData(selectedEntry);
-      if ('time' in selectedEntry && selectedEntry.time) {
+      if (!isExamsTimetable && 'time' in selectedEntry && selectedEntry.time) {
         const [start, end] = selectedEntry.time.split(' - ');
         setStartTime(start?.trim() || '');
         setEndTime(end?.trim() || '');
       }
     }
-  }, [selectedEntry, isEditModalOpen]);
+  }, [selectedEntry, isEditModalOpen, isExamsTimetable]);
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
     setSelectedEntry(entry);
@@ -1820,7 +1872,7 @@ function TimetableDisplay({
     if (!editedFormData) return;
     
     let updatedData: any = { ...editedFormData, [field]: value };
-    if (field === 'room') {
+    if (field === 'room' && !isExamsTimetable) {
       setStartTime('');
       setEndTime('');
     }
@@ -3029,6 +3081,7 @@ export default function TimetablePage() {
     setEmptySlots,
     staffSchedules,
     addStaffSchedule,
+    examsTimetable,
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
@@ -3069,6 +3122,7 @@ export default function TimetablePage() {
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
+                  examsTimetable={examsTimetable}
                />;
       case 'administrator':
         return <AdminTimetableView 
