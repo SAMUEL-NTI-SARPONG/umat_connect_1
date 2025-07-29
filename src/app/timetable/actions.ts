@@ -524,17 +524,18 @@ function cleanName(name: string | null) {
 export async function handleExamsUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheets = ['CLASS', 'GENERAL'];
-    const timetableData: any[] = [];
+    const examsData: any[] = [];
+    const practicalsData: any[] = [];
     let idCounter = 0;
 
-    for (const sheetName of sheets) {
+    // Process general exams
+    const examSheets = ['CLASS', 'GENERAL'];
+    for (const sheetName of examSheets) {
         if (!workbook.SheetNames.includes(sheetName)) continue;
 
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: ['date', 'courseCode', 'courseName', 'class', 'number', 'lecturer', 'room', 'invigilator', 'period'] });
 
-        // Find the starting row of actual data
         let dataStartIndex = -1;
         for (let i = 0; i < rows.length; i++) {
             const row: any = rows[i];
@@ -543,14 +544,12 @@ export async function handleExamsUpload(fileData: string) {
                 break;
             }
         }
-
         if (dataStartIndex === -1) continue;
 
         const sheetRows = rows.slice(dataStartIndex);
-        
         sheetRows.forEach((row: any) => {
             if (row.date && row.courseCode) {
-                timetableData.push({
+                examsData.push({
                     id: idCounter++,
                     date: row.date,
                     dateStr: typeof row.date === 'number' ? excelDateToJSDate(row.date) : row.date,
@@ -567,16 +566,54 @@ export async function handleExamsUpload(fileData: string) {
         });
     }
 
-    if (timetableData.length === 0) {
-        throw new Error("No valid exam data found in 'CLASS' or 'GENERAL' sheets.");
+    // Process practicals
+    const practicalsSheetName = 'PRACTICAL';
+    if (workbook.SheetNames.includes(practicalsSheetName)) {
+        const sheet = workbook.Sheets[practicalsSheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        
+        let dataStartIndex = -1;
+        for (let i = 0; i < rows.length; i++) {
+            const row: any = rows[i];
+            if (String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
+                dataStartIndex = i + 1;
+                break;
+            }
+        }
+    
+        if (dataStartIndex !== -1) {
+            const sheetRows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex - 1 });
+            sheetRows.forEach((row: any) => {
+                if (row['DATE'] && row['CRS NO.']) {
+                    practicalsData.push({
+                        id: idCounter++,
+                        date: row['DATE'],
+                        dateStr: typeof row['DATE'] === 'number' ? excelDateToJSDate(row['DATE']) : row['DATE'],
+                        day: new Date(excelDateToJSDate(row['DATE']).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
+                        courseCode: row['CRS NO.'],
+                        courseName: row['COURSE TITLE'],
+                        class: row['CLASS'],
+                        lecturer: cleanName(row['EXAMINER']),
+                        room: row['ROOM'],
+                        invigilator: cleanName(row['INVIGILATOR']),
+                        period: mapPeriod(row['MORN/NOON']),
+                        is_practical: true,
+                    });
+                }
+            });
+        }
+    }
+
+    if (examsData.length === 0 && practicalsData.length === 0) {
+        throw new Error("No valid exam or practical data found in the file.");
     }
 
     // Sort by date
-    timetableData.sort((a, b) => a.date - b.date);
+    examsData.sort((a, b) => a.date - b.date);
+    practicalsData.sort((a, b) => a.date - b.date);
 
-    return timetableData;
+    return { exams: examsData, practicals: practicalsData };
 }
-
 
 // New function to handle practicals specifically
 export async function handlePracticalsUpload(fileData: string) {
