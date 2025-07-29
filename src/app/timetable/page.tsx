@@ -1198,7 +1198,7 @@ function StaffTimetableView({
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold break-words">{course.courseCode}</p>
                           <div className="flex flex-wrap items-center text-sm text-muted-foreground">
-                            <span className="break-all">{course.departments.join(', ')}</span>
+                            <span className="break-all">{(course.departments || []).join(', ')}</span>
                             <span className="mx-1.5">&middot;</span>
                             <span>Level {course.level}</span>
                           </div>
@@ -1730,15 +1730,17 @@ function TimetableDisplay({
   const examsTableHeaders = ['Period', 'Course Code', 'Course Name', 'Class', 'Room', 'Lecturer', 'Invigilator'];
   const classTableHeaders = ['Time', 'Room', 'Course', 'Lecturer', 'Departments', 'Level'];
 
-  return (
-    <div className="space-y-6">
-      {!parsedData && (
-        <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">{placeholder}</p>
-        </div>
-      )}
+  if (!parsedData) {
+    return (
+      <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+        <p className="text-muted-foreground">{placeholder}</p>
+      </div>
+    );
+  }
 
-      {parsedData && (
+  if (isExamsTimetable) {
+    return (
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>{title}</CardTitle>
@@ -1755,14 +1757,12 @@ function TimetableDisplay({
           <CardContent>
             <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
-                 const sortedEntries = isExamsTimetable 
-                 ? [...groupedByDate[key]].sort((a, b) => {
-                     const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
-                     const aPeriod = (a as any).period || 'Unknown';
-                     const bPeriod = (b as any).period || 'Unknown';
-                     return periodOrder[aPeriod] - periodOrder[bPeriod];
-                   })
-                 : groupedByDate[key];
+                const sortedEntries = [...groupedByDate[key]].sort((a, b) => {
+                    const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
+                    const aPeriod = (a as any).period || 'Unknown';
+                    const bPeriod = (b as any).period || 'Unknown';
+                    return periodOrder[aPeriod] - periodOrder[bPeriod];
+                });
                 
                 return (
                   <Card key={key} className="overflow-hidden">
@@ -1779,7 +1779,7 @@ function TimetableDisplay({
                             <Table>
                             <TableHeader>
                                 <TableRow>
-                                {(isExamsTimetable ? examsTableHeaders : classTableHeaders).map(header => (
+                                {examsTableHeaders.map(header => (
                                     <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
                                 ))}
                                 </TableRow>
@@ -1787,28 +1787,15 @@ function TimetableDisplay({
                             <TableBody>
                                 {sortedEntries.map((entry: any) => (
                                 <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
-                                    {isExamsTimetable ? (
-                                    <>
-                                        <TableCell>
-                                          <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
-                                        </TableCell>
-                                        <TableCell className="font-medium">{entry.courseCode} {(entry.is_practical) && <Badge variant="destructive" className='ml-2'>Practical</Badge>}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.class}</TableCell>
-                                        <TableCell className="font-medium">{entry.room}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.invigilator}</TableCell>
-                                    </>
-                                    ) : (
-                                    <>
-                                        <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
-                                        <TableCell className="font-medium">{entry.room}</TableCell>
-                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
-                                        <TableCell className="text-muted-foreground">{(entry.departments || []).join(', ')}</TableCell>
-                                        <TableCell className="text-muted-foreground">{entry.level}</TableCell>
-                                    </>
-                                    )}
+                                    <TableCell>
+                                      <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium">{entry.courseCode} {entry.is_practical && <Badge variant="destructive" className='ml-2'>Practical</Badge>}</TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.class}</TableCell>
+                                    <TableCell className="font-medium">{entry.room}</TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.invigilator}</TableCell>
                                 </TableRow>
                                 ))}
                             </TableBody>
@@ -1827,10 +1814,76 @@ function TimetableDisplay({
              )}
           </CardContent>
         </Card>
-      )}
+      </div>
+    );
+  }
 
-      {/* Action Modal */}
-      <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+  // Fallback for Class Timetable
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>
+          {
+            showInvalid 
+              ? `Found ${filteredData?.length || 0} entries for review.`
+              : searchTerm 
+                ? `Found ${filteredData?.length || 0} matching entries.`
+                : description
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue={days[0]} className="w-full">
+            <TabsList className="grid w-full grid-cols-7">
+            {days.map(day => (
+                <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
+            ))}
+            </TabsList>
+            <div className="py-6">
+            {days.map(day => (
+                <TabsContent key={day} value={day}>
+                {groupedByDate[day] && groupedByDate[day].length > 0 ? (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                {classTableHeaders.map(header => (
+                                    <TableHead key={header} className="font-semibold text-foreground/80">{header}</TableHead>
+                                ))}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {groupedByDate[day].map((entry: any) => (
+                                    <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                        <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
+                                        <TableCell className="font-medium">{entry.room}</TableCell>
+                                        <TableCell className="font-medium">{entry.courseCode}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
+                                        <TableCell className="text-muted-foreground">{(entry.departments || []).join(', ')}</TableCell>
+                                        <TableCell className="text-muted-foreground">{entry.level}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ) : (
+                    <div className="text-center p-12 text-muted-foreground">
+                        <p>No classes scheduled for {day}.</p>
+                    </div>
+                )}
+                </TabsContent>
+            ))}
+            </div>
+        </Tabs>
+        {groupKeys.length === 0 && (searchTerm || showInvalid) && (
+            <div className="text-center p-12 text-muted-foreground">
+              <p>No results found for your filter criteria.</p>
+            </div>
+         )}
+      </CardContent>
+      {/* Modals remain here */}
+       <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Choose Action</DialogTitle>
@@ -1994,8 +2047,7 @@ function TimetableDisplay({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-    </div>
+    </Card>
   );
 }
 
@@ -2328,6 +2380,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
