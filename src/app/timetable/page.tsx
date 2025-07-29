@@ -547,8 +547,8 @@ function StaffExamsView() {
       const staffName = user.name.toLowerCase();
       
       return allExams.filter(exam => 
-        exam.lecturer.toLowerCase().includes(staffName) || 
-        exam.invigilator.toLowerCase().includes(staffName)
+        (exam.lecturer && exam.lecturer.toLowerCase().includes(staffName)) || 
+        (exam.invigilator && exam.invigilator.toLowerCase().includes(staffName))
       );
     }, [user, examsTimetable]);
   
@@ -585,8 +585,8 @@ function StaffExamsView() {
                 <TableBody>
                   {staffExams.map(exam => {
                     const staffName = user!.name.toLowerCase();
-                    const isLecturer = exam.lecturer.toLowerCase().includes(staffName);
-                    const isInvigilator = exam.invigilator.toLowerCase().includes(staffName);
+                    const isLecturer = exam.lecturer && exam.lecturer.toLowerCase().includes(staffName);
+                    const isInvigilator = exam.invigilator && exam.invigilator.toLowerCase().includes(staffName);
                     let role = '';
                     if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
                     else if (isLecturer) role = 'Lecturer';
@@ -1760,7 +1760,6 @@ function TimetableDisplay({
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
 
   const [startTime, setStartTime] = useState<string>('');
@@ -1830,7 +1829,6 @@ function TimetableDisplay({
   const closeAllModals = () => {
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
-    setIsDeleteConfirmOpen(false);
     setSelectedEntry(null);
   }
 
@@ -2750,7 +2748,7 @@ function AdminTimetableView({
             </div>
           )}
           <DialogFooter className="justify-between">
-            <AlertDialog>
+            <AlertDialog open={isDeletePracticalConfirmOpen} onOpenChange={setIsDeletePracticalConfirmOpen}>
                 <AlertDialogTrigger asChild>
                     <Button variant="destructive">
                         <Trash2 className="mr-2 h-4 w-4"/> Delete
@@ -3119,6 +3117,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
