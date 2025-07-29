@@ -2,10 +2,10 @@
 
 'use client';
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry } from '../providers/user-provider';
 import { departments as allDepartments } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload, handleExamsUpload } from './actions';
+import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -1595,6 +1595,7 @@ function TimetableDisplay({
   description,
   placeholder,
   isExamsTimetable = false,
+  onViewPracticals,
 }: {
   parsedData: TimetableEntry[] | null;
   setParsedData: (data: TimetableEntry[] | null) => void;
@@ -1605,6 +1606,7 @@ function TimetableDisplay({
   description: string;
   placeholder: string;
   isExamsTimetable?: boolean;
+  onViewPracticals?: () => void;
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -1696,7 +1698,7 @@ function TimetableDisplay({
     }, {} as Record<string, TimetableEntry[]>);
   }, [filteredData, isExamsTimetable]);
   
-  const availableSlotsForEdit = useMemo(() => {
+    const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
     const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
@@ -1743,16 +1745,26 @@ function TimetableDisplay({
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>
-              {
-                showInvalid 
-                  ? `Found ${filteredData?.length || 0} entries for review.`
-                  : searchTerm 
-                    ? `Found ${filteredData?.length || 0} matching entries.`
-                    : description
-              }
-            </CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>
+                  {
+                    showInvalid 
+                      ? `Found ${filteredData?.length || 0} entries for review.`
+                      : searchTerm 
+                        ? `Found ${filteredData?.length || 0} matching entries.`
+                        : description
+                  }
+                </CardDescription>
+              </div>
+              {onViewPracticals && (
+                <Button variant="outline" onClick={onViewPracticals}>
+                  <FlaskConical className="h-4 w-4 mr-2" />
+                  View Practicals
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Accordion type="multiple" className="w-full space-y-4">
@@ -1790,7 +1802,7 @@ function TimetableDisplay({
                                     <TableCell>
                                       <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                     </TableCell>
-                                    <TableCell className="font-medium">{entry.courseCode} {entry.is_practical && <Badge variant="destructive" className='ml-2'>Practical</Badge>}</TableCell>
+                                    <TableCell className="font-medium">{entry.courseCode}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.class}</TableCell>
                                     <TableCell className="font-medium">{entry.room}</TableCell>
@@ -2081,6 +2093,13 @@ function AdminTimetableView({
   const [examsError, setExamsError] = useState<string | null>(null);
   const [examsSearchTerm, setExamsSearchTerm] = useState('');
   const [examsShowInvalid, setExamsShowInvalid] = useState(false);
+  const [lastUploadedFile, setLastUploadedFile] = useState<string | null>(null);
+
+  // State for Practical Exams
+  const [isPracticalsModalOpen, setIsPracticalsModalOpen] = useState(false);
+  const [practicalsData, setPracticalsData] = useState<any[] | null>(null);
+  const [isPracticalsLoading, setIsPracticalsLoading] = useState(false);
+  const [practicalsError, setPracticalsError] = useState<string | null>(null);
 
   // State for Resit Timetable
   const [isResitLoading, setIsResitLoading] = useState(false);
@@ -2118,6 +2137,10 @@ function AdminTimetableView({
       const arrayBuffer = await file.arrayBuffer();
       const fileData = Buffer.from(arrayBuffer).toString('base64');
       
+      if (activeTab === 'exams') {
+        setLastUploadedFile(fileData);
+      }
+
       const data = await activeState.handler(fileData);
       
       if (activeTab === 'class') {
@@ -2154,6 +2177,27 @@ function AdminTimetableView({
     }
   };
 
+  const handleViewPracticals = useCallback(async () => {
+    if (!lastUploadedFile) {
+      setPracticalsError("Please upload an exams timetable file first.");
+      setIsPracticalsModalOpen(true);
+      return;
+    }
+    
+    setIsPracticalsLoading(true);
+    setPracticalsError(null);
+    setIsPracticalsModalOpen(true);
+    
+    try {
+      const practicals = await handlePracticalsUpload(lastUploadedFile);
+      setPracticalsData(practicals);
+    } catch (err) {
+      setPracticalsError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
+      setIsPracticalsLoading(false);
+    }
+  }, [lastUploadedFile]);
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -2171,6 +2215,9 @@ function AdminTimetableView({
     if (activeTab === 'class') {
         setParsedData(null);
         setEmptySlots([]);
+    }
+    if (activeTab === 'exams') {
+        setLastUploadedFile(null);
     }
   };
   
@@ -2292,6 +2339,7 @@ function AdminTimetableView({
             description={`A total of ${examsParsedData?.length || 0} exam entries were found.`}
             placeholder="Upload an exams timetable to begin."
             isExamsTimetable={true}
+            onViewPracticals={handleViewPracticals}
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
@@ -2303,6 +2351,62 @@ function AdminTimetableView({
           />
         </TabsContent>
       </Tabs>
+      <Dialog open={isPracticalsModalOpen} onOpenChange={setIsPracticalsModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Practical Exams Timetable</DialogTitle>
+            <DialogDescription>
+              The following practical exams were found in the uploaded file.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto my-4 pr-4">
+            {isPracticalsLoading && <div className="flex justify-center items-center h-48"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+            {practicalsError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{practicalsError}</AlertDescription>
+              </Alert>
+            )}
+            {practicalsData && (
+              practicalsData.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Class</TableHead>
+                      <TableHead>Room</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {practicalsData.map((prac: any) => (
+                      <TableRow key={prac.id}>
+                        <TableCell>{prac.dateStr}</TableCell>
+                        <TableCell><Badge variant={prac.period === 'Morning' ? 'default' : prac.period === 'Afternoon' ? 'secondary' : 'outline'}>{prac.period}</Badge></TableCell>
+                        <TableCell>
+                          <div className="font-medium">{prac.courseCode}</div>
+                          <div className="text-sm text-muted-foreground">{prac.courseName}</div>
+                        </TableCell>
+                        <TableCell>{prac.class}</TableCell>
+                        <TableCell>{prac.room}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center p-12 text-muted-foreground">
+                  <p>No practical exams found in the 'PRACTICAL' sheet of the uploaded file.</p>
+                </div>
+              )
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPracticalsModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -2380,6 +2484,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 

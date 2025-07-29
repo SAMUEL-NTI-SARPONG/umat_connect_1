@@ -576,3 +576,64 @@ export async function handleExamsUpload(fileData: string) {
 
     return timetableData;
 }
+
+
+// New function to handle practicals specifically
+export async function handlePracticalsUpload(fileData: string) {
+    const fileBuffer = Buffer.from(fileData, 'base64');
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const timetableData: any[] = [];
+    let idCounter = 10000; // Start with a high number to avoid ID collision
+  
+    const sheetName = 'PRACTICAL';
+    if (!workbook.SheetNames.includes(sheetName)) {
+      return []; // No practicals sheet found
+    }
+  
+    const sheet = workbook.Sheets[sheetName];
+  
+    // Helper to normalize row data for practicals
+    function normalizePracticalRow(row: any) {
+      return {
+        id: idCounter++,
+        date: row['DATE'],
+        dateStr: typeof row['DATE'] === 'number' ? excelDateToJSDate(row['DATE']) : row['DATE'],
+        day: new Date(excelDateToJSDate(row['DATE']).split('-').reverse().join('-')).toLocaleDateString('en-US', { weekday: 'long' }),
+        courseCode: row['CRS NO.'],
+        courseName: row['COURSE TITLE'],
+        class: row['CLASS'],
+        lecturer: cleanName(row['EXAMINER']),
+        room: row['ROOM'],
+        invigilator: cleanName(row['INVIGILATOR']),
+        period: mapPeriod(row['MORN/NOON']),
+        is_practical: true,
+      };
+    }
+  
+    // Find the starting row of actual data
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    let dataStartIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const row: any = rows[i];
+      if (String(row[0]).trim().toUpperCase() === 'DATE' && String(row[1]).trim().toUpperCase() === 'CRS NO.') {
+        dataStartIndex = i + 1;
+        break;
+      }
+    }
+  
+    if (dataStartIndex === -1) {
+        throw new Error("Could not find the header row in the PRACTICAL sheet.");
+    }
+  
+    const sheetRows = XLSX.utils.sheet_to_json(sheet, { range: dataStartIndex -1 });
+  
+    sheetRows.forEach((row: any) => {
+        if (row['DATE'] && row['CRS NO.']) {
+            timetableData.push(normalizePracticalRow(row));
+        }
+    });
+
+    timetableData.sort((a, b) => a.date - b.date);
+  
+    return timetableData;
+}
