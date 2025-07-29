@@ -1674,8 +1674,7 @@ function TimetableDisplay({
   const handleEditInputChange = (field: keyof TimetableEntry | "period" | "class" | "invigilator" | "courseName" | "is_practical", value: string | number | string[] | boolean) => {
     if (!editedFormData) return;
     
-    let updatedData = { ...editedFormData, [field]: value };
-
+    let updatedData: any = { ...editedFormData, [field]: value };
     if (field === 'room') {
       setStartTime('');
       setEndTime('');
@@ -1895,7 +1894,7 @@ function TimetableDisplay({
       </Card>
       
       {/* Modals */}
-       <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+      <Dialog open={isActionModalOpen} onOpenChange={closeAllModals}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Choose Action</DialogTitle>
@@ -1904,12 +1903,28 @@ function TimetableDisplay({
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-around py-4">
-             <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
+            <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
-             </Button>
-             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-             </Button>
+            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this timetable entry.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setIsDeleteConfirmOpen(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
           </div>
         </DialogContent>
       </Dialog>
@@ -2062,22 +2077,6 @@ function TimetableDisplay({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this timetable entry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
@@ -2118,6 +2117,7 @@ function AdminTimetableView({
   const [practicalsData, setPracticalsData] = useState<any[] | null>(null);
   const [isPracticalsLoading, setIsPracticalsLoading] = useState(false);
   const [practicalsError, setPracticalsError] = useState<string | null>(null);
+  const [isAddPracticalModalOpen, setIsAddPracticalModalOpen] = useState(false);
   
   // State for editing practicals
   const [selectedPractical, setSelectedPractical] = useState<any | null>(null);
@@ -2134,6 +2134,13 @@ function AdminTimetableView({
   const handleAddExam = (newExam: any) => {
     setExamsParsedData(prev => {
         const newData = [...(prev || []), newExam];
+        return newData;
+    });
+  };
+  
+  const handleAddPractical = (newPractical: any) => {
+    setPracticalsData(prev => {
+        const newData = [...(prev || []), newPractical];
         return newData;
     });
   };
@@ -2425,11 +2432,16 @@ function AdminTimetableView({
        />
       <Dialog open={isPracticalsModalOpen} onOpenChange={setIsPracticalsModalOpen}>
         <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Practical Exams Timetable</DialogTitle>
-            <DialogDescription>
-              The following practical exams were found in the uploaded file.
-            </DialogDescription>
+          <DialogHeader className='flex-row items-center justify-between'>
+            <div>
+                <DialogTitle>Practical Exams Timetable</DialogTitle>
+                <DialogDescription>
+                  The following practical exams were found in the uploaded file.
+                </DialogDescription>
+            </div>
+            <Button variant="outline" onClick={() => setIsAddPracticalModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Practical
+            </Button>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto my-4 pr-4">
             {isPracticalsLoading && <div className="flex justify-center items-center h-48"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
@@ -2537,9 +2549,25 @@ function AdminTimetableView({
             </div>
           )}
           <DialogFooter className="justify-between">
-            <Button variant="destructive" onClick={() => { setIsEditPracticalModalOpen(false); setIsDeletePracticalConfirmOpen(true);}}>
-                <Trash2 className="mr-2 h-4 w-4"/> Delete
-            </Button>
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <Trash2 className="mr-2 h-4 w-4"/> Delete
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this practical exam entry.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeAllPracticalModals}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeletePractical}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             <div className="flex gap-2">
                 <Button variant="ghost" onClick={closeAllPracticalModals}>Cancel</Button>
                 <Button onClick={handleSavePracticalEdit}>Save Changes</Button>
@@ -2547,22 +2575,11 @@ function AdminTimetableView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Practical Confirmation */}
-      <AlertDialog open={isDeletePracticalConfirmOpen} onOpenChange={setIsDeletePracticalConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete this practical exam entry.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeAllPracticalModals}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePractical}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AddPracticalDialog
+        isOpen={isAddPracticalModalOpen}
+        onClose={() => setIsAddPracticalModalOpen(false)}
+        onAddPractical={handleAddPractical}
+       />
     </div>
   );
 }
@@ -2690,6 +2707,117 @@ function AddExamDialog({ isOpen, onClose, onAddExam }: { isOpen: boolean; onClos
     );
 }
 
+function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boolean; onClose: () => void; onAddPractical: (exam: any) => void; }) {
+    const [practicalData, setPracticalData] = useState<any>(initialExamState);
+
+    const handleInputChange = (field: string, value: any) => {
+        setPracticalData((prev: any) => ({ ...prev, [field]: value }));
+    };
+
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            setPracticalData((prev: any) => ({
+                ...prev,
+                date: date,
+                dateStr: format(date, 'dd-MM-yyyy')
+            }));
+        }
+    };
+
+    const handleSave = () => {
+        const newPractical = {
+            ...practicalData,
+            id: Date.now(), // Unique ID for the new entry
+            day: practicalData.date ? format(practicalData.date, 'EEEE') : '',
+            is_practical: true,
+        };
+        onAddPractical(newPractical);
+        setPracticalData(initialExamState);
+        onClose();
+    };
+
+    const canSave = practicalData.dateStr && practicalData.period && practicalData.courseCode;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(isOpen) => { if (!isOpen) { setPracticalData(initialExamState); } onClose(); }}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add New Practical Entry</DialogTitle>
+                    <DialogDescription>Fill in the details for the new practical exam.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="date" className="text-right">Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "col-span-3 justify-start text-left font-normal",
+                                        !practicalData.date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {practicalData.date ? format(practicalData.date, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={practicalData.date}
+                                    onSelect={handleDateSelect}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="period" className="text-right">Period</Label>
+                        <Select onValueChange={(value) => handleInputChange('period', value)}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select period" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Morning">Morning</SelectItem>
+                                <SelectItem value="Afternoon">Afternoon</SelectItem>
+                                <SelectItem value="Evening">Evening</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="courseCode" className="text-right">Course Code</Label>
+                        <Input id="courseCode" value={practicalData.courseCode} onChange={(e) => handleInputChange('courseCode', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="courseName" className="text-right">Course Name</Label>
+                        <Input id="courseName" value={practicalData.courseName} onChange={(e) => handleInputChange('courseName', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="class" className="text-right">Class</Label>
+                        <Input id="class" value={practicalData.class} onChange={(e) => handleInputChange('class', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="room" className="text-right">Room</Label>
+                        <Input id="room" value={practicalData.room} onChange={(e) => handleInputChange('room', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="lecturer" className="text-right">Examiner</Label>
+                        <Input id="lecturer" value={practicalData.lecturer} onChange={(e) => handleInputChange('lecturer', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invigilator" className="text-right">Invigilator</Label>
+                        <Input id="invigilator" value={practicalData.invigilator} onChange={(e) => handleInputChange('invigilator', e.target.value)} className="col-span-3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={!canSave}>Add Entry</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function TimetablePage() {
   const { 
     user, 
@@ -2790,5 +2918,6 @@ export default function TimetablePage() {
 
 
     
+
 
 
