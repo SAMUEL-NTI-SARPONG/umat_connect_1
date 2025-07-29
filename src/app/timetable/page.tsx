@@ -2100,6 +2100,12 @@ function AdminTimetableView({
   const [practicalsData, setPracticalsData] = useState<any[] | null>(null);
   const [isPracticalsLoading, setIsPracticalsLoading] = useState(false);
   const [practicalsError, setPracticalsError] = useState<string | null>(null);
+  
+  // State for editing practicals
+  const [selectedPractical, setSelectedPractical] = useState<any | null>(null);
+  const [isEditPracticalModalOpen, setIsEditPracticalModalOpen] = useState(false);
+  const [isDeletePracticalConfirmOpen, setIsDeletePracticalConfirmOpen] = useState(false);
+  const [editedPracticalData, setEditedPracticalData] = useState<any | null>(null);
 
   // State for Resit Timetable
   const [isResitLoading, setIsResitLoading] = useState(false);
@@ -2240,6 +2246,37 @@ function AdminTimetableView({
         return dateA - dateB;
     } catch(e) { return 0; }
   });
+
+  const openPracticalEditModal = (practical: any) => {
+    setSelectedPractical(practical);
+    setEditedPracticalData(practical);
+    setIsEditPracticalModalOpen(true);
+  };
+  
+  const closeAllPracticalModals = () => {
+      setSelectedPractical(null);
+      setEditedPracticalData(null);
+      setIsEditPracticalModalOpen(false);
+      setIsDeletePracticalConfirmOpen(false);
+  };
+
+  const handlePracticalEditInputChange = (field: string, value: string) => {
+      setEditedPracticalData((prev: any) => ({...prev, [field]: value}));
+  };
+
+  const handleSavePracticalEdit = () => {
+      if (!editedPracticalData) return;
+      setPracticalsData(prev => 
+        prev!.map(p => p.id === editedPracticalData.id ? editedPracticalData : p)
+      );
+      closeAllPracticalModals();
+  };
+  
+  const handleDeletePractical = () => {
+      if (!selectedPractical) return;
+      setPracticalsData(prev => prev!.filter(p => p.id !== selectedPractical.id));
+      closeAllPracticalModals();
+  };
   
   return (
     <div className="space-y-6">
@@ -2416,7 +2453,7 @@ function AdminTimetableView({
                                             </TableHeader>
                                             <TableBody>
                                                 {groupedPracticals[key].map((prac: any) => (
-                                                <TableRow key={prac.id}>
+                                                <TableRow key={prac.id} onClick={() => openPracticalEditModal(prac)} className="cursor-pointer">
                                                     <TableCell><Badge variant={prac.period === 'Morning' ? 'default' : prac.period === 'Afternoon' ? 'secondary' : 'outline'}>{prac.period}</Badge></TableCell>
                                                     <TableCell>
                                                         <div className="font-medium">{prac.courseCode}</div>
@@ -2448,6 +2485,69 @@ function AdminTimetableView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Edit Practical Modal */}
+      <Dialog open={isEditPracticalModalOpen} onOpenChange={closeAllPracticalModals}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Practical Exam</DialogTitle>
+            <DialogDescription>Make changes to this practical exam entry.</DialogDescription>
+          </DialogHeader>
+          {editedPracticalData && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-date" className="text-right">Date</Label>
+                <Input id="prac-date" value={editedPracticalData.dateStr} onChange={(e) => handlePracticalEditInputChange('dateStr', e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-course" className="text-right">Course</Label>
+                <Input id="prac-course" value={editedPracticalData.courseCode} onChange={(e) => handlePracticalEditInputChange('courseCode', e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-class" className="text-right">Class</Label>
+                <Input id="prac-class" value={editedPracticalData.class} onChange={(e) => handlePracticalEditInputChange('class', e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-room" className="text-right">Room</Label>
+                <Input id="prac-room" value={editedPracticalData.room} onChange={(e) => handlePracticalEditInputChange('room', e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-examiner" className="text-right">Examiner</Label>
+                <Input id="prac-examiner" value={editedPracticalData.lecturer} onChange={(e) => handlePracticalEditInputChange('lecturer', e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="prac-invigilator" className="text-right">Invigilator</Label>
+                <Input id="prac-invigilator" value={editedPracticalData.invigilator} onChange={(e) => handlePracticalEditInputChange('invigilator', e.target.value)} className="col-span-3" />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="justify-between">
+            <Button variant="destructive" onClick={() => { setIsEditPracticalModalOpen(false); setIsDeletePracticalConfirmOpen(true);}}>
+                <Trash2 className="mr-2 h-4 w-4"/> Delete
+            </Button>
+            <div className="flex gap-2">
+                <Button variant="ghost" onClick={closeAllPracticalModals}>Cancel</Button>
+                <Button onClick={handleSavePracticalEdit}>Save Changes</Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Practical Confirmation */}
+      <AlertDialog open={isDeletePracticalConfirmOpen} onOpenChange={setIsDeletePracticalConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this practical exam entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeAllPracticalModals}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePractical}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -2525,6 +2625,7 @@ export default function TimetablePage() {
 
     
     
+
 
 
 
