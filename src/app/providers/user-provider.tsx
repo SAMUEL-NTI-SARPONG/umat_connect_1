@@ -463,18 +463,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const distributeSpecialResitTimetable = useCallback(() => {
-    let distributedData: SpecialResitTimetable | null = null;
-    setSpecialResitTimetableState(prev => {
-      if (!prev) return null;
-      distributedData = { ...prev, isDistributed: true };
-      return distributedData;
-    });
+    const currentState = specialResitTimetable;
+    if (!currentState) return;
 
-    if (distributedData) {
-        localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
-        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
-    }
-  }, [toast]);
+    const distributedData = { ...currentState, isDistributed: true };
+    setSpecialResitTimetableState(distributedData);
+    localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
+    toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+
+  }, [specialResitTimetable, toast]);
   
   const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
     setExamsTimetableState(data);
@@ -486,14 +483,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const distributeExamsTimetable = useCallback(() => {
-    setExamsTimetableState(prev => {
-      if (!prev) return prev;
-      const distributedData = { ...prev, isDistributed: true };
-      localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-      toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
-      return distributedData;
-    });
-  }, [toast]);
+    const currentState = examsTimetable;
+    if (!currentState) return;
+    
+    const distributedData = { ...currentState, isDistributed: true };
+    setExamsTimetableState(distributedData);
+    localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
+    toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
+
+  }, [examsTimetable, toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
