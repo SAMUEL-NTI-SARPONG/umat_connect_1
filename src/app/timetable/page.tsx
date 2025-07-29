@@ -64,6 +64,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -1596,6 +1599,7 @@ function TimetableDisplay({
   placeholder,
   isExamsTimetable = false,
   onViewPracticals,
+  onAddExam,
 }: {
   parsedData: TimetableEntry[] | null;
   setParsedData: (data: TimetableEntry[] | null) => void;
@@ -1607,6 +1611,7 @@ function TimetableDisplay({
   placeholder: string;
   isExamsTimetable?: boolean;
   onViewPracticals?: () => void;
+  onAddExam?: () => void;
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -1758,12 +1763,20 @@ function TimetableDisplay({
                   }
                 </CardDescription>
               </div>
-              {onViewPracticals && (
-                <Button variant="outline" onClick={onViewPracticals}>
-                  <FlaskConical className="h-4 w-4 mr-2" />
-                  View Practicals
-                </Button>
-              )}
+              <div className='flex gap-2'>
+                {onAddExam && (
+                    <Button variant="outline" onClick={onAddExam}>
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Exam
+                    </Button>
+                )}
+                {onViewPracticals && (
+                    <Button variant="outline" onClick={onViewPracticals}>
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    View Practicals
+                    </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -2109,11 +2122,12 @@ function AdminTimetableView({
   const [classShowInvalid, setClassShowInvalid] = useState(false);
 
   // State for Exams Timetable
-  const [examsParsedData, setExamsParsedData] = useState<TimetableEntry[] | null>(null);
+  const [examsParsedData, setExamsParsedData] = useState<any[] | null>(null);
   const [isExamsLoading, setIsExamsLoading] = useState(false);
   const [examsError, setExamsError] = useState<string | null>(null);
   const [examsSearchTerm, setExamsSearchTerm] = useState('');
   const [examsShowInvalid, setExamsShowInvalid] = useState(false);
+  const [isAddExamModalOpen, setIsAddExamModalOpen] = useState(false);
   
   // State for Practical Exams
   const [isPracticalsModalOpen, setIsPracticalsModalOpen] = useState(false);
@@ -2133,6 +2147,13 @@ function AdminTimetableView({
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
   
+  const handleAddExam = (newExam: any) => {
+    setExamsParsedData(prev => {
+        const newData = [...(prev || []), newExam];
+        return newData;
+    });
+  };
+
   // Map state to the active tab
   const activeState = useMemo(() => {
     switch (activeTab) {
@@ -2401,6 +2422,7 @@ function AdminTimetableView({
             placeholder="Upload an exams timetable to begin."
             isExamsTimetable={true}
             onViewPracticals={handleViewPracticals}
+            onAddExam={() => setIsAddExamModalOpen(true)}
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
@@ -2412,6 +2434,11 @@ function AdminTimetableView({
           />
         </TabsContent>
       </Tabs>
+      <AddExamDialog
+        isOpen={isAddExamModalOpen}
+        onClose={() => setIsAddExamModalOpen(false)}
+        onAddExam={handleAddExam}
+       />
       <Dialog open={isPracticalsModalOpen} onOpenChange={setIsPracticalsModalOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -2554,6 +2581,129 @@ function AdminTimetableView({
       </AlertDialog>
     </div>
   );
+}
+
+
+const initialExamState = {
+    date: undefined,
+    dateStr: '',
+    period: '',
+    courseCode: '',
+    courseName: '',
+    class: '',
+    room: '',
+    lecturer: '',
+    invigilator: '',
+};
+
+function AddExamDialog({ isOpen, onClose, onAddExam }: { isOpen: boolean; onClose: () => void; onAddExam: (exam: any) => void; }) {
+    const [examData, setExamData] = useState<any>(initialExamState);
+
+    const handleInputChange = (field: string, value: any) => {
+        setExamData((prev: any) => ({ ...prev, [field]: value }));
+    };
+
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            setExamData((prev: any) => ({
+                ...prev,
+                date: date,
+                dateStr: format(date, 'dd-MM-yyyy')
+            }));
+        }
+    };
+
+    const handleSave = () => {
+        const newExam = {
+            ...examData,
+            id: Date.now(), // Unique ID for the new entry
+            day: examData.date ? format(examData.date, 'EEEE') : '',
+        };
+        onAddExam(newExam);
+        setExamData(initialExamState);
+        onClose();
+    };
+
+    const canSave = examData.dateStr && examData.period && examData.courseCode;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Add New Exam Entry</DialogTitle>
+                    <DialogDescription>Fill in the details for the new exam and click 'Add Entry' to save.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="date" className="text-right">Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "col-span-3 justify-start text-left font-normal",
+                                        !examData.date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {examData.date ? format(examData.date, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={examData.date}
+                                    onSelect={handleDateSelect}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="period" className="text-right">Period</Label>
+                        <Select onValueChange={(value) => handleInputChange('period', value)}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select period" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Morning">Morning</SelectItem>
+                                <SelectItem value="Afternoon">Afternoon</SelectItem>
+                                <SelectItem value="Evening">Evening</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="courseCode" className="text-right">Course Code</Label>
+                        <Input id="courseCode" value={examData.courseCode} onChange={(e) => handleInputChange('courseCode', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="courseName" className="text-right">Course Name</Label>
+                        <Input id="courseName" value={examData.courseName} onChange={(e) => handleInputChange('courseName', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="class" className="text-right">Class</Label>
+                        <Input id="class" value={examData.class} onChange={(e) => handleInputChange('class', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="room" className="text-right">Room</Label>
+                        <Input id="room" value={examData.room} onChange={(e) => handleInputChange('room', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="lecturer" className="text-right">Lecturer</Label>
+                        <Input id="lecturer" value={examData.lecturer} onChange={(e) => handleInputChange('lecturer', e.target.value)} className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="invigilator" className="text-right">Invigilator</Label>
+                        <Input id="invigilator" value={examData.invigilator} onChange={(e) => handleInputChange('invigilator', e.target.value)} className="col-span-3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={!canSave}>Add Entry</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export default function TimetablePage() {
