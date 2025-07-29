@@ -1907,11 +1907,9 @@ function TimetableDisplay({
              <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
              </Button>
-             <AlertDialogTrigger asChild>
-                <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </Button>
-             </AlertDialogTrigger>
+             <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+             </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -2792,4 +2790,5 @@ export default function TimetablePage() {
 
 
     
+
 
