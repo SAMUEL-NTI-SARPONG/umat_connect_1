@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -537,20 +536,20 @@ const initialCreateFormState = {
   time: '',
 };
 
-function StaffExamsView() {
-    const { user, examsTimetable } = useUser();
+function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | null }) {
+    const { user } = useUser();
   
     const staffExams = useMemo(() => {
-      if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
-  
-      const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
-      const staffName = user.name.toLowerCase();
-      
-      return allExams.filter(exam => 
-        (exam.lecturer && exam.lecturer.toLowerCase().includes(staffName)) || 
-        (exam.invigilator && exam.invigilator.toLowerCase().includes(staffName))
-      );
-    }, [user, examsTimetable]);
+        if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
+    
+        const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+        const staffName = user.name.toLowerCase();
+        
+        return allExams.filter(exam => 
+          (exam.lecturer && exam.lecturer.toLowerCase().includes(staffName)) || 
+          (exam.invigilator && exam.invigilator.toLowerCase().includes(staffName))
+        );
+      }, [user, examsTimetable]);
   
     if (!examsTimetable || !examsTimetable.isDistributed) {
       return (
@@ -719,7 +718,7 @@ function StaffTimetableView({
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
 }) {
-  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, examsTimetable } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -1028,10 +1027,10 @@ function StaffTimetableView({
           <LecturerReviewModal
             isOpen={isReviewModalOpen}
             onClose={() => {
-                setIsReviewModalOpen(false);
                 if (user && !reviewedSchedules.includes(user.id)) {
                   markScheduleAsReviewed(user.id);
                 }
+                setIsReviewModalOpen(false);
             }}
             courses={staffCourses}
           />
@@ -1380,7 +1379,7 @@ function StaffTimetableView({
         </>
       </TabsContent>
        <TabsContent value="exams" className="mt-6">
-            <StaffExamsView />
+            <StaffExamsView examsTimetable={examsTimetable} />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StaffResitView />
@@ -1745,8 +1744,8 @@ function TimetableDisplay({
   onViewPracticals,
   onAddExam,
 }: {
-  parsedData: TimetableEntry[] | null;
-  setParsedData: (data: TimetableEntry[] | null) => void;
+  parsedData: TimetableEntry[] | ExamEntry[] | null;
+  setParsedData: (data: any[] | null) => void;
   emptySlots: EmptySlot[];
   searchTerm: string;
   showInvalid: boolean;
@@ -1757,19 +1756,22 @@ function TimetableDisplay({
   onViewPracticals?: () => void;
   onAddExam?: () => void;
 }) {
-  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
+  const [editedFormData, setEditedFormData] = useState<TimetableEntry | ExamEntry | null>(null);
 
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
   
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
-    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    const day = 'day' in editedFormData ? editedFormData.day : '';
+    const room = 'room' in editedFormData ? editedFormData.room : '';
+
+    const daySlots = emptySlots.filter(slot => slot.day === day);
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
-    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    const roomDaySlots = daySlots.filter(slot => slot.location === room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
     const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
     
     let endTimes: string[] = [];
@@ -1788,7 +1790,7 @@ function TimetableDisplay({
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
       setEditedFormData(selectedEntry);
-      if (selectedEntry.time) {
+      if ('time' in selectedEntry && selectedEntry.time) {
         const [start, end] = selectedEntry.time.split(' - ');
         setStartTime(start?.trim() || '');
         setEndTime(end?.trim() || '');
@@ -1796,7 +1798,7 @@ function TimetableDisplay({
     }
   }, [selectedEntry, isEditModalOpen]);
 
-  const handleRowClick = (entry: TimetableEntry) => {
+  const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
   };
@@ -1814,7 +1816,7 @@ function TimetableDisplay({
      closeAllModals();
   };
 
-  const handleEditInputChange = (field: keyof TimetableEntry | "period" | "class" | "invigilator" | "courseName" | "is_practical", value: string | number | string[] | boolean) => {
+  const handleEditInputChange = (field: keyof ExamEntry | "period" | "class" | "invigilator" | "courseName" | "is_practical", value: string | number | string[] | boolean) => {
     if (!editedFormData) return;
     
     let updatedData: any = { ...editedFormData, [field]: value };
@@ -1823,7 +1825,7 @@ function TimetableDisplay({
       setEndTime('');
     }
     
-    setEditedFormData(updatedData as TimetableEntry);
+    setEditedFormData(updatedData as TimetableEntry | ExamEntry);
   };
   
   const closeAllModals = () => {
@@ -1838,7 +1840,7 @@ function TimetableDisplay({
     let data = [...parsedData];
 
     if (showInvalid) {
-        data = data.filter(entry => entry.lecturer?.toLowerCase() === 'tba' || entry.lecturer?.toLowerCase() === 'unknown' || (entry as any).invigilator?.toLowerCase() === 'tba' || (entry as any).invigilator?.toLowerCase() === 'unknown');
+        data = data.filter(entry => (entry as any).lecturer?.toLowerCase() === 'tba' || (entry as any).lecturer?.toLowerCase() === 'unknown' || (entry as any).invigilator?.toLowerCase() === 'tba' || (entry as any).invigilator?.toLowerCase() === 'unknown');
     }
     
     if (!searchTerm) return data;
@@ -1855,13 +1857,13 @@ function TimetableDisplay({
     if (!filteredData) return {};
     
     return filteredData.reduce((acc, entry) => {
-      const key = isExamsTimetable ? (entry as any).dateStr : entry.day;
+      const key = isExamsTimetable ? (entry as any).dateStr : (entry as any).day;
       if (!acc[key]) {
         acc[key] = [];
       }
       acc[key].push(entry);
       return acc;
-    }, {} as Record<string, TimetableEntry[]>);
+    }, {} as Record<string, (TimetableEntry | ExamEntry)[]>);
   }, [filteredData, isExamsTimetable]);
   
   const groupKeys = Object.keys(groupedByDate).sort((a, b) => {
@@ -1925,10 +1927,10 @@ function TimetableDisplay({
           {isExamsTimetable ? (
             <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
-                const sortedEntries = [...groupedByDate[key]].sort((a, b) => {
+                const sortedEntries = [...(groupedByDate[key] as ExamEntry[])].sort((a, b) => {
                     const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
-                    const aPeriod = (a as any).period || 'Unknown';
-                    const bPeriod = (b as any).period || 'Unknown';
+                    const aPeriod = a.period || 'Unknown';
+                    const bPeriod = b.period || 'Unknown';
                     return periodOrder[aPeriod] - periodOrder[bPeriod];
                 });
                 
@@ -2117,7 +2119,7 @@ function TimetableDisplay({
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="room" className="text-right">Room</Label>
                     <Select
-                        value={editedFormData?.room || ''}
+                        value={('room' in (editedFormData || {})) ? (editedFormData as any).room : ''}
                         onValueChange={(value) => handleEditInputChange('room', value)}
                         >
                         <SelectTrigger className="col-span-3">
@@ -2180,7 +2182,7 @@ function TimetableDisplay({
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="departments" className="text-right">Depts</Label>
                     <Select
-                        value={(editedFormData?.departments || [])[0] || ''}
+                        value={('departments' in (editedFormData || {})) ? (editedFormData as any).departments[0] || '' : ''}
                         onValueChange={(value) => handleEditInputChange('departments', [value])}
                     >
                         <SelectTrigger className="col-span-3">
@@ -2196,7 +2198,7 @@ function TimetableDisplay({
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="level" className="text-right">Level</Label>
                     <Select
-                        value={String(editedFormData?.level || '')}
+                        value={String(('level' in (editedFormData || {})) ? (editedFormData as any).level : '')}
                         onValueChange={(value) => handleEditInputChange('level', Number(value))}
                         >
                         <SelectTrigger className="col-span-3">
@@ -2591,7 +2593,7 @@ function AdminTimetableView({
         <TabsContent value="class" className="mt-6">
           <TimetableDisplay
             parsedData={classParsedData}
-            setParsedData={setClassParsedData}
+            setParsedData={setClassParsedData as any}
             emptySlots={classEmptySlots}
             searchTerm={classSearchTerm}
             showInvalid={classShowInvalid}
@@ -2602,7 +2604,7 @@ function AdminTimetableView({
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
            <TimetableDisplay
-            parsedData={examsParsedData as any}
+            parsedData={examsParsedData}
             setParsedData={setExamsParsedData as any}
             emptySlots={[]}
             searchTerm={examsSearchTerm}
@@ -3122,3 +3124,6 @@ export default function TimetablePage() {
 
 
 
+
+
+    
