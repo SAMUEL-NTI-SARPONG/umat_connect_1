@@ -4,7 +4,7 @@
 
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { departmentMap } from '@/lib/data';
+import { initialDepartmentMap } from '@/lib/data';
 
 // This is a new, robust parser based entirely on the user-provided implementation.
 // It correctly handles merged cells, multiple courses within a single cell, and complex formats.
@@ -116,7 +116,7 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
       .split(/[/ ]+/)
       .map(d => d.trim())
       .filter(Boolean)
-      .map(initial => departmentMap.get(initial) || initial);
+      .map(initial => initialDepartmentMap.get(initial) || initial);
     
     const finalCourseCode = `${deptStr} ${courseNumStr}`.trim();
 
@@ -349,7 +349,7 @@ function addDistributionFields(entry: any) {
     const uniqueDeptInitials = [...new Set(deptInitialParts)];
   
     const departments = uniqueDeptInitials
-      .map(initial => departmentMap.get(initial) || initial)
+      .map(initial => initialDepartmentMap.get(initial) || initial)
       .filter(Boolean);
   
     return { ...entry, level, departments };
