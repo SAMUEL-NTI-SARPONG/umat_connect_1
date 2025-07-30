@@ -200,53 +200,49 @@ export async function findEmptyClassrooms(fileData: string) {
 }
 
 // Function to normalize and tokenize a name
-function normalizeAndTokenizeName(name: string | null) {
+function normalizeAndTokenizeName(name: string | null): any {
   if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-    return null; // Skip invalid names
+    return null;
   }
 
-  // Normalize: lowercase, remove extra spaces, remove punctuation
-  let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
-  
-  // Tokenize: split by spaces or commas
-  let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
-  
-  // Handle formats: "surname, firstname [initials]" or "firstname surname"
+  // Keep commas but remove dots
+  name = name.normalize("NFKD").replace(/\u00A0/g, ' ').trim();
+  let normalized = name.toLowerCase().replace(/[.]/g, '').replace(/\s+/g, ' ');
+
+  const hasComma = normalized.includes(',');
+  let tokens = hasComma ? normalized.split(',') : normalized.split(' ');
+  tokens = tokens.map(t => t.trim()).filter(t => t.length > 0);
+
   let surname = '', firstName = '', middleInitials: string[] = [];
-  if (name.includes(',')) {
-    // Format: "surname, firstname [initials]"
-    surname = tokens[0] || '';
-    firstName = tokens[1] || '';
-    middleInitials = tokens.slice(2);
+  if (hasComma && tokens.length >= 2) {
+    surname = tokens[0];
+    const names = tokens[1].split(/\s+/);
+    firstName = names[0] || '';
+    middleInitials = names.slice(1);
   } else {
-    // Format: "firstname surname" or "surname initials"
-    surname = tokens[tokens.length - 1] || '';
-    firstName = tokens[0] || '';
+    surname = tokens[tokens.length - 1];
+    firstName = tokens[0];
     middleInitials = tokens.slice(1, -1);
   }
 
-  // Determine if tokens are full names or initials
-  const components: { type: 'name' | 'initial', value: string }[] = [];
-  if (surname.length > 1) components.push({ type: 'name', value: surname });
-  if (firstName.length > 1) components.push({ type: 'name', value: firstName });
-  middleInitials.forEach(initial => {
-    if (initial.length === 1) components.push({ type: 'initial', value: initial });
-    else if (initial.length > 1) components.push({ type: 'name', value: initial });
+  const components: any[] = [];
+  if (surname) components.push({ type: 'name', value: surname });
+  if (firstName) components.push({ type: 'name', value: firstName });
+  middleInitials.forEach(mid => {
+    if (mid.length === 1) components.push({ type: 'initial', value: mid });
+    else components.push({ type: 'name', value: mid });
   });
 
-  return {
-    original: name,
-    normalized: normalized.replace(/\s/g, ''),
-    surname,
-    firstName,
-    middleInitials,
-    components,
-    variants: [
-      normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
-      `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
-      ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, '')) // e.g., "dumenyak"
-    ].filter(v => v.length > 0)
-  };
+  const variants = [
+    normalized.replace(/\s/g, ''),
+    `${surname}${firstName}`.replace(/\s/g, ''),
+    `${firstName}${surname}`.replace(/\s/g, ''),
+    `${firstName[0] || ''}${surname}`.replace(/\s/g, ''),
+    `${surname}${firstName[0] || ''}`.replace(/\s/g, ''),
+    ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, ''))
+  ].filter(v => v.length > 0);
+
+  return { original: name, normalized: normalized.replace(/\s/g, ''), surname, firstName, middleInitials, components, variants };
 }
 
 // Function to check if two names match based on the "two names or name and initial" rule
