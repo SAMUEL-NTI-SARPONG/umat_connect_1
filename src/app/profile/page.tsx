@@ -16,6 +16,7 @@ import { useUser } from '../providers/user-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { departments as allDepartments } from '@/lib/data';
 import { Combobox } from '@/components/ui/combobox';
+import { useToast } from '@/hooks/use-toast';
 
 const titles = [
     'Prof.', 'Professor', 'Dr.', 'Doctor', 'DPhil', 'ScD', 'EdD', 'DSc', 'DVM',
@@ -67,6 +68,7 @@ const parseFullName = (fullName: string) => {
 
 export default function ProfilePage() {
   const { user, updateUser } = useUser();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
@@ -151,6 +153,15 @@ export default function ProfilePage() {
   const handleSaveChanges = () => {
     if (!user) return;
     
+    if (!formData.firstname.trim() || !formData.surname.trim()) {
+        toast({
+            title: "Missing Information",
+            description: "First Name and Surname are required.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     const fullName = constructFullName();
 
     const updatedUser = {
