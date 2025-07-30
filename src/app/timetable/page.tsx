@@ -2365,18 +2365,18 @@ function TimetableDisplay({
 type TabStatus = 'empty' | 'uploaded' | 'distributed';
 
 function TabStatusIndicator({ status }: { status: TabStatus }) {
-  const statusConfig: Record<TabStatus, { text: string; color: string }> = {
-    empty: { text: 'Empty', color: 'bg-gray-400' },
-    uploaded: { text: 'Uploaded', color: 'bg-yellow-500' },
-    distributed: { text: 'Distributed', color: 'bg-green-500' },
+  const statusConfig: Record<TabStatus, { text: string; color: string; textColor: string }> = {
+    empty: { text: 'Empty', color: 'bg-gray-200 dark:bg-gray-700', textColor: 'text-gray-600 dark:text-gray-300' },
+    uploaded: { text: 'Uploaded', color: 'bg-yellow-100 dark:bg-yellow-900/30', textColor: 'text-yellow-600 dark:text-yellow-300' },
+    distributed: { text: 'Distributed', color: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-300' },
   };
 
-  const { text, color } = statusConfig[status];
+  const { text, color, textColor } = statusConfig[status];
 
   return (
-    <div className="ml-2 flex items-center gap-1.5">
-      <Circle className={cn('h-2 w-2', color)} />
-      <span className="text-xs font-normal">{text}</span>
+    <div className={cn("ml-2 flex items-center gap-1.5 py-0.5 px-2 rounded-full", color)}>
+      <div className={cn("h-2 w-2 rounded-full", color.replace(/bg-([a-z]+)-[0-9]{2,3}/, "bg-$1-500"))} />
+      <span className={cn("text-xs font-medium", textColor)}>{text}</span>
     </div>
   );
 }
@@ -3261,6 +3261,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
