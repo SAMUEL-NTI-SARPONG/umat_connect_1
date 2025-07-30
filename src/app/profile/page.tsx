@@ -15,6 +15,7 @@ import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { departments as allDepartments } from '@/lib/data';
+import { Combobox } from '@/components/ui/combobox';
 
 const titles = [
     'Prof.', 'Professor', 'Dr.', 'Doctor', 'DPhil', 'ScD', 'EdD', 'DSc', 'DVM',
@@ -180,6 +181,11 @@ export default function ProfilePage() {
   if (!user) {
     return <div>Loading profile...</div>;
   }
+  
+  const titleOptions = [
+      { value: 'none', label: 'None' },
+      ...titles.map(t => ({ value: t, label: t }))
+  ];
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-6">
@@ -239,13 +245,14 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2 col-span-1">
                       <Label htmlFor="title">Title</Label>
-                      <Select value={formData.title} onValueChange={(value) => handleSelectChange('title', value)}>
-                          <SelectTrigger><SelectValue placeholder="Title" /></SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {titles.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
+                      <Combobox
+                        options={titleOptions}
+                        value={formData.title || 'none'}
+                        onChange={(value) => handleSelectChange('title', value)}
+                        placeholder="Select a title..."
+                        searchPlaceholder="Search titles..."
+                        notFoundMessage="No title found."
+                      />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
