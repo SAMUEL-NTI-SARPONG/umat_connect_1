@@ -392,7 +392,7 @@ function StudentResitView() {
 
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
-  const { user, emptySlots } = useUser();
+  const { user, emptySlots, isClassTimetableDistributed } = useUser();
   const [activeDay, setActiveDay] = useState("Monday");
   const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
@@ -471,6 +471,15 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
           <TabsTrigger value="resit">Special Resit</TabsTrigger>
         </TabsList>
         <TabsContent value="class" className="mt-6">
+            {!isClassTimetableDistributed ? (
+                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                    <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Class Timetable Not Available</p>
+                    <p className="text-sm">The class timetable will appear here once it's published.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+            <>
             <div className="flex justify-end mb-4">
                 <Button variant="outline" size="sm" onClick={() => setIsFreeRoomModalOpen(true)}>
                     <SearchIcon className="mr-2 h-4 w-4" />
@@ -556,6 +565,8 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                 ))}
                 </div>
             </Tabs>
+            </>
+            )}
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
              <StudentExamsView />
@@ -798,7 +809,7 @@ function StaffTimetableView({
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
   examsTimetable: ExamsTimetable | null;
 }) {
-  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed } = useUser();
+  const { user, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -1103,6 +1114,14 @@ function StaffTimetableView({
         <TabsTrigger value="resit">Special Resit</TabsTrigger>
       </TabsList>
       <TabsContent value="class" className="mt-6">
+        {!isClassTimetableDistributed ? (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Class Timetable Not Available</p>
+                    <p className="text-sm">The class timetable will appear here once it's published by an administrator.</p>
+                </CardContent>
+            </Card>
+        ) : (
         <>
           <LecturerReviewModal
             isOpen={isReviewModalOpen}
@@ -1457,6 +1476,7 @@ function StaffTimetableView({
             </DialogContent>
           </Dialog>
         </>
+        )}
       </TabsContent>
        <TabsContent value="exams" className="mt-6">
             <StaffExamsView examsTimetable={examsTimetable} />
@@ -1707,7 +1727,7 @@ function ResitTimetableDisplay({
                             <TableBody>
                                 {flattenedAndFilteredData.length > 0 ? (
                                     flattenedAndFilteredData.map((row) => (
-                                        <TableRow key={row.id} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                        <TableRow key={`${row.id}-${(row as any).assignedLecturer}`} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
                                             <TableCell>{row.date}</TableCell>
                                             <TableCell>{row.courseCode}</TableCell>
                                             <TableCell>{row.courseName}</TableCell>
@@ -1823,6 +1843,8 @@ function TimetableDisplay({
   isExamsTimetable = false,
   onViewPracticals,
   onAddExam,
+  isDistributed,
+  onDistribute,
 }: {
   parsedData: TimetableEntry[] | ExamEntry[] | null;
   setParsedData: (data: any[] | null) => void;
@@ -1835,12 +1857,15 @@ function TimetableDisplay({
   isExamsTimetable?: boolean;
   onViewPracticals?: () => void;
   onAddExam?: () => void;
+  isDistributed?: boolean;
+  onDistribute?: () => void;
 }) {
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | ExamEntry | null>(null);
+  const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
 
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
@@ -1880,6 +1905,7 @@ function TimetableDisplay({
   }, [selectedEntry, isEditModalOpen, isExamsTimetable]);
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
+    if (isDistributed) return;
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
   };
@@ -1974,7 +2000,7 @@ function TimetableDisplay({
     <>
       <Card>
         <CardHeader>
-          <div className={cn("flex justify-between items-start", isExamsTimetable && "flex-col sm:flex-row gap-2")}>
+          <div className={cn("flex justify-between items-start", (isExamsTimetable || onDistribute) && "flex-col sm:flex-row gap-2")}>
             <div>
               <CardTitle>{title}</CardTitle>
               <CardDescription>
@@ -1987,22 +2013,52 @@ function TimetableDisplay({
                 }
               </CardDescription>
             </div>
-            {isExamsTimetable && (
-              <div className='flex gap-2'>
-                {onAddExam && (
+            <div className='flex gap-2'>
+                {onDistribute && (
+                    isDistributed ? (
+                    <Badge variant="secondary" className="text-green-600 border-green-600">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Distributed
+                    </Badge>
+                ) : (
+                    <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button>
+                                <SendHorizontal className="h-4 w-4 mr-2" />
+                                Distribute Timetable
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Distribute Timetable?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will make the timetable visible to all relevant users. This action cannot be undone. Are you sure you want to proceed?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => {
+                                    onDistribute();
+                                    setIsDistributeConfirmOpen(false);
+                                }}>Distribute</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )
+                )}
+                {isExamsTimetable && onAddExam && !isDistributed && (
                     <Button variant="outline" onClick={onAddExam}>
                         <PlusCircle className="h-4 w-4 mr-2" />
                         Add Exam
                     </Button>
                 )}
-                {onViewPracticals && (
+                {isExamsTimetable && onViewPracticals && (
                     <Button variant="outline" onClick={onViewPracticals}>
                     <FlaskConical className="h-4 w-4 mr-2" />
                     View Practicals
                     </Button>
                 )}
               </div>
-            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -2038,7 +2094,7 @@ function TimetableDisplay({
                             </TableHeader>
                             <TableBody>
                                 {sortedEntries.map((entry: any) => (
-                                <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className={cn(!isDistributed && "cursor-pointer")}>
                                     <TableCell>
                                       <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                     </TableCell>
@@ -2089,7 +2145,7 @@ function TimetableDisplay({
                                 </TableHeader>
                                 <TableBody>
                                     {groupedByDate[day].map((entry: any) => (
-                                        <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
+                                        <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className={cn(!isDistributed && "cursor-pointer")}>
                                             <TableCell className="whitespace-nowrap font-medium">{entry.time}</TableCell>
                                             <TableCell className="font-medium">{entry.room}</TableCell>
                                             <TableCell className="font-medium">{entry.courseCode}</TableCell>
@@ -2317,10 +2373,9 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
-  const { specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable } = useUser();
+  const { specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   
   // State for Class Timetable
   const [classParsedData, setClassParsedData] = useState<TimetableEntry[] | null>(parsedData);
@@ -2609,39 +2664,6 @@ function AdminTimetableView({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            
-            {activeTab === 'exams' && examsParsedData && (
-                <AlertDialog open={isDistributeConfirmOpen} onOpenChange={setIsDistributeConfirmOpen}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                                <AlertDialogTrigger asChild>
-                                    <Button disabled={examsTimetable?.isDistributed}>
-                                        <SendHorizontal className="mr-2 h-4 w-4"/>
-                                        {examsTimetable?.isDistributed ? 'Distributed' : 'Distribute'}
-                                    </Button>
-                                </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Distribute Exams Timetable</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Distribute Exams Timetable?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will make the timetable available to all students and staff based on their roles and departments. This action cannot be undone.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => {
-                            distributeExamsTimetable();
-                            setIsDistributeConfirmOpen(false);
-                        }}>Distribute</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
           </div>
         </TooltipProvider>
         {currentParsedData && (
@@ -2681,6 +2703,8 @@ function AdminTimetableView({
             title="Parsed Class Timetable Preview"
             description={`A total of ${classParsedData?.length || 0} entries were found. Click a row to edit or delete.`}
             placeholder="Upload a class timetable to begin."
+            isDistributed={isClassTimetableDistributed}
+            onDistribute={distributeClassTimetable}
           />
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
@@ -2696,6 +2720,8 @@ function AdminTimetableView({
             isExamsTimetable={true}
             onViewPracticals={handleViewPracticals}
             onAddExam={() => setIsAddExamModalOpen(true)}
+            isDistributed={examsTimetable?.isDistributed}
+            onDistribute={distributeExamsTimetable}
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
@@ -3111,11 +3137,13 @@ export default function TimetablePage() {
     staffSchedules,
     addStaffSchedule,
     examsTimetable,
+    isClassTimetableDistributed,
   } = useUser();
   
   const combinedSchedule = useMemo(() => {
+    if (!isClassTimetableDistributed) return [];
     return [...(masterSchedule || []), ...staffSchedules];
-  }, [masterSchedule, staffSchedules]);
+  }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
 
   // Derived states are now calculated within the render logic using useMemo
   const staffSchedule = useMemo(() => {
@@ -3210,4 +3238,5 @@ export default function TimetablePage() {
 
 
     
+
 

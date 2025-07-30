@@ -138,6 +138,8 @@ interface UserContextType {
   resetState: () => void;
   masterSchedule: TimetableEntry[] | null;
   setMasterSchedule: (data: TimetableEntry[] | null) => void;
+  isClassTimetableDistributed: boolean;
+  distributeClassTimetable: () => void;
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
@@ -174,6 +176,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>(defaultUsers);
   const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>([]);
+  const [isClassTimetableDistributed, setClassTimetableDistributed] = useState(false);
   const [staffSchedules, setStaffSchedules] = useState<TimetableEntry[]>([]);
   const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -239,10 +242,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
   const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
+    setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
     toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
   }, [toast]);
+  
+  const distributeClassTimetable = useCallback(() => {
+    if (!masterSchedule) return;
+    setClassTimetableDistributed(true);
+    toast({ title: "Class Timetable Distributed", description: "The class timetable is now live for all users." });
+  }, [masterSchedule, toast]);
 
   const updateScheduleStatus = useCallback((entryId: number, status: EventStatus) => {
     const updateSchedule = (schedule: TimetableEntry[]) => 
@@ -515,6 +525,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     logout();
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
+    setClassTimetableDistributed(false);
     setEmptySlotsState([]);
     setPosts([]);
     setStaffSchedules([]);
@@ -545,6 +556,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     resetState,
     masterSchedule,
     setMasterSchedule,
+    isClassTimetableDistributed,
+    distributeClassTimetable,
     updateScheduleStatus,
     emptySlots,
     setEmptySlots,
@@ -572,7 +585,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     examsTimetable,
     setExamsTimetable,
     distributeExamsTimetable,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable]);
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, isClassTimetableDistributed, distributeClassTimetable, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
