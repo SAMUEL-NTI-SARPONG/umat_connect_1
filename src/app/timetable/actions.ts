@@ -199,249 +199,96 @@ export async function findEmptyClassrooms(fileData: string) {
   return result;
 }
 
-// Function to normalize and tokenize a name
-function normalizeAndTokenizeName(name: string | null): any {
-    if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-      return null;
-    }
-  
-    // Keep commas but remove dots
-    name = name.normalize("NFKD").replace(/\u00A0/g, ' ').trim();
-    let normalized = name.toLowerCase().replace(/[.]/g, '').replace(/\s+/g, ' ');
-  
-    const hasComma = normalized.includes(',');
-    let tokens = hasComma ? normalized.split(',') : normalized.split(' ');
-    tokens = tokens.map(t => t.trim()).filter(t => t.length > 0);
-  
-    let surname = '', firstName = '', middleInitials: string[] = [];
-    if (hasComma && tokens.length >= 2) {
-      surname = tokens[0];
-      const names = tokens[1].split(/\s+/);
-      firstName = names[0] || '';
-      middleInitials = names.slice(1);
-    } else {
-      surname = tokens[tokens.length - 1];
-      firstName = tokens[0];
-      middleInitials = tokens.slice(1, -1);
-    }
-  
-    const components: any[] = [];
-    if (surname) components.push({ type: 'name', value: surname });
-    if (firstName) components.push({ type: 'name', value: firstName });
-    middleInitials.forEach(mid => {
-      if (mid.length === 1) components.push({ type: 'initial', value: mid });
-      else components.push({ type: 'name', value: mid });
-    });
-  
-    const variants = [
-      normalized.replace(/\s/g, ''),
-      `${surname}${firstName}`.replace(/\s/g, ''),
-      `${firstName}${surname}`.replace(/\s/g, ''),
-      `${firstName[0] || ''}${surname}`.replace(/\s/g, ''),
-      `${surname}${firstName[0] || ''}`.replace(/\s/g, ''),
-      ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, ''))
-    ].filter(v => v.length > 0);
-  
-    return { original: name, normalized: normalized.replace(/\s/g, ''), surname, firstName, middleInitials, components, variants };
-}
-
-// Function to check if two names match based on the "two names or name and initial" rule
-function namesMatch(nameData1: any, nameData2: any) {
-    if (!nameData1 || !nameData2) return false;
-  
-    const components1 = nameData1.components;
-    const components2 = nameData2.components;
-  
-    // Count matching components (full names or initials)
-    let matches = 0;
-    const matchedValues = new Set();
-  
-    for (const comp1 of components1) {
-      for (const comp2 of components2) {
-        if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
-  
-        if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
-          matches++;
-          matchedValues.add(comp1.value);
-        } else if (
-          (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
-          (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
-        ) {
-          matches++;
-          matchedValues.add(comp1.value);
-          matchedValues.add(comp2.value);
-        }
-      }
-    }
-  
-    // Require at least two full names or one full name and one initial
-    return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
-}
-
-// Function to distribute courses to lecturers
-function distributeCourses(entries: any[]) {
-  const nameIndex = new Map();
-  const lecturerCourses = new Map();
-
-  for (const entry of entries) {
-    const nameData = normalizeAndTokenizeName(entry.examiner);
-
-    if (!nameData) {
-      // Handle invalid examiners by using their original name as the key
-      const originalExaminer = entry.examiner || 'Unassigned';
-      if (!lecturerCourses.has(originalExaminer)) {
-        lecturerCourses.set(originalExaminer, {
-          lecturer: originalExaminer,
-          courses: [],
-        });
-      }
-      lecturerCourses.get(originalExaminer).courses.push({ ...entry, examiner: entry.examiner });
-      continue;
-    }
-
-    // Try to find a matching lecturer
-    let matchedName = null;
-    for (const variant of nameData.variants) {
-      if (nameIndex.has(variant)) {
-        const existingData = nameIndex.get(variant);
-        if (namesMatch(nameData, existingData)) {
-          matchedName = existingData.normalized;
-          break;
-        }
-      }
-    }
-
-    // If no direct match, check all indexed names
-    if (!matchedName) {
-      for (const [existingVariant, existingData] of nameIndex) {
-        if (namesMatch(nameData, existingData)) {
-          matchedName = existingData.normalized;
-          break;
-        }
-      }
-    }
-
-    // If still no match, add as new lecturer
-    if (!matchedName) {
-      matchedName = nameData.normalized;
-      nameData.variants.forEach(variant => {
-        nameIndex.set(variant, nameData);
-      });
-    }
-
-    // Initialize lecturer's course array if not exists
-    if (!lecturerCourses.has(matchedName)) {
-      lecturerCourses.set(matchedName, {
-        lecturer: nameData.original,
-        courses: []
-      });
-    }
-    
-    // Add course to lecturer's courses
-    lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
-  }
-
-  // Convert to array for output
-  const result = Array.from(lecturerCourses.values());
-
-  // Sort lecturers alphabetically
-  result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
-
-  return result;
-}
-  
-/**
- * Extracts timetable data from an Excel file with a structure similar to the provided example.
- * @param {Buffer} fileBuffer - The uploaded Excel file buffer.
- * @returns {Object} - Structured JSON object containing timetable data.
- */
 function extractTimetableData(fileBuffer: Buffer) {
-  try {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    
-    const resitSheet = workbook.Sheets['SPECIAL RESIT'];
-    if (!resitSheet) {
-        throw new Error("Sheet 'SPECIAL RESIT' not found in the Excel file.");
-    }
-
-    const sheetData = XLSX.utils.sheet_to_json(resitSheet, { header: 1, raw: false, blankrows: false }) as any[][];
-    
-    let venue = 'Not specified';
-    for(let i = 0; i < sheetData.length; i++) {
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      
+      const resitSheet = workbook.Sheets['SPECIAL RESIT'];
+      if (!resitSheet) {
+          throw new Error("Sheet 'SPECIAL RESIT' not found in the Excel file.");
+      }
+  
+      const sheetData = XLSX.utils.sheet_to_json(resitSheet, { header: 1, raw: false, blankrows: false }) as any[][];
+      
+      let venue = 'Not specified';
+      for(let i = 0; i < sheetData.length; i++) {
+          const row = sheetData[i];
+          if (row[0] && typeof row[0] === 'string' && row[0].toUpperCase().includes('VENUE')) {
+              venue = row[0].replace(/VENUE:/i, '').trim();
+              break;
+          }
+      }
+  
+      let headerRowIndex = -1;
+      const expectedHeaders = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
+      
+      for (let i = 0; i < sheetData.length; i++) {
         const row = sheetData[i];
-        if (row[0] && typeof row[0] === 'string' && row[0].toUpperCase().includes('VENUE')) {
-            venue = row[0].replace(/VENUE:/i, '').trim();
-            break;
+        if (row.length >= expectedHeaders.length && row.slice(0, expectedHeaders.length).every((cell, idx) => 
+          cell && typeof cell === 'string' && cell.trim().toUpperCase().replace(/\s/g, '') === expectedHeaders[idx].replace(/\s/g, '')
+        )) {
+          headerRowIndex = i;
+          break;
         }
-    }
-
-    let headerRowIndex = -1;
-    const expectedHeaders = ['DATE', 'COURSE NO.', 'COURSE NAME', 'DEPARTMENT', 'NUMBER', 'ROOM', 'EXAMINER', 'SESSION (M/A)'];
-    
-    for (let i = 0; i < sheetData.length; i++) {
-      const row = sheetData[i];
-      if (row.length >= expectedHeaders.length && row.slice(0, expectedHeaders.length).every((cell, idx) => 
-        cell && typeof cell === 'string' && cell.trim().toUpperCase().replace(/\s/g, '') === expectedHeaders[idx].replace(/\s/g, '')
-      )) {
-        headerRowIndex = i;
-        break;
       }
-    }
-
-    if (headerRowIndex === -1) {
-      throw new Error(`No valid header row found in sheet "SPECIAL RESIT".`);
-    }
-
-    const entries = [];
-    let entryIdCounter = 0;
-    for (let i = headerRowIndex + 1; i < sheetData.length; i++) {
-      const row = sheetData[i];
-      // Basic validation: ensure at least the first cell (date) is not empty.
-      if (!row[0] || (typeof row[0] === 'string' && row[0].trim() === '') || (typeof row[0] === 'string' && row[0].toUpperCase().includes('FOR ANY ISSUES'))) {
-        continue;
+  
+      if (headerRowIndex === -1) {
+        throw new Error(`No valid header row found in sheet "SPECIAL RESIT".`);
       }
-
-      let dateStr;
-      if(typeof row[0] === 'number') {
-        const jsDate = XLSX.SSF.parse_date_code(row[0]);
-        // Format as DD-MM-YYYY for reliable matching
-        dateStr = `${String(jsDate.d).padStart(2, '0')}-${String(jsDate.m).padStart(2, '0')}-${jsDate.y}`;
-      } else {
-        dateStr = row[0] || null;
+  
+      const entries = [];
+      let entryIdCounter = 0;
+      for (let i = headerRowIndex + 1; i < sheetData.length; i++) {
+        const row = sheetData[i];
+        if (!row[0] || (typeof row[0] === 'string' && row[0].trim() === '') || (typeof row[0] === 'string' && row[0].toUpperCase().includes('FOR ANY ISSUES'))) {
+          continue;
+        }
+  
+        let dateStr;
+        if(typeof row[0] === 'number') {
+          const jsDate = XLSX.SSF.parse_date_code(row[0]);
+          dateStr = `${String(jsDate.d).padStart(2, '0')}-${String(jsDate.m).padStart(2, '0')}-${jsDate.y}`;
+        } else {
+          dateStr = row[0] || null;
+        }
+  
+        const entry = {
+          id: entryIdCounter++,
+          date: dateStr,
+          courseCode: row[1] || null,
+          courseName: row[2] || null,
+          department: row[3] || null,
+          numberOfStudents: parseInt(row[4], 10) || 0,
+          room: row[5] || null,
+          examiner: row[6] || null,
+          session: row[7] || null,
+        };
+  
+        entries.push(entry);
       }
-
-      const entry = {
-        id: entryIdCounter++,
-        date: dateStr,
-        courseCode: row[1] || null,
-        courseName: row[2] || null,
-        department: row[3] || null,
-        numberOfStudents: parseInt(row[4], 10) || 0,
-        room: row[5] || null,
-        examiner: row[6] || null,
-        session: row[7] || null
+  
+      // Simple structure without distribution.
+      // The data is just a flat list of courses for the "Distributed" sheet.
+      // The view components will need to handle this.
+      const lecturerEntries = [{
+        lecturer: "All Courses", // Placeholder lecturer
+        courses: entries,
+      }];
+  
+      return {
+        venue,
+        isDistributed: false,
+        sheets: [{
+            sheetName: "Distributed",
+            entries: lecturerEntries,
+        }]
       };
-
-      // Push even if some fields are null, as distribution will handle it
-      entries.push(entry);
+  
+    } catch (error) {
+      console.error('Error processing Excel file:', error);
+      throw new Error('Failed to extract timetable data. Please ensure the file is a valid Excel file with the correct format.');
     }
-
-    const distributedData = distributeCourses(entries);
-
-    return {
-      venue,
-      isDistributed: false,
-      sheets: [{
-          sheetName: "Distributed",
-          entries: distributedData
-      }]
-    };
-
-  } catch (error) {
-    console.error('Error processing Excel file:', error);
-    throw new Error('Failed to extract timetable data. Please ensure the file is a valid Excel file with the correct format.');
   }
-}
 
 export async function handleSpecialResitUpload(fileData: string) {
   const fileBuffer = Buffer.from(fileData, 'base64');
