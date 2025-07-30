@@ -110,7 +110,8 @@ export default function ProfilePage() {
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    const processedValue = value === 'none' ? '' : value;
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
   };
 
   const handleLevelChange = (value: string) => {
@@ -241,7 +242,7 @@ export default function ProfilePage() {
                       <Select value={formData.title} onValueChange={(value) => handleSelectChange('title', value)}>
                           <SelectTrigger><SelectValue placeholder="Title" /></SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {titles.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                           </SelectContent>
                       </Select>
