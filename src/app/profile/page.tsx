@@ -16,6 +16,54 @@ import { useUser } from '../providers/user-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { departments as allDepartments } from '@/lib/data';
 
+const titles = [
+    'Prof.', 'Professor', 'Dr.', 'Doctor', 'DPhil', 'ScD', 'EdD', 'DSc', 'DVM',
+    'Mr.', 'Mrs.', 'Ms.', 'Miss', 'Mx.',
+    'Sr.', 'Fr.', 'Br.', 'Rev.', 'Rev. Fr.',
+    'Eng.', 'Engr.', 'Arch.', 'Capt.', 'Col.', 'Hon.'
+];
+const suffixes = ['PhD', 'MPhil', 'MSc', 'MA', 'MBA', 'BSc', 'BA', 'LLB', 'LLM', 'JD', 'MD', 'RN', 'Esq.'];
+
+// Function to parse a full name into its components
+const parseFullName = (fullName: string) => {
+    const parts = fullName.split(' ').filter(Boolean);
+    let title = '';
+    let surname = '';
+    let firstname = '';
+    let othername = '';
+    let suffix = '';
+
+    // Extract title
+    if (parts.length > 0 && titles.includes(parts[0])) {
+        title = parts.shift() || '';
+    }
+    
+    // Extract suffix
+    if (parts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        const lastPartClean = lastPart.replace(/,/g, '');
+        if (suffixes.includes(lastPartClean)) {
+            suffix = parts.pop() || '';
+        }
+    }
+
+    if (parts.length > 0) firstname = parts.shift() || '';
+    if (parts.length > 0) surname = parts.pop() || '';
+    if (parts.length > 0) othername = parts.join(' ');
+    
+    // Handle cases with only one or two names
+    if (!surname && firstname) {
+        surname = firstname;
+        firstname = '';
+    }
+    if (title && !firstname && !surname) {
+        surname = parts.join(' ');
+    }
+
+
+    return { title, firstname, surname, othername, suffix };
+};
+
 export default function ProfilePage() {
   const { user, updateUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
@@ -24,30 +72,45 @@ export default function ProfilePage() {
   const [fontSize, setFontSize] = useState(16);
 
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    title: '',
+    firstname: '',
+    surname: '',
+    othername: '',
     department: user?.department || '',
     phone: user?.phone || '',
     level: user?.level || 0,
   });
   const [localProfileImage, setLocalProfileImage] = useState(user?.profileImage || '');
 
-  // Sync local form state when the user data changes (e.g., on login)
-  // or when editing is cancelled.
+  const setFormDataFromUser = (currentUser: typeof user) => {
+    if (currentUser) {
+        const { title, firstname, surname, othername } = parseFullName(currentUser.name);
+        setFormData({
+            title,
+            firstname,
+            surname,
+            othername,
+            department: currentUser.department,
+            phone: currentUser.phone,
+            level: currentUser.level,
+        });
+        setLocalProfileImage(currentUser.profileImage);
+    }
+  };
+
   useEffect(() => {
     if (user && !isEditing) {
-      setFormData({
-        name: user.name,
-        department: user.department,
-        phone: user.phone,
-        level: user.level,
-      });
-      setLocalProfileImage(user.profileImage);
+      setFormDataFromUser(user);
     }
   }, [user, isEditing]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleLevelChange = (value: string) => {
@@ -71,21 +134,26 @@ export default function ProfilePage() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Revert changes if cancelling
       if (user) {
-        setFormData({ name: user.name, department: user.department, phone: user.phone, level: user.level });
-        setLocalProfileImage(user.profileImage);
+        setFormDataFromUser(user);
       }
     }
     setIsEditing(!isEditing);
   };
+  
+  const constructFullName = () => {
+    const { title, firstname, surname, othername } = formData;
+    return [title, firstname, othername, surname].filter(Boolean).join(' ');
+  };
 
   const handleSaveChanges = () => {
     if (!user) return;
+    
+    const fullName = constructFullName();
 
     const updatedUser = {
       ...user,
-      name: formData.name,
+      name: fullName,
       department: formData.department,
       phone: formData.phone,
       level: formData.level,
@@ -99,15 +167,14 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     if (user) {
-        setFormData({ name: user.name, department: user.department, phone: user.phone, level: user.level });
-        setLocalProfileImage(user.profileImage);
+        setFormDataFromUser(user);
     }
     setIsEditing(false);
   };
   
   const currentTheme = theme;
   const displayImage = isEditing ? localProfileImage : user?.profileImage;
-  const displayName = isEditing ? formData.name : user?.name;
+  const displayName = isEditing ? constructFullName() : user?.name;
 
   if (!user) {
     return <div>Loading profile...</div>;
@@ -166,14 +233,41 @@ export default function ProfilePage() {
         </CardHeader>
         <Separator />
         <CardContent className="p-6 space-y-6">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Full Name</Label>
             {isEditing ? (
-              <Input id="name" value={formData.name} onChange={handleInputChange} />
+            <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2 col-span-1">
+                      <Label htmlFor="title">Title</Label>
+                      <Select value={formData.title} onValueChange={(value) => handleSelectChange('title', value)}>
+                          <SelectTrigger><SelectValue placeholder="Title" /></SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {titles.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="firstname">First Name</Label>
+                      <Input id="firstname" value={formData.firstname} onChange={handleInputChange} />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="othername">Other Name(s)</Label>
+                      <Input id="othername" value={formData.othername} onChange={handleInputChange} />
+                  </div>
+                   <div className="space-y-2">
+                      <Label htmlFor="surname">Surname</Label>
+                      <Input id="surname" value={formData.surname} onChange={handleInputChange} />
+                  </div>
+                </div>
+            </>
             ) : (
-              <p className="text-muted-foreground">{user.name}</p>
+                <div className="grid gap-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <p className="text-muted-foreground">{user.name}</p>
+                </div>
             )}
-          </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
