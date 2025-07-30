@@ -75,7 +75,7 @@ export const users: User[] = [
   }
 ];
 
-export const departments = [
+export const allDepartments = [
   'Mining Engineering',
   'Minerals Engineering',
   'Mechanical Engineering',
@@ -102,7 +102,7 @@ export const departments = [
   'Chemical Engineering',
 ];
 
-export const departmentMap = new Map([
+export const initialDepartmentMap = new Map([
     // Faculty of mining and minerals
     ['MN', 'Mining Engineering'],
     ['MR', 'Minerals Engineering'],
@@ -135,59 +135,59 @@ export const departmentMap = new Map([
     ['CH', 'Chemical Engineering'],
   ]);
 
-export const faculties: { name: string; departments: string[] }[] = [
+export const initialFaculties: { name: string; departments: { name: string, initial: string }[] }[] = [
     {
         name: 'Faculty of Mining and Minerals Engineering',
         departments: [
-            'Mining Engineering',
-            'Minerals Engineering',
+            { name: 'Mining Engineering', initial: 'MN' },
+            { name: 'Minerals Engineering', initial: 'MR' },
         ]
     },
     {
         name: 'Faculty of Engineering',
         departments: [
-            'Mechanical Engineering',
-            'Electrical and Electronic Engineering',
-            'Renewable Energy Engineering',
-            'Telecommunication Engineering',
-            'Plant and Maintenance Engineering',
+            { name: 'Mechanical Engineering', initial: 'MC' },
+            { name: 'Electrical and Electronic Engineering', initial: 'EL' },
+            { name: 'Renewable Energy Engineering', initial: 'RN' },
+            { name: 'Telecommunication Engineering', initial: 'TC' },
+            { name: 'Plant and Maintenance Engineering', initial: 'PM' },
         ]
     },
     {
         name: 'Faculty of Computing and Mathematical Sciences',
         departments: [
-            'Cyber Security',
-            'Computer Science And Engineering',
-            'Information Systems and Technology',
-            'Mathematics',
-            'Statistical Data Science',
+            { name: 'Cyber Security', initial: 'CY' },
+            { name: 'Computer Science And Engineering', initial: 'CE' },
+            { name: 'Information Systems and Technology', initial: 'IS' },
+            { name: 'Mathematics', initial: 'MA' },
+            { name: 'Statistical Data Science', initial: 'SD' },
         ]
     },
     {
         name: 'Faculty of Integrated Management Studies',
         departments: [
-            'Logistics and Transport Management',
-            'Economics and Industrial Organisation',
+            { name: 'Logistics and Transport Management', initial: 'LT' },
+            { name: 'Economics and Industrial Organisation', initial: 'EC' },
         ]
     },
     {
         name: 'Faculty of Geosciences and Environmental Studies',
         departments: [
-            'Geomatic Engineering',
-            'Geological Engineering',
-            'Spatial Planning',
-            'Environmental and Safety Engineering',
-            'Land Administration and Information Systems',
+            { name: 'Geomatic Engineering', initial: 'GM' },
+            { name: 'Geological Engineering', initial: 'GL' },
+            { name: 'Spatial Planning', initial: 'SP' },
+            { name: 'Environmental and Safety Engineering', initial: 'ES' },
+            { name: 'Land Administration and Information Systems', initial: 'LA' },
         ]
     },
     {
         name: 'School of Petroleum Studies',
         departments: [
-            'Petroleum Engineering',
-            'Natural Gas Engineering',
-            'Petroleum Geosciences and Engineering',
-            'Petroleum Refining and Petrochemical Engineering',
-            'Chemical Engineering',
+            { name: 'Petroleum Engineering', initial: 'PE' },
+            { name: 'Natural Gas Engineering', initial: 'NG' },
+            { name: 'Petroleum Geosciences and Engineering', initial: 'PG' },
+            { name: 'Petroleum Refining and Petrochemical Engineering', initial: 'RP' },
+            { name: 'Chemical Engineering', initial: 'CH' },
         ]
     }
 ];

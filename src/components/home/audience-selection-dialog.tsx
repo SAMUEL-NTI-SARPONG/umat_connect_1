@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { useUser, type User, type Post } from '@/app/providers/user-provider';
-import { departments as allDepartments, faculties } from '@/lib/data';
 import { ScrollArea } from '../ui/scroll-area';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
@@ -34,7 +33,7 @@ export default function AudienceSelectionDialog({
   onClose,
   onConfirm,
 }: AudienceSelectionDialogProps) {
-  const { allUsers } = useUser();
+  const { allUsers, allDepartments, faculties } = useUser();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   
   // Student filters
@@ -54,13 +53,15 @@ export default function AudienceSelectionDialog({
   // Derived department lists based on faculty selection
   const studentAvailableDepts = useMemo(() => {
     if (!studentFaculty) return allDepartments;
-    return faculties.find(f => f.name === studentFaculty)?.departments || [];
-  }, [studentFaculty]);
+    const faculty = faculties.find(f => f.name === studentFaculty);
+    return faculty ? faculty.departments.map(d => d.name) : [];
+  }, [studentFaculty, allDepartments, faculties]);
 
   const staffAvailableDepts = useMemo(() => {
     if (!staffFaculty) return allDepartments;
-    return faculties.find(f => f.name === staffFaculty)?.departments || [];
-  }, [staffFaculty]);
+    const faculty = faculties.find(f => f.name === staffFaculty);
+    return faculty ? faculty.departments.map(d => d.name) : [];
+  }, [staffFaculty, allDepartments, faculties]);
 
   // Effect to reset department if faculty changes and dept is no longer valid
   useEffect(() => {
@@ -96,7 +97,9 @@ export default function AudienceSelectionDialog({
   };
 
   const filteredStudents = useMemo(() => {
-    const facultyDepts = studentFaculty ? faculties.find(f => f.name === studentFaculty)?.departments : null;
+    const faculty = studentFaculty ? faculties.find(f => f.name === studentFaculty) : null;
+    const facultyDepts = faculty ? faculty.departments.map(d => d.name) : null;
+
     return allUsers.filter(user => 
       user.role === 'student' &&
       user.name.toLowerCase().includes(studentSearch.toLowerCase()) &&
@@ -104,17 +107,18 @@ export default function AudienceSelectionDialog({
       (!studentDept || user.department === studentDept) &&
       (!studentLevel || user.level === Number(studentLevel))
     );
-  }, [allUsers, studentSearch, studentFaculty, studentDept, studentLevel]);
+  }, [allUsers, studentSearch, studentFaculty, studentDept, studentLevel, faculties]);
 
   const filteredStaff = useMemo(() => {
-    const facultyDepts = staffFaculty ? faculties.find(f => f.name === staffFaculty)?.departments : null;
+    const faculty = staffFaculty ? faculties.find(f => f.name === staffFaculty) : null;
+    const facultyDepts = faculty ? faculty.departments.map(d => d.name) : null;
     return allUsers.filter(user =>
       user.role === 'staff' &&
       user.name.toLowerCase().includes(staffSearch.toLowerCase()) &&
       (!staffFaculty || (facultyDepts && facultyDepts.includes(user.department))) &&
       (!staffDept || user.department === staffDept)
     );
-  }, [allUsers, staffSearch, staffFaculty, staffDept]);
+  }, [allUsers, staffSearch, staffFaculty, staffDept, faculties]);
 
   const filteredAdmins = useMemo(() => {
     return allUsers.filter(user =>

@@ -14,7 +14,6 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useUser } from '../providers/user-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { departments as allDepartments } from '@/lib/data';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 
@@ -67,7 +66,7 @@ const parseFullName = (fullName: string) => {
 };
 
 export default function ProfilePage() {
-  const { user, updateUser } = useUser();
+  const { user, updateUser, allDepartments } = useUser();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

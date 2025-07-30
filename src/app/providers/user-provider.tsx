@@ -10,7 +10,7 @@ import {
   useEffect,
   useCallback,
 } from 'react';
-import { users as defaultUsers, type User } from '@/lib/data';
+import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -128,6 +128,16 @@ export interface ExamEntry {
     practicals: ExamEntry[];
     isDistributed: boolean;
   }
+  
+export interface Department {
+  name: string;
+  initial: string;
+}
+
+export interface Faculty {
+  name: string;
+  departments: Department[];
+}
 
 interface UserContextType {
   user: User | null;
@@ -167,6 +177,17 @@ interface UserContextType {
   examsTimetable: ExamsTimetable | null;
   setExamsTimetable: (data: ExamsTimetable | null) => void;
   distributeExamsTimetable: () => void;
+  faculties: Faculty[];
+  departmentMap: Map<string, string>;
+  allDepartments: string[];
+  addFaculty: (name: string) => void;
+  updateFaculty: (oldName: string, newName: string) => void;
+  deleteFaculty: (name: string) => void;
+  addDepartment: (data: { name: string; initial: string; facultyName: string }) => void;
+  updateDepartment: (data: { oldName: string; newName: string; newInitial: string }) => void;
+  moveDepartment: (data: { departmentName: string; newFacultyName: string }) => void;
+  deleteDepartment: (name: string) => void;
+  toast: (options: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -186,6 +207,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [specialResitTimetable, setSpecialResitTimetableState] = useState<SpecialResitTimetable | null>(null);
   const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
   const [examsTimetable, setExamsTimetableState] = useState<ExamsTimetable | null>(null);
+  const [faculties, setFaculties] = useState<Faculty[]>(initialFaculties);
+  const [departmentMap, setDepartmentMap] = useState<Map<string, string>>(initialDepartmentMap);
+  const [allDepartments, setAllDepartments] = useState<string[]>(initialAllDepartments);
 
   // This useEffect handles session-based login persistence.
   useEffect(() => {
@@ -521,6 +545,118 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   }, [user]);
 
+  const addFaculty = useCallback((name: string) => {
+    if (faculties.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+        toast({ title: "Faculty Exists", description: "A faculty with this name already exists.", variant: "destructive" });
+        return;
+    }
+    setFaculties(prev => [...prev, { name, departments: [] }]);
+    toast({ title: "Faculty Added", description: `The "${name}" faculty has been created.` });
+  }, [faculties, toast]);
+
+  const updateFaculty = useCallback((oldName: string, newName: string) => {
+    setFaculties(prev => prev.map(f => f.name === oldName ? { ...f, name: newName } : f));
+    toast({ title: "Faculty Updated", description: "The faculty name has been updated." });
+  }, [toast]);
+
+  const deleteFaculty = useCallback((name: string) => {
+    setFaculties(prev => {
+        const facultyToDelete = prev.find(f => f.name === name);
+        if (facultyToDelete) {
+            const departmentNames = facultyToDelete.departments.map(d => d.name);
+            setAllDepartments(ad => ad.filter(d => !departmentNames.includes(d)));
+            setDepartmentMap(dm => {
+                const newMap = new Map(dm);
+                facultyToDelete.departments.forEach(d => newMap.delete(d.initial));
+                return newMap;
+            });
+        }
+        return prev.filter(f => f.name !== name);
+    });
+    toast({ title: "Faculty Deleted", description: `The "${name}" faculty has been deleted.` });
+  }, [toast]);
+
+  const addDepartment = useCallback(({ name, initial, facultyName }: { name: string; initial: string; facultyName: string }) => {
+    setFaculties(prev => prev.map(f => {
+        if (f.name === facultyName) {
+            return { ...f, departments: [...f.departments, { name, initial }] };
+        }
+        return f;
+    }));
+    setAllDepartments(prev => [...prev, name].sort());
+    setDepartmentMap(prev => new Map(prev).set(initial, name));
+    toast({ title: "Department Added", description: `"${name}" has been added to the ${facultyName} faculty.` });
+  }, [toast]);
+
+  const updateDepartment = useCallback(({ oldName, newName, newInitial }: { oldName: string; newName: string; newInitial: string }) => {
+    let oldInitial = '';
+    setFaculties(prev => prev.map(f => ({
+        ...f,
+        departments: f.departments.map(d => {
+            if (d.name === oldName) {
+                oldInitial = d.initial;
+                return { name: newName, initial: newInitial };
+            }
+            return d;
+        }),
+    })));
+    setAllDepartments(prev => prev.map(d => d === oldName ? newName : d).sort());
+    setDepartmentMap(prev => {
+        const newMap = new Map(prev);
+        if (oldInitial) newMap.delete(oldInitial);
+        newMap.set(newInitial, newName);
+        return newMap;
+    });
+    toast({ title: "Department Updated", description: "The department details have been updated." });
+  }, [toast]);
+  
+  const moveDepartment = useCallback(({ departmentName, newFacultyName }: { departmentName: string; newFacultyName: string }) => {
+    let departmentToMove: Department | null = null;
+    // Remove from old faculty
+    setFaculties(prev => {
+        const nextState = prev.map(f => {
+            const dept = f.departments.find(d => d.name === departmentName);
+            if (dept) {
+                departmentToMove = dept;
+                return { ...f, departments: f.departments.filter(d => d.name !== departmentName) };
+            }
+            return f;
+        });
+        // Add to new faculty
+        return nextState.map(f => {
+            if (f.name === newFacultyName && departmentToMove) {
+                return { ...f, departments: [...f.departments, departmentToMove] };
+            }
+            return f;
+        });
+    });
+    toast({ title: "Department Moved", description: `Moved "${departmentName}" to the ${newFacultyName} faculty.` });
+  }, [toast]);
+
+  const deleteDepartment = useCallback((name: string) => {
+    let initialToDelete = '';
+    setFaculties(prev => prev.map(f => ({
+        ...f,
+        departments: f.departments.filter(d => {
+            if (d.name === name) {
+                initialToDelete = d.initial;
+                return false;
+            }
+            return true;
+        })
+    })));
+    setAllDepartments(prev => prev.filter(d => d !== name));
+    if (initialToDelete) {
+        setDepartmentMap(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(initialToDelete);
+            return newMap;
+        });
+    }
+    toast({ title: "Department Deleted", description: `The "${name}" department has been deleted.` });
+  }, [toast]);
+
+
   const resetState = () => {
     logout();
     setAllUsers(defaultUsers);
@@ -535,6 +671,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setSpecialResitTimetableState(null);
     setStudentResitSelections({});
     setExamsTimetableState(null);
+    setFaculties(initialFaculties);
+    setDepartmentMap(initialDepartmentMap);
+    setAllDepartments(initialAllDepartments);
     
     // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
@@ -585,7 +724,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     examsTimetable,
     setExamsTimetable,
     distributeExamsTimetable,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, isClassTimetableDistributed, distributeClassTimetable, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable]);
+    faculties,
+    departmentMap,
+    allDepartments,
+    addFaculty,
+    updateFaculty,
+    deleteFaculty,
+    addDepartment,
+    updateDepartment,
+    moveDepartment,
+    deleteDepartment,
+    toast,
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, isClassTimetableDistributed, distributeClassTimetable, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable, faculties, departmentMap, allDepartments, addFaculty, updateFaculty, deleteFaculty, addDepartment, updateDepartment, moveDepartment, deleteDepartment, toast]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

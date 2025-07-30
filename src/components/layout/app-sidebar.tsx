@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, School } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -74,6 +74,19 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+           {user.role === 'administrator' && (
+             <SidebarMenuItem>
+              <Link href="/departments" passHref>
+                <SidebarMenuButton
+                  tooltip="Departments"
+                  isActive={pathname.startsWith('/departments')}
+                >
+                  <School />
+                  <span>Departments</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+           )}
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
               <SidebarMenuButton
