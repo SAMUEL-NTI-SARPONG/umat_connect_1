@@ -2251,7 +2251,16 @@ function TimetableDisplay({
                 <div className="space-y-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="exam-period" className="text-right">Period</Label>
-                        <Input id="exam-period" value={(editedFormData as any)?.period || ''} onChange={(e) => handleEditInputChange('period', e.target.value)} className="col-span-3" />
+                         <Select value={(editedFormData as any)?.period || ''} onValueChange={(value) => handleEditInputChange('period', value)}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select period" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Morning">Morning</SelectItem>
+                                <SelectItem value="Afternoon">Afternoon</SelectItem>
+                                <SelectItem value="Evening">Evening</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="exam-courseCode" className="text-right">Course Code</Label>
@@ -3288,6 +3297,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
