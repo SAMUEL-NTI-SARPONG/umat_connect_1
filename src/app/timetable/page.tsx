@@ -1578,9 +1578,15 @@ function ResitTimetableDisplay({
         closeAllModals();
     };
 
-    const handleEditInputChange = (field: keyof SpecialResitEntry, value: string | number | null) => {
+    const handleEditInputChange = (field: keyof SpecialResitEntry, value: string | number | null | Date) => {
         if (!editedFormData) return;
-        setEditedFormData({ ...editedFormData, [field]: value });
+        
+        let finalValue = value;
+        if (field === 'date' && value instanceof Date) {
+            finalValue = format(value, 'dd-MM-yyyy');
+        }
+
+        setEditedFormData({ ...editedFormData, [field]: finalValue });
     };
 
     const flattenedAndFilteredData = useMemo(() => {
@@ -1779,8 +1785,29 @@ function ResitTimetableDisplay({
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="date-edit" className="text-right">Date</Label>
-                    <Input id="date-edit" value={editedFormData?.date || ''} onChange={(e) => handleEditInputChange('date', e.target.value)} className="col-span-3" />
+                  <Label htmlFor="date-edit" className="text-right">Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "col-span-3 justify-start text-left font-normal",
+                          !editedFormData?.date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editedFormData?.date ? editedFormData.date : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={editedFormData?.date ? new Date(editedFormData.date.split('-').reverse().join('-')) : undefined}
+                        onSelect={(date) => handleEditInputChange('date', date || '')}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="courseCode-edit" className="text-right">Course Code</Label>
@@ -3261,6 +3288,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
