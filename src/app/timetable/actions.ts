@@ -201,81 +201,81 @@ export async function findEmptyClassrooms(fileData: string) {
 
 // Function to normalize and tokenize a name
 function normalizeAndTokenizeName(name: string | null): any {
-  if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-    return null;
-  }
-
-  // Keep commas but remove dots
-  name = name.normalize("NFKD").replace(/\u00A0/g, ' ').trim();
-  let normalized = name.toLowerCase().replace(/[.]/g, '').replace(/\s+/g, ' ');
-
-  const hasComma = normalized.includes(',');
-  let tokens = hasComma ? normalized.split(',') : normalized.split(' ');
-  tokens = tokens.map(t => t.trim()).filter(t => t.length > 0);
-
-  let surname = '', firstName = '', middleInitials: string[] = [];
-  if (hasComma && tokens.length >= 2) {
-    surname = tokens[0];
-    const names = tokens[1].split(/\s+/);
-    firstName = names[0] || '';
-    middleInitials = names.slice(1);
-  } else {
-    surname = tokens[tokens.length - 1];
-    firstName = tokens[0];
-    middleInitials = tokens.slice(1, -1);
-  }
-
-  const components: any[] = [];
-  if (surname) components.push({ type: 'name', value: surname });
-  if (firstName) components.push({ type: 'name', value: firstName });
-  middleInitials.forEach(mid => {
-    if (mid.length === 1) components.push({ type: 'initial', value: mid });
-    else components.push({ type: 'name', value: mid });
-  });
-
-  const variants = [
-    normalized.replace(/\s/g, ''),
-    `${surname}${firstName}`.replace(/\s/g, ''),
-    `${firstName}${surname}`.replace(/\s/g, ''),
-    `${firstName[0] || ''}${surname}`.replace(/\s/g, ''),
-    `${surname}${firstName[0] || ''}`.replace(/\s/g, ''),
-    ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, ''))
-  ].filter(v => v.length > 0);
-
-  return { original: name, normalized: normalized.replace(/\s/g, ''), surname, firstName, middleInitials, components, variants };
+    if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
+      return null;
+    }
+  
+    // Keep commas but remove dots
+    name = name.normalize("NFKD").replace(/\u00A0/g, ' ').trim();
+    let normalized = name.toLowerCase().replace(/[.]/g, '').replace(/\s+/g, ' ');
+  
+    const hasComma = normalized.includes(',');
+    let tokens = hasComma ? normalized.split(',') : normalized.split(' ');
+    tokens = tokens.map(t => t.trim()).filter(t => t.length > 0);
+  
+    let surname = '', firstName = '', middleInitials: string[] = [];
+    if (hasComma && tokens.length >= 2) {
+      surname = tokens[0];
+      const names = tokens[1].split(/\s+/);
+      firstName = names[0] || '';
+      middleInitials = names.slice(1);
+    } else {
+      surname = tokens[tokens.length - 1];
+      firstName = tokens[0];
+      middleInitials = tokens.slice(1, -1);
+    }
+  
+    const components: any[] = [];
+    if (surname) components.push({ type: 'name', value: surname });
+    if (firstName) components.push({ type: 'name', value: firstName });
+    middleInitials.forEach(mid => {
+      if (mid.length === 1) components.push({ type: 'initial', value: mid });
+      else components.push({ type: 'name', value: mid });
+    });
+  
+    const variants = [
+      normalized.replace(/\s/g, ''),
+      `${surname}${firstName}`.replace(/\s/g, ''),
+      `${firstName}${surname}`.replace(/\s/g, ''),
+      `${firstName[0] || ''}${surname}`.replace(/\s/g, ''),
+      `${surname}${firstName[0] || ''}`.replace(/\s/g, ''),
+      ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, ''))
+    ].filter(v => v.length > 0);
+  
+    return { original: name, normalized: normalized.replace(/\s/g, ''), surname, firstName, middleInitials, components, variants };
 }
 
 // Function to check if two names match based on the "two names or name and initial" rule
 function namesMatch(nameData1: any, nameData2: any) {
-  if (!nameData1 || !nameData2) return false;
-
-  const components1 = nameData1.components;
-  const components2 = nameData2.components;
-
-  // Count matching components (full names or initials)
-  let matches = 0;
-  const matchedValues = new Set();
-
-  for (const comp1 of components1) {
-    for (const comp2 of components2) {
-      if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
-
-      if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
-        matches++;
-        matchedValues.add(comp1.value);
-      } else if (
-        (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
-        (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
-      ) {
-        matches++;
-        matchedValues.add(comp1.value);
-        matchedValues.add(comp2.value);
+    if (!nameData1 || !nameData2) return false;
+  
+    const components1 = nameData1.components;
+    const components2 = nameData2.components;
+  
+    // Count matching components (full names or initials)
+    let matches = 0;
+    const matchedValues = new Set();
+  
+    for (const comp1 of components1) {
+      for (const comp2 of components2) {
+        if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
+  
+        if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
+          matches++;
+          matchedValues.add(comp1.value);
+        } else if (
+          (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
+          (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
+        ) {
+          matches++;
+          matchedValues.add(comp1.value);
+          matchedValues.add(comp2.value);
+        }
       }
     }
-  }
-
-  // Require at least two full names or one full name and one initial
-  return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
+  
+    // Require at least two full names or one full name and one initial
+    return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
 }
 
 // Function to distribute courses to lecturers
@@ -608,10 +608,10 @@ export async function handleExamsUpload(fileData: string) {
 // New function to handle practicals specifically
 export async function handlePracticalsUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const timetableData: any[] = [];
     let idCounter = 10000; // Start with a high number to avoid ID collision
   
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = 'PRACTICAL';
     if (!workbook.SheetNames.includes(sheetName)) {
       return []; // No practicals sheet found
