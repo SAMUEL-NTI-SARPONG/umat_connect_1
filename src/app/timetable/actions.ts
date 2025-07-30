@@ -201,158 +201,158 @@ export async function findEmptyClassrooms(fileData: string) {
 
 // Function to normalize and tokenize a name
 function normalizeAndTokenizeName(name: string | null) {
-    if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
-      return null; // Skip invalid names
-    }
-  
-    // Normalize: lowercase, remove extra spaces, remove punctuation
-    let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
-    
-    // Tokenize: split by spaces or commas
-    let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
-    
-    // Handle formats: "surname, firstname [initials]" or "firstname surname"
-    let surname = '', firstName = '', middleInitials: string[] = [];
-    if (name.includes(',')) {
-      // Format: "surname, firstname [initials]"
-      surname = tokens[0] || '';
-      firstName = tokens[1] || '';
-      middleInitials = tokens.slice(2);
-    } else {
-      // Format: "firstname surname" or "surname initials"
-      surname = tokens[tokens.length - 1] || '';
-      firstName = tokens[0] || '';
-      middleInitials = tokens.slice(1, -1);
-    }
-  
-    // Determine if tokens are full names or initials
-    const components: { type: 'name' | 'initial', value: string }[] = [];
-    if (surname.length > 1) components.push({ type: 'name', value: surname });
-    if (firstName.length > 1) components.push({ type: 'name', value: firstName });
-    middleInitials.forEach(initial => {
-      if (initial.length === 1) components.push({ type: 'initial', value: initial });
-      else if (initial.length > 1) components.push({ type: 'name', value: initial });
-    });
-  
-    return {
-      original: name,
-      normalized: normalized.replace(/\s/g, ''),
-      surname,
-      firstName,
-      middleInitials,
-      components,
-      variants: [
-        normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
-        `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
-        ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, '')) // e.g., "dumenyak"
-      ].filter(v => v.length > 0)
-    };
+  if (!name || typeof name !== 'string' || name.trim().toLowerCase() === 'department, gm') {
+    return null; // Skip invalid names
   }
+
+  // Normalize: lowercase, remove extra spaces, remove punctuation
+  let normalized = name.trim().toLowerCase().replace(/[\.,]/g, '').replace(/\s+/g, ' ');
   
-  // Function to check if two names match based on the "two names or name and initial" rule
-  function namesMatch(nameData1: any, nameData2: any) {
-    if (!nameData1 || !nameData2) return false;
+  // Tokenize: split by spaces or commas
+  let tokens = normalized.split(/[\s,]+/).filter(token => token.length > 0);
   
-    const components1 = nameData1.components;
-    const components2 = nameData2.components;
-  
-    // Count matching components (full names or initials)
-    let matches = 0;
-    const matchedValues = new Set();
-  
-    for (const comp1 of components1) {
-      for (const comp2 of components2) {
-        if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
-  
-        if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
-          matches++;
-          matchedValues.add(comp1.value);
-        } else if (
-          (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
-          (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
-        ) {
-          matches++;
-          matchedValues.add(comp1.value);
-          matchedValues.add(comp2.value);
-        }
+  // Handle formats: "surname, firstname [initials]" or "firstname surname"
+  let surname = '', firstName = '', middleInitials: string[] = [];
+  if (name.includes(',')) {
+    // Format: "surname, firstname [initials]"
+    surname = tokens[0] || '';
+    firstName = tokens[1] || '';
+    middleInitials = tokens.slice(2);
+  } else {
+    // Format: "firstname surname" or "surname initials"
+    surname = tokens[tokens.length - 1] || '';
+    firstName = tokens[0] || '';
+    middleInitials = tokens.slice(1, -1);
+  }
+
+  // Determine if tokens are full names or initials
+  const components: { type: 'name' | 'initial', value: string }[] = [];
+  if (surname.length > 1) components.push({ type: 'name', value: surname });
+  if (firstName.length > 1) components.push({ type: 'name', value: firstName });
+  middleInitials.forEach(initial => {
+    if (initial.length === 1) components.push({ type: 'initial', value: initial });
+    else if (initial.length > 1) components.push({ type: 'name', value: initial });
+  });
+
+  return {
+    original: name,
+    normalized: normalized.replace(/\s/g, ''),
+    surname,
+    firstName,
+    middleInitials,
+    components,
+    variants: [
+      normalized.replace(/\s/g, ''), // e.g., "dumenyajamesk"
+      `${surname}${firstName}`.replace(/\s/g, ''), // e.g., "dumenyajames"
+      ...middleInitials.map(initial => `${surname}${initial}`.replace(/\s/g, '')) // e.g., "dumenyak"
+    ].filter(v => v.length > 0)
+  };
+}
+
+// Function to check if two names match based on the "two names or name and initial" rule
+function namesMatch(nameData1: any, nameData2: any) {
+  if (!nameData1 || !nameData2) return false;
+
+  const components1 = nameData1.components;
+  const components2 = nameData2.components;
+
+  // Count matching components (full names or initials)
+  let matches = 0;
+  const matchedValues = new Set();
+
+  for (const comp1 of components1) {
+    for (const comp2 of components2) {
+      if (matchedValues.has(comp1.value) || matchedValues.has(comp2.value)) continue;
+
+      if (comp1.type === 'name' && comp2.type === 'name' && comp1.value === comp2.value) {
+        matches++;
+        matchedValues.add(comp1.value);
+      } else if (
+        (comp1.type === 'name' && comp2.type === 'initial' && comp1.value.startsWith(comp2.value)) ||
+        (comp2.type === 'name' && comp1.type === 'initial' && comp2.value.startsWith(comp1.value))
+      ) {
+        matches++;
+        matchedValues.add(comp1.value);
+        matchedValues.add(comp2.value);
       }
     }
-  
-    // Require at least two full names or one full name and one initial
-    return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
   }
-  
-  // Function to distribute courses to lecturers
-  function distributeCourses(entries: any[]) {
-    const nameIndex = new Map();
-    const lecturerCourses = new Map();
-  
-    for (const entry of entries) {
-      const nameData = normalizeAndTokenizeName(entry.examiner);
-  
-      if (!nameData) {
-        // Handle invalid examiners by using their original name as the key
-        const originalExaminer = entry.examiner || 'Unassigned';
-        if (!lecturerCourses.has(originalExaminer)) {
-          lecturerCourses.set(originalExaminer, {
-            lecturer: originalExaminer,
-            courses: [],
-          });
-        }
-        lecturerCourses.get(originalExaminer).courses.push({ ...entry, examiner: entry.examiner });
-        continue;
-      }
-  
-      // Try to find a matching lecturer
-      let matchedName = null;
-      for (const variant of nameData.variants) {
-        if (nameIndex.has(variant)) {
-          const existingData = nameIndex.get(variant);
-          if (namesMatch(nameData, existingData)) {
-            matchedName = existingData.normalized;
-            break;
-          }
-        }
-      }
-  
-      // If no direct match, check all indexed names
-      if (!matchedName) {
-        for (const [existingVariant, existingData] of nameIndex) {
-          if (namesMatch(nameData, existingData)) {
-            matchedName = existingData.normalized;
-            break;
-          }
-        }
-      }
-  
-      // If still no match, add as new lecturer
-      if (!matchedName) {
-        matchedName = nameData.normalized;
-        nameData.variants.forEach(variant => {
-          nameIndex.set(variant, nameData);
+
+  // Require at least two full names or one full name and one initial
+  return matches >= 2 || (matches === 1 && components1.some((c: any) => c.type === 'name') && components2.some((c: any) => c.type === 'name'));
+}
+
+// Function to distribute courses to lecturers
+function distributeCourses(entries: any[]) {
+  const nameIndex = new Map();
+  const lecturerCourses = new Map();
+
+  for (const entry of entries) {
+    const nameData = normalizeAndTokenizeName(entry.examiner);
+
+    if (!nameData) {
+      // Handle invalid examiners by using their original name as the key
+      const originalExaminer = entry.examiner || 'Unassigned';
+      if (!lecturerCourses.has(originalExaminer)) {
+        lecturerCourses.set(originalExaminer, {
+          lecturer: originalExaminer,
+          courses: [],
         });
       }
-  
-      // Initialize lecturer's course array if not exists
-      if (!lecturerCourses.has(matchedName)) {
-        lecturerCourses.set(matchedName, {
-          lecturer: nameData.original,
-          courses: []
-        });
-      }
-      
-      // Add course to lecturer's courses
-      lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
+      lecturerCourses.get(originalExaminer).courses.push({ ...entry, examiner: entry.examiner });
+      continue;
     }
-  
-    // Convert to array for output
-    const result = Array.from(lecturerCourses.values());
-  
-    // Sort lecturers alphabetically
-    result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
-  
-    return result;
+
+    // Try to find a matching lecturer
+    let matchedName = null;
+    for (const variant of nameData.variants) {
+      if (nameIndex.has(variant)) {
+        const existingData = nameIndex.get(variant);
+        if (namesMatch(nameData, existingData)) {
+          matchedName = existingData.normalized;
+          break;
+        }
+      }
+    }
+
+    // If no direct match, check all indexed names
+    if (!matchedName) {
+      for (const [existingVariant, existingData] of nameIndex) {
+        if (namesMatch(nameData, existingData)) {
+          matchedName = existingData.normalized;
+          break;
+        }
+      }
+    }
+
+    // If still no match, add as new lecturer
+    if (!matchedName) {
+      matchedName = nameData.normalized;
+      nameData.variants.forEach(variant => {
+        nameIndex.set(variant, nameData);
+      });
+    }
+
+    // Initialize lecturer's course array if not exists
+    if (!lecturerCourses.has(matchedName)) {
+      lecturerCourses.set(matchedName, {
+        lecturer: nameData.original,
+        courses: []
+      });
+    }
+    
+    // Add course to lecturer's courses
+    lecturerCourses.get(matchedName).courses.push({ ...entry, examiner: entry.examiner });
   }
+
+  // Convert to array for output
+  const result = Array.from(lecturerCourses.values());
+
+  // Sort lecturers alphabetically
+  result.sort((a, b) => a.lecturer.localeCompare(b.lecturer));
+
+  return result;
+}
   
 /**
  * Extracts timetable data from an Excel file with a structure similar to the provided example.
