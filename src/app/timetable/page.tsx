@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry } from '../providers/user-provider';
 import { departments as allDepartments, departmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -2362,6 +2362,25 @@ function TimetableDisplay({
   );
 }
 
+type TabStatus = 'empty' | 'uploaded' | 'distributed';
+
+function TabStatusIndicator({ status }: { status: TabStatus }) {
+  const statusConfig: Record<TabStatus, { text: string; color: string }> = {
+    empty: { text: 'Empty', color: 'bg-gray-400' },
+    uploaded: { text: 'Uploaded', color: 'bg-yellow-500' },
+    distributed: { text: 'Distributed', color: 'bg-green-500' },
+  };
+
+  const { text, color } = statusConfig[status];
+
+  return (
+    <div className="ml-2 flex items-center gap-1.5">
+      <Circle className={cn('h-2 w-2', color)} />
+      <span className="text-xs font-normal">{text}</span>
+    </div>
+  );
+}
+
 function AdminTimetableView({
   parsedData,
   setParsedData,
@@ -2373,7 +2392,7 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
-  const { specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
+  const { masterSchedule, specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -2597,6 +2616,10 @@ function AdminTimetableView({
       setPracticalsData(prev => prev!.filter(p => p.id !== selectedPractical.id));
       closeAllPracticalModals();
   };
+
+  const classStatus: TabStatus = isClassTimetableDistributed ? 'distributed' : (masterSchedule && masterSchedule.length > 0) ? 'uploaded' : 'empty';
+  const examsStatus: TabStatus = examsTimetable?.isDistributed ? 'distributed' : (examsTimetable && (examsTimetable.exams.length > 0 || examsTimetable.practicals.length > 0)) ? 'uploaded' : 'empty';
+  const resitStatus: TabStatus = specialResitTimetable?.isDistributed ? 'distributed' : (specialResitTimetable && specialResitTimetable.sheets.length > 0) ? 'uploaded' : 'empty';
   
   return (
     <div className="space-y-6">
@@ -2689,9 +2712,9 @@ function AdminTimetableView({
 
       <Tabs defaultValue="class" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="class">Class Timetable</TabsTrigger>
-          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-          <TabsTrigger value="resit">Special Resit Timetable</TabsTrigger>
+          <TabsTrigger value="class">Class Timetable <TabStatusIndicator status={classStatus} /></TabsTrigger>
+          <TabsTrigger value="exams">Exams Timetable <TabStatusIndicator status={examsStatus} /></TabsTrigger>
+          <TabsTrigger value="resit">Special Resit <TabStatusIndicator status={resitStatus} /></TabsTrigger>
         </TabsList>
         <TabsContent value="class" className="mt-6">
           <TimetableDisplay
@@ -3238,5 +3261,6 @@ export default function TimetablePage() {
 
 
     
+
 
 
