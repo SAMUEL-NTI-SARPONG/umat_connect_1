@@ -86,7 +86,15 @@ function StudentExamsView() {
         const studentExams = allExams.filter(exam => {
             const examLevel = exam.level || 0;
             const examDepts = exam.departments || [];
-            return user.level === examLevel && examDepts.includes(user.department);
+            const examClass = exam.class || 'All'; // Default to 'All' if not specified
+            
+            const levelMatch = user.level === examLevel;
+            const deptMatch = examDepts.includes(user.department);
+            
+            // Show if it's for 'All' classes or matches the student's specific class
+            const classMatch = !exam.class || exam.class === 'All' || exam.class === user.class;
+
+            return levelMatch && deptMatch && classMatch;
         });
 
         return studentExams.reduce((acc, exam) => {
@@ -200,6 +208,7 @@ function StudentExamsView() {
 function StudentResitView() {
   const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
   
   // Local state for selections within the modal
   const [localSelections, setLocalSelections] = useState<Set<number>>(new Set());
@@ -224,12 +233,22 @@ function StudentResitView() {
   const allEntries = useMemo(() => {
     if (!specialResitTimetable) return [];
     // The data is now nested, so we need to flatten it.
-    return specialResitTimetable.sheets.flatMap(sheet => 
+    let entries = specialResitTimetable.sheets.flatMap(sheet => 
         sheet.entries.flatMap(lecturerSchedule => 
             lecturerSchedule.courses
         )
     );
-  }, [specialResitTimetable]);
+
+    if (courseSearchTerm) {
+        const lowercasedFilter = courseSearchTerm.toLowerCase();
+        entries = entries.filter(entry => 
+            (entry.courseCode && entry.courseCode.toLowerCase().includes(lowercasedFilter)) ||
+            (entry.courseName && entry.courseName.toLowerCase().includes(lowercasedFilter))
+        );
+    }
+
+    return entries;
+  }, [specialResitTimetable, courseSearchTerm]);
 
   const userSelections = (user && studentResitSelections[user.id]) || [];
   const selectedEntries = allEntries.filter(entry => userSelections.includes(entry.id));
@@ -304,6 +323,15 @@ function StudentResitView() {
                         <DialogTitle>Select Your Resit Courses</DialogTitle>
                         <DialogDescription>Choose the courses you are registered to write from the list below.</DialogDescription>
                     </DialogHeader>
+                    <div className="relative my-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Search by course code or name..."
+                            className="pl-10"
+                            value={courseSearchTerm}
+                            onChange={(e) => setCourseSearchTerm(e.target.value)}
+                        />
+                    </div>
                     <ScrollArea className="h-64 border rounded-md p-4">
                         <div className="space-y-2">
                         {allEntries.map(entry => (
@@ -1811,6 +1839,7 @@ function TimetableDisplay({
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | ExamEntry | null>(null);
 
   const [startTime, setStartTime] = useState<string>('');
@@ -1883,6 +1912,7 @@ function TimetableDisplay({
   const closeAllModals = () => {
     setIsActionModalOpen(false);
     setIsEditModalOpen(false);
+    setIsDeleteConfirmOpen(false);
     setSelectedEntry(null);
   }
 
@@ -2102,28 +2132,27 @@ function TimetableDisplay({
             <Button variant="outline" onClick={() => { setIsActionModalOpen(false); setIsEditModalOpen(true); }}>
                 <Edit className="mr-2 h-4 w-4" /> Edit
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete this timetable entry.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button variant="destructive" onClick={() => { setIsActionModalOpen(false); setIsDeleteConfirmOpen(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this timetable entry.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={closeAllModals}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteRow}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       
       {/* Edit Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
@@ -3181,3 +3210,4 @@ export default function TimetablePage() {
 
 
     
+
