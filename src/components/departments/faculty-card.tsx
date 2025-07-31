@@ -45,38 +45,36 @@ export function FacultyCard({ faculty, index }: { faculty: Faculty, index: numbe
   return (
     <>
       <Card className="overflow-hidden">
-        <Accordion type="single" collapsible defaultValue="item-1">
+        <Accordion type="single" collapsible>
           <AccordionItem value="item-1" className="border-b-0">
             <div className={cn(
               "flex items-center p-4 hover:bg-muted transition-colors",
               isEven ? "bg-muted" : "bg-muted/50"
             )}>
               <AccordionTrigger className="flex-grow p-0 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                  <span className="font-semibold text-base">{faculty.name}</span>
                   <div className="flex items-center gap-4">
-                      <span className="font-semibold text-base">{faculty.name}</span>
-                      <Badge variant="secondary">{faculty.departments.length} departments</Badge>
+                    <Badge variant="secondary">{faculty.departments.length} departments</Badge>
+                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
                   </div>
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
               </AccordionTrigger>
-              <div className="flex items-center gap-1 pl-2">
-                  <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => setIsFacultyEditDialogOpen(true)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit Faculty
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => setIsFacultyDeleteDialogOpen(true)} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Faculty
-                          </DropdownMenuItem>
-                      </DropdownMenuContent>
-                  </DropdownMenu>
-              </div>
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 ml-2">
+                          <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setIsFacultyEditDialogOpen(true)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit Faculty
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setIsFacultyDeleteDialogOpen(true)} className="text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Faculty
+                      </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <AccordionContent className="p-4">
               <div className="flex justify-end mb-4">
