@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -51,12 +52,14 @@ export function FacultyCard({ faculty, index }: { faculty: Faculty, index: numbe
               "flex items-center p-4 hover:bg-muted transition-colors",
               isEven ? "bg-muted" : "bg-muted/50"
             )}>
-              <AccordionTrigger className="flex-grow p-0 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                  <span className="font-semibold text-base">{faculty.name}</span>
-                  <div className="flex items-center gap-4">
-                    <Badge variant="secondary">{faculty.departments.length} departments</Badge>
-                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                  </div>
+              <AccordionTrigger className="p-0 flex-1 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-base">{faculty.name}</span>
+                    <div className="flex items-center gap-4">
+                        <Badge variant="secondary">{faculty.departments.length} departments</Badge>
+                        <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                    </div>
+                </div>
               </AccordionTrigger>
               <DropdownMenu>
                   <DropdownMenuTrigger asChild>
