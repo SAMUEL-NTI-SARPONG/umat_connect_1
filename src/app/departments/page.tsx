@@ -37,8 +37,8 @@ export default function DepartmentsPage() {
         <CardContent>
           {faculties.length > 0 ? (
             <div className="space-y-4">
-              {faculties.map((faculty) => (
-                <FacultyCard key={faculty.name} faculty={faculty} />
+              {faculties.map((faculty, index) => (
+                <FacultyCard key={faculty.name} faculty={faculty} index={index} />
               ))}
             </div>
           ) : (

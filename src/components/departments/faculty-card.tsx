@@ -32,19 +32,25 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { Card } from '../ui/card';
+import { cn } from '@/lib/utils';
 
-export function FacultyCard({ faculty }: { faculty: Faculty }) {
+export function FacultyCard({ faculty, index }: { faculty: Faculty, index: number }) {
   const { deleteFaculty } = useUser();
   const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false);
   const [isFacultyEditDialogOpen, setIsFacultyEditDialogOpen] = useState(false);
   const [isFacultyDeleteDialogOpen, setIsFacultyDeleteDialogOpen] = useState(false);
+  
+  const isEven = index % 2 === 0;
 
   return (
     <>
       <Card className="overflow-hidden">
         <Accordion type="single" collapsible defaultValue="item-1">
           <AccordionItem value="item-1" className="border-b-0">
-            <div className="flex items-center p-4 bg-muted/50 hover:bg-muted transition-colors">
+            <div className={cn(
+              "flex items-center p-4 hover:bg-muted transition-colors",
+              isEven ? "bg-muted" : "bg-muted/50"
+            )}>
               <AccordionTrigger className="flex-grow p-0 hover:no-underline [&[data-state=open]>svg]:rotate-180">
                   <div className="flex items-center gap-4">
                       <span className="font-semibold text-base">{faculty.name}</span>
