@@ -44,32 +44,34 @@ export function FacultyCard({ faculty }: { faculty: Faculty }) {
       <Card className="overflow-hidden">
         <Accordion type="single" collapsible defaultValue="item-1">
           <AccordionItem value="item-1" className="border-b-0">
-            <AccordionTrigger className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors [&[data-state=open]>svg]:rotate-180">
-                <div className="flex items-center gap-4">
-                    <span className="font-semibold text-base">{faculty.name}</span>
-                    <Badge variant="secondary">{faculty.departments.length} departments</Badge>
-                </div>
-                <div className="flex items-center gap-1">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setIsFacultyEditDialogOpen(true)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit Faculty
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setIsFacultyDeleteDialogOpen(true)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Faculty
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
-                </div>
-            </AccordionTrigger>
+            <div className="flex items-center p-4 bg-muted/50 hover:bg-muted transition-colors">
+              <AccordionTrigger className="flex-grow p-0 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                  <div className="flex items-center gap-4">
+                      <span className="font-semibold text-base">{faculty.name}</span>
+                      <Badge variant="secondary">{faculty.departments.length} departments</Badge>
+                  </div>
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+              </AccordionTrigger>
+              <div className="flex items-center gap-1 pl-2">
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => setIsFacultyEditDialogOpen(true)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit Faculty
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setIsFacultyDeleteDialogOpen(true)} className="text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Faculty
+                          </DropdownMenuItem>
+                      </DropdownMenuContent>
+                  </DropdownMenu>
+              </div>
+            </div>
             <AccordionContent className="p-4">
               <div className="flex justify-end mb-4">
                 <Button variant="outline" size="sm" onClick={() => setIsDepartmentDialogOpen(true)}>
