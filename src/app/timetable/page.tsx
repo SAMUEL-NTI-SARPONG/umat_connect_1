@@ -795,11 +795,12 @@ function StaffResitView() {
   }
 
 const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-  const staffNameLower = staffName.toLowerCase();
-  const entryNameLower = entryLecturerName.toLowerCase();
+  if (!entryLecturerName || !staffName) return false;
 
+  const entryNameLower = entryLecturerName.toLowerCase();
+  
   // Get significant parts of the staff member's name from their profile
-  const staffNameParts = staffNameLower
+  const staffNameParts = staffName.toLowerCase()
     .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
     .split(' ')
     .filter(p => p.length > 1); // Ignore single initials/short parts
@@ -2441,21 +2442,17 @@ function AdminTimetableView({
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
 }) {
-  const { masterSchedule, specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
+  const { masterSchedule, setMasterSchedule, specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // State for Class Timetable
-  const [classParsedData, setClassParsedData] = useState<TimetableEntry[] | null>(parsedData);
-  const [classEmptySlots, setClassEmptySlots] = useState<EmptySlot[]>(emptySlots);
   const [isClassLoading, setIsClassLoading] = useState(false);
   const [classError, setClassError] = useState<string | null>(null);
   const [classSearchTerm, setClassSearchTerm] = useState('');
   const [classShowInvalid, setClassShowInvalid] = useState(false);
 
   // State for Exams Timetable
-  const [examsParsedData, setExamsParsedData] = useState<ExamEntry[] | null>(examsTimetable?.exams ?? null);
-  const [practicalsData, setPracticalsData] = useState<ExamEntry[] | null>(examsTimetable?.practicals ?? null);
   const [isExamsLoading, setIsExamsLoading] = useState(false);
   const [examsError, setExamsError] = useState<string | null>(null);
   const [examsSearchTerm, setExamsSearchTerm] = useState('');
@@ -2479,29 +2476,18 @@ function AdminTimetableView({
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
-
-  useEffect(() => {
-    if (examsParsedData || practicalsData) {
-      const updatedExamsTimetable: ExamsTimetable = {
-        exams: examsParsedData || [],
-        practicals: practicalsData || [],
-        isDistributed: examsTimetable?.isDistributed || false,
-      };
-      setExamsTimetable(updatedExamsTimetable);
-    }
-  }, [examsParsedData, practicalsData, setExamsTimetable, examsTimetable?.isDistributed]);
   
   const handleAddExam = (newExam: any) => {
-    setExamsParsedData(prev => {
-        const newData = [...(prev || []), newExam];
-        return newData;
+    setExamsTimetable(prev => {
+        const exams = [...(prev?.exams || []), newExam];
+        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), exams };
     });
   };
   
   const handleAddPractical = (newPractical: any) => {
-    setPracticalsData(prev => {
-        const newData = [...(prev || []), newPractical];
-        return newData;
+    setExamsTimetable(prev => {
+        const practicals = [...(prev?.practicals || []), newPractical];
+        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), practicals };
     });
   };
 
@@ -2524,10 +2510,6 @@ function AdminTimetableView({
     isResitLoading, resitError, resitSearchTerm, resitShowInvalid
   ]);
 
-  useEffect(() => {
-      setClassParsedData(parsedData);
-      setClassEmptySlots(emptySlots);
-  }, [parsedData, emptySlots]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -2544,12 +2526,12 @@ function AdminTimetableView({
         const data = await handleFileUpload(fileData);
         if (!data || (Array.isArray(data) && data.length === 0)) {
             setClassError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-            setParsedData(null);
+            setMasterSchedule(null);
             setEmptySlots([]);
         } else {
             const slots = await findEmptyClassrooms(fileData);
             const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-            setParsedData(dataWithIdsAndStatus);
+            setMasterSchedule(dataWithIdsAndStatus);
             setEmptySlots(slots);
         }
       } else if (activeTab === 'exams') {
@@ -2581,7 +2563,7 @@ function AdminTimetableView({
 
   const handleDeleteAll = () => {
     if(activeTab === 'class') {
-        setParsedData(null);
+        setMasterSchedule(null);
         setEmptySlots([]);
         setClassError(null);
         setClassSearchTerm('');
@@ -2645,15 +2627,19 @@ function AdminTimetableView({
 
   const handleSavePracticalEdit = () => {
       if (!editedPracticalData) return;
-      setPracticalsData(prev => 
-        prev!.map(p => p.id === editedPracticalData.id ? editedPracticalData : p)
-      );
+      setExamsTimetable(prev => {
+        const practicals = prev!.practicals.map(p => p.id === editedPracticalData.id ? editedPracticalData : p);
+        return { ...prev!, practicals };
+      });
       closeAllPracticalModals();
   };
   
   const handleDeletePractical = () => {
       if (!selectedPractical) return;
-      setPracticalsData(prev => prev!.filter(p => p.id !== selectedPractical.id));
+       setExamsTimetable(prev => {
+        const practicals = prev!.practicals.filter(p => p.id !== selectedPractical.id);
+        return { ...prev!, practicals };
+      });
       closeAllPracticalModals();
   };
 
@@ -2755,7 +2741,7 @@ function AdminTimetableView({
         <TabsContent value="class" className="mt-6">
           <TimetableDisplay
             parsedData={masterSchedule}
-            setParsedData={setParsedData as any}
+            setParsedData={setMasterSchedule as any}
             emptySlots={emptySlots}
             searchTerm={classSearchTerm}
             showInvalid={classShowInvalid}
@@ -2769,11 +2755,7 @@ function AdminTimetableView({
         <TabsContent value="exams" className="mt-6">
            <TimetableDisplay
             parsedData={examsTimetable?.exams ?? null}
-            setParsedData={
-                (data) => setExamsTimetable(
-                    (prev) => ({...prev, exams: data, isDistributed: prev?.isDistributed || false }) as ExamsTimetable
-                )
-            }
+            setParsedData={(data) => setExamsTimetable(prev => ({ ...(prev || { exams: [], practicals: [], isDistributed: false }), exams: data || [] }))}
             emptySlots={[]}
             searchTerm={examsSearchTerm}
             showInvalid={examsShowInvalid}
@@ -3307,6 +3289,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
