@@ -2507,15 +2507,20 @@ function AdminTimetableView({
   const activeState = useMemo(() => {
     switch (activeTab) {
         case 'class':
-            return { isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid, handler: handleFileUpload };
+            return { isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid };
         case 'exams':
-            return { isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid, handler: handleExamsUpload };
+            return { isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid };
         case 'resit':
-            return { isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid, handler: handleSpecialResitUpload };
+            return { isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid };
         default:
-            return { isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, handler: async () => [] };
+            return { isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {} };
     }
-  }, [activeTab, isClassLoading, classError, classSearchTerm, classShowInvalid, isExamsLoading, examsError, examsSearchTerm, examsShowInvalid, isResitLoading, resitError, resitSearchTerm, resitShowInvalid]);
+  }, [
+    activeTab, 
+    isClassLoading, classError, classSearchTerm, classShowInvalid,
+    isExamsLoading, examsError, examsSearchTerm, examsShowInvalid,
+    isResitLoading, resitError, resitSearchTerm, resitShowInvalid
+  ]);
 
   useEffect(() => {
       setClassParsedData(parsedData);
@@ -2570,13 +2575,6 @@ function AdminTimetableView({
       }
     }
   };
-
-  const handleViewPracticals = useCallback(() => {
-    if (!practicalsData) {
-      setPracticalsError("No practicals data found. Please upload an exams timetable file first.");
-    }
-    setIsPracticalsModalOpen(true);
-  }, [practicalsData]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -2670,6 +2668,13 @@ function AdminTimetableView({
   
   return (
     <div className="space-y-6">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFileChange}
+        className="hidden"
+        accept=".xlsx, .xls"
+      />
       <div className="flex flex-col sm:flex-row gap-4 items-start">
         <div className="flex gap-2 flex-wrap flex-shrink-0">
           <TooltipProvider>
@@ -2684,19 +2689,17 @@ function AdminTimetableView({
                   <p>Upload New Timetable</p>
                 </TooltipContent>
               </Tooltip>
-              {(activeTab !== 'resit') && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                      <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!currentParsedData}>
-                      <FilterX className="h-4 w-4" />
-                      <span className="sr-only">Filter for review</span>
-                      </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                      <p>Filter for review</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!currentParsedData}>
+                    <FilterX className="h-4 w-4" />
+                    <span className="sr-only">Filter for review</span>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Filter for review</p>
+                </TooltipContent>
+              </Tooltip>
                <AlertDialog>
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -2734,7 +2737,7 @@ function AdminTimetableView({
               placeholder="Search course, lecturer, room, department..."
               className="pl-10"
               value={activeState.searchTerm}
-              onChange={(e) => 'setSearchTerm' in activeState && activeState.setSearchTerm(e.target.value)}
+              onChange={(e) => activeState.setSearchTerm(e.target.value)}
             />
           </div>
         )}
@@ -2779,7 +2782,7 @@ function AdminTimetableView({
             description={`A total of ${examsParsedData?.length || 0} exam entries were found.`}
             placeholder="Upload an exams timetable to begin."
             isExamsTimetable={true}
-            onViewPracticals={handleViewPracticals}
+            onViewPracticals={() => setIsPracticalsModalOpen(true)}
             onAddExam={() => setIsAddExamModalOpen(true)}
             isDistributed={examsTimetable?.isDistributed}
             onDistribute={distributeExamsTimetable}
@@ -3305,6 +3308,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
