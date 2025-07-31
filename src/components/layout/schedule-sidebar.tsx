@@ -9,6 +9,23 @@ import { useMemo } from 'react';
 import { BookUser } from 'lucide-react';
 import AdminStats from './admin-stats';
 
+// Helper function to check if a timetable entry's lecturer name matches a staff member's name.
+const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
+  const staffNameLower = staffName.toLowerCase();
+  const entryNameLower = entryLecturerName.toLowerCase();
+
+  // Get significant parts of the staff member's name from their profile
+  const staffNameParts = staffNameLower
+    .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
+    .split(' ')
+    .filter(p => p.length > 1); // Ignore single initials/short parts
+
+  if (staffNameParts.length === 0) return false;
+
+  // Check if all significant parts of the staff's name are present in the entry's lecturer name
+  return staffNameParts.every(part => entryNameLower.includes(part));
+};
+
 function ScheduleItem({
   title,
   time,
@@ -62,18 +79,16 @@ export default function ScheduleSidebar() {
     }
     
     if (user.role === 'staff') {
-        const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
-        
         const staffEntries = combinedSchedule.filter(entry => 
             entry.day === today &&
-            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+            isLecturerMatch(entry.lecturer, user.name)
         );
 
         const userRejectedIds = new Set(rejectedEntries[user.id] || []);
         if (userRejectedIds.size === 0) return staffEntries;
 
         const staffCourses = (masterSchedule || []).filter(entry =>
-            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
+            isLecturerMatch(entry.lecturer, user.name)
         );
         
         const rejectedMasterIds = new Set<number>();
