@@ -1,11 +1,13 @@
 
 'use client';
 
+import React from 'react';
 import './globals.css';
 import { UserProvider } from './providers/user-provider';
 import { ThemeProvider } from './providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import AppLayout from '@/components/layout/app-layout';
+import type { TimetableEntry } from './providers/user-provider';
 
 
 export default function RootLayout({
@@ -13,6 +15,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [studentSchedule, setStudentSchedule] = React.useState<TimetableEntry[]>([]);
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -37,7 +41,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider>
-            <AppLayout>{children}</AppLayout>
+            <AppLayout studentSchedule={studentSchedule}>
+              {React.cloneElement(children as React.ReactElement, { setStudentSchedule })}
+            </AppLayout>
           </UserProvider>
           <Toaster />
         </ThemeProvider>

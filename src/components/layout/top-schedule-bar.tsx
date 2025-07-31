@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useUser, type EventStatus } from '@/app/providers/user-provider';
+import { useUser, type EventStatus, type TimetableEntry } from '@/app/providers/user-provider';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { useMemo } from 'react';
@@ -49,23 +49,9 @@ function ScheduleItem({
   );
 }
 
-export default function TopScheduleBar() {
-  const { user, masterSchedule, staffSchedules } = useUser();
-
-  const studentSchedule = useMemo(() => {
-    const combinedSchedule = [...(masterSchedule || []), ...staffSchedules];
-    if (!combinedSchedule || !user || user.role !== 'student') return [];
-
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    const userDepartments = Array.isArray(user.department) ? user.department : [user.department];
-
-    return combinedSchedule.filter(entry =>
-        entry.level === user.level &&
-        entry.day === today &&
-        entry.departments.some(dep => userDepartments.includes(dep))
-      );
-  }, [masterSchedule, staffSchedules, user]);
-
+export default function TopScheduleBar({ studentSchedule }: { studentSchedule: TimetableEntry[] }) {
+  const { user } = useUser();
+  
   if (!user || user.role !== 'student' || studentSchedule.length === 0) {
     return null;
   }

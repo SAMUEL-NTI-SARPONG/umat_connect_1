@@ -8,7 +8,7 @@ import {
   SidebarInset,
 } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/layout/app-sidebar';
-import { useUser } from '@/app/providers/user-provider';
+import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
 import ScheduleSidebar from '@/components/layout/schedule-sidebar';
 import AppHeader from '@/components/layout/app-header';
 import BottomNavbar from '@/components/layout/bottom-navbar';
@@ -16,7 +16,7 @@ import TopScheduleBar from '@/components/layout/top-schedule-bar';
 import LoginPage from '@/app/login/page';
 import { usePathname } from 'next/navigation';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children, studentSchedule }: { children: React.ReactNode, studentSchedule: TimetableEntry[] }) {
   const { user } = useUser();
   const pathname = usePathname();
 
@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <AppSidebar />
           </Sidebar>
           <SidebarInset className="flex flex-col flex-1">
-            <TopScheduleBar />
+            <TopScheduleBar studentSchedule={studentSchedule} />
             <main className="flex-1 px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
               {children}
             </main>

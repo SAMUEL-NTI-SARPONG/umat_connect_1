@@ -79,9 +79,9 @@ function StudentExamsView() {
     const { user, examsTimetable } = useUser();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-    const { studentExams, examDays, firstExamDate } = useMemo(() => {
+    const { studentExams, examDays, firstExamDate, lastExamDate } = useMemo(() => {
         if (!user || !examsTimetable || !examsTimetable.isDistributed) {
-            return { studentExams: [], examDays: [], firstExamDate: new Date() };
+            return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date() };
         }
 
         const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
@@ -98,14 +98,17 @@ function StudentExamsView() {
             return levelMatch && deptMatch && classMatch;
         });
 
-        const uniqueExamDays = [...new Set(filteredStudentExams.map(exam => exam.dateStr))];
+        const uniqueExamDays = [...new Set(filteredStudentExams.map(exam => exam.dateStr))].filter(Boolean);
         const sortedExamDays = uniqueExamDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
+        
         const firstDay = sortedExamDays[0];
+        const lastDay = sortedExamDays[sortedExamDays.length - 1];
 
         return { 
             studentExams: filteredStudentExams, 
             examDays: sortedExamDays,
-            firstExamDate: firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date()
+            firstExamDate: firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date(),
+            lastExamDate: lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date(),
         };
     }, [user, examsTimetable]);
 
@@ -163,6 +166,8 @@ function StudentExamsView() {
                                 day: "h-10 w-10",
                             }}
                             month={selectedDate || firstExamDate}
+                            fromMonth={firstExamDate}
+                            toMonth={lastExamDate}
                             disabled={(date) => !examDays.includes(format(date, 'dd-MM-yyyy'))}
                         />
                     </CardContent>
@@ -2665,72 +2670,63 @@ function AdminTimetableView({
   
   return (
     <div className="space-y-6">
-       <input
-        type="file"
-        ref={fileInputRef}
-        onChange={onFileChange}
-        className="hidden"
-        accept=".xlsx, .xls"
-      />
       <div className="flex flex-col sm:flex-row gap-4 items-start">
-        <TooltipProvider>
-          <div className="flex gap-2 flex-wrap flex-shrink-0">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
-                  {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  <span className="sr-only">Upload New</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Upload New Timetable</p>
-              </TooltipContent>
-            </Tooltip>
-            
-            {(activeTab !== 'resit') && (
+        <div className="flex gap-2 flex-wrap flex-shrink-0">
+          <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!currentParsedData}>
-                    <FilterX className="h-4 w-4" />
-                    <span className="sr-only">Filter for review</span>
-                    </Button>
+                  <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
+                    {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    <span className="sr-only">Upload New</span>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>Filter for review</p>
+                  <p>Upload New Timetable</p>
                 </TooltipContent>
               </Tooltip>
-            )}
-
-            <AlertDialog>
+              {(activeTab !== 'resit') && (
                 <Tooltip>
                   <TooltipTrigger asChild>
+                      <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => 'setShowInvalid' in activeState && (activeState.setShowInvalid as Function)(!activeState.showInvalid)} disabled={!currentParsedData}>
+                      <FilterX className="h-4 w-4" />
+                      <span className="sr-only">Filter for review</span>
+                      </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Filter for review</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+               <AlertDialog>
+                <Tooltip>
+                    <TooltipTrigger asChild>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon" disabled={!currentParsedData}>
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                         </Button>
                     </AlertDialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
+                    </TooltipTrigger>
+                    <TooltipContent>
                     <p>Delete Timetable</p>
-                  </TooltipContent>
+                    </TooltipContent>
                 </Tooltip>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    entire timetable data from this view.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </TooltipProvider>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the
+                        entire timetable data from this view.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialog>
+          </TooltipProvider>
+        </div>
         {currentParsedData && (
           <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -3191,7 +3187,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage() {
+export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void }) {
   const { 
     user, 
     masterSchedule, 
@@ -3228,6 +3224,14 @@ export default function TimetablePage() {
         (entry.departments || []).includes(user.department)
       );
   }, [combinedSchedule, user]);
+
+  useEffect(() => {
+    if (user?.role === 'student' && setStudentSchedule) {
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const todaysStudentSchedule = studentSchedule.filter(entry => entry.day === today);
+      setStudentSchedule(todaysStudentSchedule);
+    }
+  }, [studentSchedule, user, setStudentSchedule]);
 
   const renderContent = () => {
     if (!user) return <p>Loading...</p>;
@@ -3301,6 +3305,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
