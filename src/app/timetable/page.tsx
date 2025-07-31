@@ -114,9 +114,10 @@ function StudentExamsView() {
 
     useEffect(() => {
         if (examDays.length > 0 && !selectedDate) {
-            setSelectedDate(firstExamDate);
+            const firstDate = examDays[0] ? new Date(examDays[0].split('-').reverse().join('-')) : undefined;
+            setSelectedDate(firstDate);
         }
-    }, [examDays, selectedDate, firstExamDate]);
+    }, [examDays, selectedDate]);
 
     const displayedExams = useMemo(() => {
         if (!selectedDate) return [];
@@ -2431,18 +2432,15 @@ function TabStatusIndicator({ status }: { status: TabStatus }) {
   );
 }
 
-function AdminTimetableView({
-  parsedData,
-  setParsedData,
-  emptySlots,
-  setEmptySlots,
-}: {
-  parsedData: TimetableEntry[] | null;
-  setParsedData: (data: TimetableEntry[] | null) => void;
-  emptySlots: EmptySlot[];
-  setEmptySlots: (slots: EmptySlot[]) => void;
-}) {
-  const { masterSchedule, setMasterSchedule, specialResitTimetable, setSpecialResitTimetable, examsTimetable, setExamsTimetable, distributeExamsTimetable, isClassTimetableDistributed, distributeClassTimetable } = useUser();
+function AdminTimetableView() {
+  const { 
+      masterSchedule, setMasterSchedule, 
+      emptySlots, setEmptySlots,
+      specialResitTimetable, setSpecialResitTimetable,
+      examsTimetable, setExamsTimetable,
+      isClassTimetableDistributed, distributeClassTimetable,
+      distributeExamsTimetable
+  } = useUser();
   const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -3233,12 +3231,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
                   examsTimetable={examsTimetable}
                />;
       case 'administrator':
-        return <AdminTimetableView 
-                  parsedData={masterSchedule} 
-                  setParsedData={setMasterSchedule as any} 
-                  emptySlots={emptySlots} 
-                  setEmptySlots={setEmptySlots} 
-               />;
+        return <AdminTimetableView />
       default:
         return <p>Select a role to see the timetable.</p>;
     }
@@ -3301,3 +3294,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
 
+
+
+    
