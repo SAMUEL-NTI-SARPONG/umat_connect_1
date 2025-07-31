@@ -794,18 +794,20 @@ function StaffResitView() {
     );
   }
 
-const isLecturerMatchForStaffView = (entryLecturerName: string, staffName: string): boolean => {
-    const staffNameLower = staffName.toLowerCase();
-    const entryNameLower = entryLecturerName.toLowerCase();
+const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
+  const staffNameLower = staffName.toLowerCase();
+  const entryNameLower = entryLecturerName.toLowerCase();
 
-    const staffNameParts = staffNameLower
-      .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '')
-      .split(' ')
-      .filter(p => p.length > 1);
+  // Get significant parts of the staff member's name from their profile
+  const staffNameParts = staffNameLower
+    .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
+    .split(' ')
+    .filter(p => p.length > 1); // Ignore single initials/short parts
 
-    if (staffNameParts.length === 0) return false;
+  if (staffNameParts.length === 0) return false;
 
-    return staffNameParts.every(part => entryNameLower.includes(part));
+  // Check if all significant parts of the staff's name are present in the entry's lecturer name
+  return staffNameParts.every(part => entryNameLower.includes(part));
 };
 
 function StaffTimetableView({
@@ -860,7 +862,7 @@ function StaffTimetableView({
   const staffCourses = useMemo(() => {
     if (!masterSchedule || !user) return [];
     
-    const allEntriesForStaff = masterSchedule.filter(entry => isLecturerMatchForStaffView(entry.lecturer, user.name));
+    const allEntriesForStaff = masterSchedule.filter(entry => isLecturerMatch(entry.lecturer, user.name));
 
     const groupedByNormalizedId = allEntriesForStaff.reduce((acc, entry) => {
         const { normalizedId, displayCode } = normalizeCourse(entry);
@@ -2542,20 +2544,17 @@ function AdminTimetableView({
         const data = await handleFileUpload(fileData);
         if (!data || (Array.isArray(data) && data.length === 0)) {
             setClassError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-            setClassParsedData(null);
-            setClassEmptySlots([]);
+            setParsedData(null);
+            setEmptySlots([]);
         } else {
             const slots = await findEmptyClassrooms(fileData);
             const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-            setClassParsedData(dataWithIdsAndStatus);
-            setClassEmptySlots(slots);
             setParsedData(dataWithIdsAndStatus);
             setEmptySlots(slots);
         }
       } else if (activeTab === 'exams') {
-        const { exams, practicals } = await handleExamsUpload(fileData);
-        setExamsParsedData(exams as any);
-        setPracticalsData(practicals);
+        const data = await handleExamsUpload(fileData);
+        setExamsTimetable({ exams: data.exams, practicals: data.practicals, isDistributed: false });
       } else if (activeTab === 'resit') {
         const data = await handleSpecialResitUpload(fileData);
          if (!data) {
@@ -2582,16 +2581,12 @@ function AdminTimetableView({
 
   const handleDeleteAll = () => {
     if(activeTab === 'class') {
-        setClassParsedData(null);
-        setClassEmptySlots([]);
         setParsedData(null);
         setEmptySlots([]);
         setClassError(null);
         setClassSearchTerm('');
         setClassShowInvalid(false);
     } else if (activeTab === 'exams') {
-        setExamsParsedData(null);
-        setPracticalsData(null);
         setExamsTimetable(null);
         setExamsError(null);
         setExamsSearchTerm('');
@@ -2605,15 +2600,15 @@ function AdminTimetableView({
   };
 
   const currentParsedData = useMemo(() => {
-    if (activeTab === 'class') return classParsedData;
-    if (activeTab === 'exams') return examsParsedData;
+    if (activeTab === 'class') return masterSchedule;
+    if (activeTab === 'exams') return examsTimetable?.exams;
     if (activeTab === 'resit') return specialResitTimetable;
     return null;
-  }, [activeTab, classParsedData, examsParsedData, specialResitTimetable]);
+  }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
 
   const groupedPracticals = useMemo(() => {
-    if (!practicalsData) return {};
-    return practicalsData.reduce((acc, entry) => {
+    if (!examsTimetable?.practicals) return {};
+    return examsTimetable.practicals.reduce((acc, entry) => {
         const key = entry.dateStr;
         if (!acc[key]) {
             acc[key] = [];
@@ -2621,7 +2616,7 @@ function AdminTimetableView({
         acc[key].push(entry);
         return acc;
     }, {} as Record<string, any[]>);
-  }, [practicalsData]);
+  }, [examsTimetable?.practicals]);
 
   const practicalGroupKeys = Object.keys(groupedPracticals).sort((a, b) => {
     try {
@@ -2700,15 +2695,15 @@ function AdminTimetableView({
                     <p>Filter for review</p>
                 </TooltipContent>
               </Tooltip>
-               <AlertDialog>
+              <AlertDialog>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                    <AlertDialogTrigger asChild>
+                      <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon" disabled={!currentParsedData}>
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
                         </Button>
-                    </AlertDialogTrigger>
+                      </AlertDialogTrigger>
                     </TooltipTrigger>
                     <TooltipContent>
                     <p>Delete Timetable</p>
@@ -2727,7 +2722,7 @@ function AdminTimetableView({
                     <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-                </AlertDialog>
+              </AlertDialog>
           </TooltipProvider>
         </div>
         {currentParsedData && (
@@ -2759,13 +2754,13 @@ function AdminTimetableView({
         </TabsList>
         <TabsContent value="class" className="mt-6">
           <TimetableDisplay
-            parsedData={classParsedData}
-            setParsedData={setClassParsedData as any}
-            emptySlots={classEmptySlots}
+            parsedData={masterSchedule}
+            setParsedData={setParsedData as any}
+            emptySlots={emptySlots}
             searchTerm={classSearchTerm}
             showInvalid={classShowInvalid}
             title="Parsed Class Timetable Preview"
-            description={`A total of ${classParsedData?.length || 0} entries were found. Click a row to edit or delete.`}
+            description={`A total of ${masterSchedule?.length || 0} entries were found. Click a row to edit or delete.`}
             placeholder="Upload a class timetable to begin."
             isDistributed={isClassTimetableDistributed}
             onDistribute={distributeClassTimetable}
@@ -2773,13 +2768,17 @@ function AdminTimetableView({
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
            <TimetableDisplay
-            parsedData={examsParsedData}
-            setParsedData={setExamsParsedData as any}
+            parsedData={examsTimetable?.exams ?? null}
+            setParsedData={
+                (data) => setExamsTimetable(
+                    (prev) => ({...prev, exams: data, isDistributed: prev?.isDistributed || false }) as ExamsTimetable
+                )
+            }
             emptySlots={[]}
             searchTerm={examsSearchTerm}
             showInvalid={examsShowInvalid}
             title="Parsed Exams Timetable Preview"
-            description={`A total of ${examsParsedData?.length || 0} exam entries were found.`}
+            description={`A total of ${examsTimetable?.exams.length || 0} exam entries were found.`}
             placeholder="Upload an exams timetable to begin."
             isExamsTimetable={true}
             onViewPracticals={() => setIsPracticalsModalOpen(true)}
@@ -2824,8 +2823,8 @@ function AdminTimetableView({
                 <AlertDescription>{practicalsError}</AlertDescription>
               </Alert>
             )}
-            {practicalsData && (
-              practicalsData.length > 0 ? (
+            {examsTimetable?.practicals && (
+              examsTimetable.practicals.length > 0 ? (
                 <Accordion type="multiple" className="w-full space-y-4">
                     {practicalGroupKeys.map(key => (
                         <Card key={key} className="overflow-hidden">
@@ -3214,7 +3213,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     if (!combinedSchedule || !user || user.role !== 'staff') return [];
     
     return combinedSchedule.filter(entry => 
-      isLecturerMatchForStaffView(entry.lecturer, user.name)
+      isLecturerMatch(entry.lecturer, user.name)
     );
   }, [combinedSchedule, user]);
 
@@ -3308,6 +3307,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
