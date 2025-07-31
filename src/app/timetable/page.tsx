@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry } from '../providers/user-provider';
-import { departments as allDepartments, departmentMap } from '@/lib/data';
+import { allDepartments, initialDepartmentMap as departmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -3297,6 +3297,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
