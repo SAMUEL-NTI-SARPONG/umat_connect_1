@@ -67,6 +67,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Separator } from '@/components/ui/separator';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -244,7 +245,7 @@ function StudentExamsView() {
                         mode="single"
                         selected={selectedDate}
                         onDayClick={handleDayClick}
-                        className="p-0"
+                        className="p-0 w-full"
                         classNames={{
                             day_today: "bg-accent text-accent-foreground border-green-500",
                         }}
@@ -3317,4 +3318,3 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
-
