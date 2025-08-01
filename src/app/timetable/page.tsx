@@ -80,8 +80,8 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     if (exams.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <h1 className="text-xl font-bold mb-2">No Exams</h1>
-            <p className="text-muted-foreground">There are no exams scheduled for the selected day.</p>
+            <h1 className="text-lg font-semibold mb-2">No Exams Today</h1>
+            <p className="text-sm text-muted-foreground">There are no exams scheduled for the selected day.</p>
         </div>
       );
     }
@@ -89,14 +89,16 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     return (
       <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
         {exams.map((exam) => (
-          <div key={exam.id} className="flex items-start gap-4 p-3 border rounded-lg">
+          <div key={exam.id} className="flex items-start gap-4 p-3 border rounded-lg bg-background/50">
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
             </div>
             <div className="flex-1 space-y-1">
-              <p className="font-semibold">{exam.courseCode} - {exam.courseName}</p>
-              <p className="text-sm text-muted-foreground">Room: {exam.room}</p>
-              <p className="text-sm text-muted-foreground">Lecturer: {exam.lecturer}</p>
+              <p className="font-semibold text-base">{exam.courseCode}</p>
+              <p className="text-sm text-muted-foreground">{exam.courseName}</p>
+              <Separator className="my-2" />
+              <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
+              <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
               {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
             </div>
           </div>
@@ -237,7 +239,7 @@ function StudentExamsView() {
     return (
         <Card>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
-                <div className="flex justify-center">
+                <div>
                     <Calendar
                         mode="single"
                         selected={selectedDate}
@@ -264,8 +266,8 @@ function StudentExamsView() {
                         <ExamDetails exams={displayedExams} />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                            <h1 className="text-xl font-bold mb-2">Select a Day</h1>
-                            <p className="text-muted-foreground">Click on a highlighted day in the calendar to see your exam schedule.</p>
+                            <h1 className="text-lg font-semibold mb-2">Select a Day</h1>
+                            <p className="text-sm text-muted-foreground">Click on a highlighted day in the calendar to see your exam schedule.</p>
                         </div>
                     )}
                 </div>
@@ -3315,3 +3317,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
