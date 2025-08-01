@@ -60,10 +60,10 @@ export type Post = {
 };
 
 export type Notification = {
-    id: string; // Firestore document ID
+    id: string;
     recipientId: number;
     actorId: number;
-    type: 'comment_on_post' | 'reply_to_comment';
+    type: 'comment_on_post' | 'reply_to_comment' | 'exam_timetable';
     postId: number;
     commentId: number; // The new reply's ID
     isRead: boolean;
@@ -185,6 +185,7 @@ interface UserContextType {
   notifications: Notification[];
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
+  addNotification: (notification: Omit<Notification, 'id'>) => void;
   clearAllNotifications: () => Promise<void>;
   specialResitTimetable: SpecialResitTimetable | null;
   setSpecialResitTimetable: (data: SpecialResitTimetable | null) => void;
@@ -345,6 +346,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchNotifications]);
 
+  const addNotification = useCallback((notificationData: Omit<Notification, 'id'>) => {
+    const newNotification: Notification = {
+      ...notificationData,
+      id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  }, []);
+
   const addComment = useCallback(async (postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
 
@@ -372,8 +381,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     // Create notification locally
     if (postAuthorId && postAuthorId !== user.id) {
-        const newNotification: Notification = {
-            id: String(Date.now()), // Local unique ID
+        addNotification({
             recipientId: postAuthorId,
             actorId: user.id,
             type: 'comment_on_post',
@@ -381,10 +389,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
             commentId: newComment.id,
             isRead: false,
             timestamp: newComment.timestamp,
-        };
-        setNotifications(prev => [newNotification, ...prev]);
+        });
     }
-  }, [user]);
+  }, [user, addNotification]);
 
   const addReply = useCallback(async (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
       if (!user) return;
@@ -398,7 +405,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           attachedFile,
       };
 
-      const notificationsToAdd: Notification[] = [];
+      const notificationsToAdd: Omit<Notification, 'id'>[] = [];
       
       setPosts(prevPosts => {
           const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
@@ -422,7 +429,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                   // Notify parent comment author
                   if (parentComment.authorId !== user.id) {
                       notificationsToAdd.push({
-                          id: String(Date.now() + Math.random()),
                           recipientId: parentComment.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
@@ -436,7 +442,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                   // Notify post author if they are a different person
                   if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
                       notificationsToAdd.push({
-                          id: String(Date.now() + Math.random()),
                           recipientId: post.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
@@ -452,12 +457,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
 
       if (notificationsToAdd.length > 0) {
-          setNotifications(prev => [
-            ...notificationsToAdd,
-            ...prev
-          ]);
+          notificationsToAdd.forEach(addNotification);
       }
-  }, [user]);
+  }, [user, addNotification]);
 
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
@@ -535,14 +537,98 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const distributeExamsTimetable = useCallback(() => {
     const currentState = examsTimetable;
-    if (!currentState) return;
-    
+    if (!currentState) {
+      console.warn('distributeExamsTimetable: No timetable data');
+      toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
+      return;
+    }
+  
+    // Ensure data exists
+    if (!currentState.exams?.length && !currentState.practicals?.length) {
+      console.warn('distributeExamsTimetable: Empty exams and practicals');
+      toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
+      return;
+    }
+  
+    // Filter exams for students (by class) and lecturers (by lecturer/invigilator)
+    const studentSchedules: Record<number, ExamEntry[]> = {};
+    const lecturerSchedules: Record<number, ExamEntry[]> = {};
+  
+    allUsers.forEach(u => {
+      if (u.role === 'student' && u.class) {
+        studentSchedules[u.id] = [
+          ...(currentState.exams || []).filter(e => e.class?.toUpperCase() === (u as any).class.toUpperCase()),
+          ...(currentState.practicals || []).filter(e => e.class?.toUpperCase() === (u as any).class.toUpperCase()),
+        ];
+      } else if (u.role === 'staff') {
+        const normalizeName = (name: string) =>
+          name
+            ? name
+                .toLowerCase()
+                .trim()
+                .split(/\s+/)
+                .sort()
+                .join(' ')
+            : '';
+        lecturerSchedules[u.id] = [
+          ...(currentState.exams || []).filter(
+            e =>
+              normalizeName(e.lecturer) === normalizeName(u.name) ||
+              normalizeName(e.invigilator) === normalizeName(u.name)
+          ),
+          ...(currentState.practicals || []).filter(
+            e =>
+              normalizeName(e.lecturer) === normalizeName(u.name) ||
+              normalizeName(e.invigilator) === normalizeName(u.name)
+          ),
+        ];
+      }
+    });
+  
+    // Update state with distributed flag
     const distributedData = { ...currentState, isDistributed: true };
     setExamsTimetableState(distributedData);
-localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-    toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
-
-  }, [examsTimetable, toast]);
+    localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
+  
+    // Store user-specific schedules (optional, for UI or notifications)
+    localStorage.setItem('studentSchedules', JSON.stringify(studentSchedules));
+    localStorage.setItem('lecturerSchedules', JSON.stringify(lecturerSchedules));
+  
+    // Trigger notifications
+    if (user) {
+      Object.entries(studentSchedules).forEach(([userId, schedule]) => {
+        if (schedule.length) {
+          addNotification({
+            recipientId: parseInt(userId),
+            actorId: user.id,
+            type: 'exam_timetable',
+            postId: 0,
+            commentId: 0,
+            isRead: false,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      });
+      Object.entries(lecturerSchedules).forEach(([userId, schedule]) => {
+        if (schedule.length) {
+          addNotification({
+            recipientId: parseInt(userId),
+            actorId: user.id,
+            type: 'exam_timetable',
+            postId: 0,
+            commentId: 0,
+            isRead: false,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      });
+    }
+  
+    toast({
+      title: "Exams Timetable Distributed",
+      description: "The exams timetable is now live for all users.",
+    });
+  }, [examsTimetable, allUsers, user, addNotification, toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
@@ -732,6 +818,7 @@ localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
     notifications,
     fetchNotifications,
     markNotificationAsRead,
+    addNotification,
     clearAllNotifications,
     specialResitTimetable,
     setSpecialResitTimetable,
@@ -752,7 +839,7 @@ localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
     moveDepartment,
     deleteDepartment,
     toast,
-  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, isClassTimetableDistributed, distributeClassTimetable, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable, faculties, departmentMap, allDepartments, addFaculty, updateFaculty, deleteFaculty, addDepartment, updateDepartment, moveDepartment, deleteDepartment, toast]);
+  }), [user, allUsers, login, logout, updateUser, resetState, masterSchedule, setMasterSchedule, isClassTimetableDistributed, distributeClassTimetable, updateScheduleStatus, emptySlots, setEmptySlots, posts, addPost, deletePost, addComment, addReply, staffSchedules, addStaffSchedule, reviewedSchedules, markScheduleAsReviewed, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, notifications, fetchNotifications, markNotificationAsRead, addNotification, clearAllNotifications, specialResitTimetable, setSpecialResitTimetable, distributeSpecialResitTimetable, studentResitSelections, updateStudentResitSelection, examsTimetable, setExamsTimetable, distributeExamsTimetable, faculties, departmentMap, allDepartments, addFaculty, updateFaculty, deleteFaculty, addDepartment, updateDepartment, moveDepartment, deleteDepartment, toast]);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
