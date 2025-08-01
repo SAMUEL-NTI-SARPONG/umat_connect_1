@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -183,7 +182,7 @@ function StudentExamsView() {
                     }}
                     modifiersClassNames={{
                         examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
-                        day_selected: 'bg-primary text-primary-foreground',
+                        day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
                     }}
                 />
             </CardContent>
@@ -3260,61 +3259,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
   );
 }
     
-
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
+ 
