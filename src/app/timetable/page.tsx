@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -165,6 +166,7 @@ function StudentExamsView() {
                 <Calendar
                     mode="multiple"
                     min={0}
+                    selected={selectedDate}
                     onDayClick={handleDayClick}
                     className="p-0"
                     classNames={{
@@ -181,7 +183,8 @@ function StudentExamsView() {
                         examDay: examDays
                     }}
                     modifiersClassNames={{
-                        examDay: 'bg-primary/10 text-primary-foreground font-bold'
+                        examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
+                        day_selected: 'bg-primary text-primary-foreground',
                     }}
                 />
             </CardContent>
@@ -3311,5 +3314,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
