@@ -66,6 +66,8 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        'exam-day': '#B12C00',
+        'selected-day': '#03A6A1',
       },
       borderRadius: {
         lg: 'var(--radius)',

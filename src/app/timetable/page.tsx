@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -215,8 +216,8 @@ function StudentExamsView() {
                         toMonth={lastExamDate}
                         modifiers={{ examDay: examDays }}
                         modifiersClassNames={{
-                            examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
-                            day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
+                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
                         }}
                     />
                 </CardContent>
@@ -249,8 +250,8 @@ function StudentExamsView() {
                         toMonth={lastExamDate}
                         modifiers={{ examDay: examDays }}
                         modifiersClassNames={{
-                            examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
-                            day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
+                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
                         }}
                     />
                 </div>
@@ -3313,5 +3314,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
 
 
