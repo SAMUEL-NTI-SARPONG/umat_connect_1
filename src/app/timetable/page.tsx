@@ -95,11 +95,12 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
               <Badge variant="outline">{exam.period}</Badge>
             </div>
             <div className="flex-1 space-y-1">
-              <p className="font-semibold text-base">{exam.courseCode}</p>
+              <p className="font-medium text-sm">{exam.courseCode}</p>
               <p className="text-sm text-muted-foreground">{exam.courseName}</p>
               <Separator className="my-2" />
               <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
               <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
+              <p className="text-xs text-muted-foreground">Invigilator: <span className="font-medium text-foreground">{exam.invigilator}</span></p>
               {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
             </div>
           </div>
@@ -208,7 +209,7 @@ function StudentExamsView() {
                         mode="single"
                         selected={selectedDate}
                         onDayClick={handleDayClick}
-                        className="p-0"
+                        className="w-full"
                         classNames={{
                             day_today: "bg-accent text-accent-foreground border-green-500",
                         }}
@@ -245,7 +246,7 @@ function StudentExamsView() {
                         mode="single"
                         selected={selectedDate}
                         onDayClick={handleDayClick}
-                        className="p-0 w-full"
+                        className="w-full"
                         classNames={{
                             day_today: "bg-accent text-accent-foreground border-green-500",
                         }}
@@ -3318,3 +3319,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
