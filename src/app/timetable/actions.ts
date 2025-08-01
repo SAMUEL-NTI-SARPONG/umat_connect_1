@@ -333,17 +333,46 @@ function cleanName(name: string | null) {
     return name.trim().replace(/\s+/g, ' ');
 }
 
+// THIS IS THE CORRECTED FUNCTION
 function addDistributionFields(entry: any) {
-    if (!entry.courseCode) {
-        return { ...entry, level: 0, departments: [] };
+  let level = 0;
+  let departments: string[] = [];
+  const classInfo = entry.class; // e.g., "CE 1", "GM 2", "ALL"
+
+  if (classInfo && typeof classInfo === 'string' && classInfo.toLowerCase() !== 'all') {
+    const parts = classInfo.trim().split(/\s+/);
+    const deptInitials: string[] = [];
+    let levelNum: number | null = null;
+
+    parts.forEach(part => {
+      const numMatch = part.match(/\d+/);
+      if (numMatch) {
+        levelNum = parseInt(numMatch[0], 10);
+      }
+      const alphaMatch = part.match(/[a-zA-Z]+/);
+      if (alphaMatch) {
+        deptInitials.push(alphaMatch[0]);
+      }
+    });
+
+    if (levelNum) {
+      level = levelNum * 100;
     }
-    const courseNumMatch = entry.courseCode.match(/\d+/);
-    const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
+
+    if (deptInitials.length > 0) {
+      departments = deptInitials
+        .map(initial => initialDepartmentMap.get(initial.toUpperCase()) || initial)
+        .filter(Boolean);
+    }
+  } else {
+    // Fallback to parsing the course code if class is "ALL" or not present
+    const courseNumMatch = entry.courseCode?.match(/\d+/);
+    level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
     
-    const courseParts = entry.courseCode.trim().split(/\s+/);
+    const courseParts = (entry.courseCode || '').trim().split(/\s+/);
     const deptInitialParts: string[] = [];
   
-    courseParts.forEach(part => {
+    courseParts.forEach((part: string) => {
       if (/[a-zA-Z]/.test(part) && !/^\d/.test(part)) {
         deptInitialParts.push(part.replace(/[.-]/g, ''));
       }
@@ -351,12 +380,14 @@ function addDistributionFields(entry: any) {
   
     const uniqueDeptInitials = [...new Set(deptInitialParts)];
   
-    const departments = uniqueDeptInitials
+    departments = uniqueDeptInitials
       .map(initial => initialDepartmentMap.get(initial) || initial)
       .filter(Boolean);
-  
-    return { ...entry, level, departments };
   }
+
+  return { ...entry, level, departments };
+}
+
 
 export async function handleExamsUpload(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
