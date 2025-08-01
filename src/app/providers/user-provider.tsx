@@ -538,97 +538,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const distributeExamsTimetable = useCallback(() => {
     const currentState = examsTimetable;
     if (!currentState) {
-      console.warn('distributeExamsTimetable: No timetable data');
       toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
       return;
     }
-  
-    // Ensure data exists
-    if (!currentState.exams?.length && !currentState.practicals?.length) {
-      console.warn('distributeExamsTimetable: Empty exams and practicals');
-      toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
-      return;
-    }
-  
-    // Filter exams for students (by class) and lecturers (by lecturer/invigilator)
-    const studentSchedules: Record<number, ExamEntry[]> = {};
-    const lecturerSchedules: Record<number, ExamEntry[]> = {};
-  
-    allUsers.forEach(u => {
-      if (u.role === 'student' && u.class) {
-        studentSchedules[u.id] = [
-          ...(currentState.exams || []).filter(e => e.class?.toUpperCase() === (u as any).class.toUpperCase()),
-          ...(currentState.practicals || []).filter(e => e.class?.toUpperCase() === (u as any).class.toUpperCase()),
-        ];
-      } else if (u.role === 'staff') {
-        const normalizeName = (name: string) =>
-          name
-            ? name
-                .toLowerCase()
-                .trim()
-                .split(/\s+/)
-                .sort()
-                .join(' ')
-            : '';
-        lecturerSchedules[u.id] = [
-          ...(currentState.exams || []).filter(
-            e =>
-              normalizeName(e.lecturer) === normalizeName(u.name) ||
-              normalizeName(e.invigilator) === normalizeName(u.name)
-          ),
-          ...(currentState.practicals || []).filter(
-            e =>
-              normalizeName(e.lecturer) === normalizeName(u.name) ||
-              normalizeName(e.invigilator) === normalizeName(u.name)
-          ),
-        ];
-      }
-    });
-  
-    // Update state with distributed flag
+    
     const distributedData = { ...currentState, isDistributed: true };
     setExamsTimetableState(distributedData);
     localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-  
-    // Store user-specific schedules (optional, for UI or notifications)
-    localStorage.setItem('studentSchedules', JSON.stringify(studentSchedules));
-    localStorage.setItem('lecturerSchedules', JSON.stringify(lecturerSchedules));
-  
-    // Trigger notifications
-    if (user) {
-      Object.entries(studentSchedules).forEach(([userId, schedule]) => {
-        if (schedule.length) {
-          addNotification({
-            recipientId: parseInt(userId),
-            actorId: user.id,
-            type: 'exam_timetable',
-            postId: 0,
-            commentId: 0,
-            isRead: false,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      });
-      Object.entries(lecturerSchedules).forEach(([userId, schedule]) => {
-        if (schedule.length) {
-          addNotification({
-            recipientId: parseInt(userId),
-            actorId: user.id,
-            type: 'exam_timetable',
-            postId: 0,
-            commentId: 0,
-            isRead: false,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      });
-    }
-  
-    toast({
-      title: "Exams Timetable Distributed",
-      description: "The exams timetable is now live for all users.",
-    });
-  }, [examsTimetable, allUsers, user, addNotification, toast]);
+    toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
+
+  }, [examsTimetable, toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
@@ -851,5 +770,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
