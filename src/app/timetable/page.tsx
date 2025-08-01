@@ -66,6 +66,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -75,8 +76,38 @@ const statusConfig = {
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+function ExamDetails({ exams }: { exams: ExamEntry[] }) {
+    if (exams.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <h1 className="text-xl font-bold mb-2">No Exams</h1>
+            <p className="text-muted-foreground">There are no exams scheduled for the selected day.</p>
+        </div>
+      );
+    }
+  
+    return (
+      <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
+        {exams.map((exam) => (
+          <div key={exam.id} className="flex items-start gap-4 p-3 border rounded-lg">
+            <div className="flex-shrink-0 w-24">
+              <Badge variant="outline">{exam.period}</Badge>
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="font-semibold">{exam.courseCode} - {exam.courseName}</p>
+              <p className="text-sm text-muted-foreground">Room: {exam.room}</p>
+              <p className="text-sm text-muted-foreground">Lecturer: {exam.lecturer}</p>
+              {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
 function StudentExamsView() {
     const { user, examsTimetable } = useUser();
+    const isMobile = useIsMobile();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -108,7 +139,6 @@ function StudentExamsView() {
 
         const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
 
-
         return { 
             studentExams: filteredStudentExams, 
             examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
@@ -117,6 +147,12 @@ function StudentExamsView() {
             numberOfMonths: months || 1,
         };
     }, [user, examsTimetable]);
+
+    useEffect(() => {
+        if (!isMobile && examDays.length > 0 && !selectedDate) {
+            setSelectedDate(examDays[0]);
+        }
+    }, [isMobile, examDays, selectedDate]);
 
     const displayedExams = useMemo(() => {
         if (!selectedDate) return [];
@@ -133,7 +169,9 @@ function StudentExamsView() {
       const hasExam = examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
       if(hasExam) {
         setSelectedDate(day);
-        setIsModalOpen(true);
+        if (isMobile) {
+            setIsModalOpen(true);
+        }
       }
     };
 
@@ -159,64 +197,90 @@ function StudentExamsView() {
         );
     }
   
+    if (isMobile) {
+        return (
+            <Card>
+                <CardContent className="p-2 md:p-4">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onDayClick={handleDayClick}
+                        className="p-0"
+                        classNames={{
+                            day_today: "bg-accent text-accent-foreground border-green-500",
+                            day_disabled: "text-muted-foreground/30",
+                        }}
+                        numberOfMonths={numberOfMonths}
+                        fromMonth={firstExamDate}
+                        toMonth={lastExamDate}
+                        disabled={(date) => !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))}
+                        modifiers={{ examDay: examDays }}
+                        modifiersClassNames={{
+                            examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
+                            day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
+                        }}
+                    />
+                </CardContent>
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
+                            <DialogDescription>
+                                Here are your exams for this day.
+                            </DialogDescription>
+                        </DialogHeader>
+                       <ExamDetails exams={displayedExams} />
+                    </DialogContent>
+                </Dialog>
+            </Card>
+        );
+    }
+
     return (
-        <Card>
-            <CardContent className="p-2 md:p-4 flex justify-center">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onDayClick={handleDayClick}
-                    className="p-0"
-                    classNames={{
-                        day_today: "bg-accent text-accent-foreground border-green-500",
-                        day_disabled: "text-muted-foreground/30",
-                    }}
-                    numberOfMonths={numberOfMonths}
-                    fromMonth={firstExamDate}
-                    toMonth={lastExamDate}
-                    disabled={(date) => {
-                        return !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
-                    }}
-                    modifiers={{
-                        examDay: examDays
-                    }}
-                    modifiersClassNames={{
-                        examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
-                        day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
-                    }}
-                />
-            </CardContent>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
-                        <DialogDescription>
-                            Here are your exams for this day.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {displayedExams.length > 0 ? (
-                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
-                        {displayedExams.map((exam) => (
-                            <div key={exam.id} className="flex items-start gap-4 p-3 border rounded-lg">
-                                <div className="flex-shrink-0 w-24">
-                                    <Badge variant="outline">{exam.period}</Badge>
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <p className="font-semibold">{exam.courseCode} - {exam.courseName}</p>
-                                    <p className="text-sm text-muted-foreground">Room: {exam.room}</p>
-                                    <p className="text-sm text-muted-foreground">Lecturer: {exam.lecturer}</p>
-                                    {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
-                                </div>
-                            </div>
-                        ))}
-                        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+                <CardContent className="p-2">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onDayClick={handleDayClick}
+                        className="p-0"
+                        classNames={{
+                            day_today: "bg-accent text-accent-foreground border-green-500",
+                            day_disabled: "text-muted-foreground/30",
+                        }}
+                        numberOfMonths={numberOfMonths}
+                        fromMonth={firstExamDate}
+                        toMonth={lastExamDate}
+                        disabled={(date) => !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))}
+                        modifiers={{ examDay: examDays }}
+                        modifiersClassNames={{
+                            examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
+                            day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
+                        }}
+                    />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</CardTitle>
+                    <CardDescription>
+                        Here are your exams for the selected day.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {selectedDate ? (
+                        <ExamDetails exams={displayedExams} />
                     ) : (
-                        <p className="text-muted-foreground text-center py-8">No exams scheduled for this date.</p>
+                        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                            <h1 className="text-xl font-bold mb-2">Select a Day</h1>
+                            <p className="text-muted-foreground">Click on a highlighted day in the calendar to see your exam schedule.</p>
+                        </div>
                     )}
-                </DialogContent>
-            </Dialog>
-        </Card>
-    );
+                </CardContent>
+            </Card>
+        </div>
+    )
 }
 
 
