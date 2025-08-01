@@ -210,9 +210,6 @@ function StudentExamsView() {
                         selected={selectedDate}
                         onDayClick={handleDayClick}
                         className="w-full"
-                        classNames={{
-                            day_today: "bg-accent text-accent-foreground border-green-500",
-                        }}
                         numberOfMonths={numberOfMonths}
                         fromMonth={firstExamDate}
                         toMonth={lastExamDate}
@@ -247,9 +244,6 @@ function StudentExamsView() {
                         selected={selectedDate}
                         onDayClick={handleDayClick}
                         className="w-full"
-                        classNames={{
-                            day_today: "bg-accent text-accent-foreground border-green-500",
-                        }}
                         numberOfMonths={numberOfMonths}
                         fromMonth={firstExamDate}
                         toMonth={lastExamDate}
@@ -3319,4 +3313,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
 
