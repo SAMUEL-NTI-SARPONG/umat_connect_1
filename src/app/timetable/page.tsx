@@ -94,9 +94,9 @@ function StudentExamsView() {
             const deptMatch = user.department && examDepts.includes(user.department);
             
             // Accommodate exams for "All" classes or when class is not specified
-            const classMatch = !exam.class || exam.class === 'All' || exam.class === user.class;
+            const classMatch = !exam.class || exam.class.toLowerCase() === 'all' || (exam.class && user.department && exam.class.toLowerCase().includes(initialDepartmentMap.get(user.department) || 'xxxx'));
 
-            return levelMatch && deptMatch && classMatch;
+            return levelMatch && deptMatch;
         });
 
         const uniqueExamDays = [...new Set(filteredStudentExams.map(exam => exam.dateStr))].filter(Boolean);
@@ -467,9 +467,8 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="class">Class Timetable</TabsTrigger>
-          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
           <TabsTrigger value="resit">Special Resit</TabsTrigger>
         </TabsList>
         <TabsContent value="class" className="mt-6">
@@ -569,9 +568,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </Tabs>
             </>
             )}
-        </TabsContent>
-        <TabsContent value="exams" className="mt-6">
-             <StudentExamsView />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StudentResitView />
