@@ -164,13 +164,12 @@ function StudentExamsView() {
         <Card>
             <CardContent className="p-2 md:p-4 flex justify-center">
                 <Calendar
-                    mode="multiple"
-                    min={0}
+                    mode="single"
                     selected={selectedDate}
                     onDayClick={handleDayClick}
                     className="p-0"
                     classNames={{
-                        day_today: "bg-accent text-accent-foreground",
+                        day_today: "bg-accent text-accent-foreground border-green-500",
                         day_disabled: "text-muted-foreground/30",
                     }}
                     numberOfMonths={numberOfMonths}
@@ -3314,6 +3313,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
