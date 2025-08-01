@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -542,11 +543,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
       return;
     }
+    
+    const distributedData = { ...currentState, isDistributed: true };
+    setExamsTimetableState(distributedData);
+    localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
 
     // This is the intelligent distribution part
     const allExams = [...(currentState.exams || []), ...(currentState.practicals || [])];
 
-    // Check if distribution adds value
     const studentsWithSchedules = allUsers.filter(u => {
       if (u.role !== 'student') return false;
       const studentSchedule = allExams.filter(exam => {
@@ -557,20 +561,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return studentSchedule.length > 0;
     });
 
-    // You could add notifications here if needed, for example:
-    // studentsWithSchedules.forEach(student => {
-    //   addNotification({
-    //     recipientId: student.id,
-    //     actorId: user!.id,
-    //     type: 'exam_timetable',
-    //     postId: 0,
-    //     commentId: 0,
-    //   });
-    // });
+    studentsWithSchedules.forEach(student => {
+      if (user) {
+        addNotification({
+          recipientId: student.id,
+          actorId: user.id,
+          type: 'exam_timetable',
+          postId: 0,
+          commentId: 0,
+        });
+      }
+    });
     
-    const distributedData = { ...currentState, isDistributed: true };
-    setExamsTimetableState(distributedData);
-    localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
     toast({ 
       title: "Exams Timetable Distributed", 
       description: `The exams timetable is now live for ${studentsWithSchedules.length} students and relevant staff.`
