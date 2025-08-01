@@ -84,15 +84,16 @@ function StudentExamsView() {
             return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date() };
         }
 
-        const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+        const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
         
         const filteredStudentExams = allExams.filter(exam => {
             const examLevel = exam.level || 0;
             const examDepts = exam.departments || [];
             
             const levelMatch = user.level === examLevel;
-            const deptMatch = examDepts.includes(user.department);
+            const deptMatch = user.department && examDepts.includes(user.department);
             
+            // Accommodate exams for "All" classes or when class is not specified
             const classMatch = !exam.class || exam.class === 'All' || exam.class === user.class;
 
             return levelMatch && deptMatch && classMatch;
@@ -632,7 +633,7 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
     const staffExams = useMemo(() => {
         if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
     
-        const allExams = [...examsTimetable.exams, ...examsTimetable.practicals];
+        const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
         const staffName = user.name.toLowerCase();
         
         return allExams.filter(exam => 
@@ -2581,7 +2582,7 @@ function AdminTimetableView() {
 
   const currentParsedData = useMemo(() => {
     if (activeTab === 'class') return masterSchedule;
-    if (activeTab === 'exams') return examsTimetable?.exams;
+    if (activeTab === 'exams') return examsTimetable;
     if (activeTab === 'resit') return specialResitTimetable;
     return null;
   }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
@@ -2657,56 +2658,49 @@ function AdminTimetableView() {
       <div className="flex flex-col sm:flex-row gap-4 items-start">
         <div className="flex gap-2 flex-wrap flex-shrink-0">
           <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
-                    {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                    <span className="sr-only">Upload New</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
+                  {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  <span className="sr-only">Upload New</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload New Timetable</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                  <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!currentParsedData}>
+                  <FilterX className="h-4 w-4" />
+                  <span className="sr-only">Filter for review</span>
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Upload New Timetable</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!currentParsedData}>
-                    <FilterX className="h-4 w-4" />
-                    <span className="sr-only">Filter for review</span>
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Filter for review</p>
-                </TooltipContent>
-              </Tooltip>
-              <AlertDialog>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={!currentParsedData}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                        </Button>
-                      </AlertDialogTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                    <p>Delete Timetable</p>
-                    </TooltipContent>
-                </Tooltip>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the
-                        entire timetable data from this view.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              </TooltipTrigger>
+              <TooltipContent>
+                  <p>Filter for review</p>
+              </TooltipContent>
+            </Tooltip>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" disabled={!currentParsedData}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Delete</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the
+                      entire timetable data from this view.
+                  </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TooltipProvider>
         </div>
         {currentParsedData && (
