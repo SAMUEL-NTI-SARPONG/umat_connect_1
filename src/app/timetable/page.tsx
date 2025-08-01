@@ -467,8 +467,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="class">Class Timetable</TabsTrigger>
+          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
           <TabsTrigger value="resit">Special Resit</TabsTrigger>
         </TabsList>
         <TabsContent value="class" className="mt-6">
@@ -568,6 +569,9 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </Tabs>
             </>
             )}
+        </TabsContent>
+        <TabsContent value="exams" className="mt-6">
+            <StudentExamsView />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StudentResitView />
