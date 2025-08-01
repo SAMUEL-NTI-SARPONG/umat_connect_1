@@ -80,9 +80,9 @@ function StudentExamsView() {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const { studentExams, examDays, firstExamDate, lastExamDate } = useMemo(() => {
+    const { studentExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
         if (!user || !examsTimetable || !examsTimetable.isDistributed) {
-            return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date() };
+            return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
         }
 
         const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
@@ -93,17 +93,28 @@ function StudentExamsView() {
             return levelMatch && deptMatch;
         });
 
+        if (filteredStudentExams.length === 0) {
+          return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
+        }
+
         const uniqueExamDays = [...new Set(filteredStudentExams.map(exam => exam.dateStr))].filter(Boolean);
         const sortedExamDays = uniqueExamDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
         
         const firstDay = sortedExamDays[0];
         const lastDay = sortedExamDays[sortedExamDays.length - 1];
 
+        const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
+        const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
+
+        const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
+
+
         return { 
             studentExams: filteredStudentExams, 
             examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
-            firstExamDate: firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date(),
-            lastExamDate: lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date(),
+            firstExamDate: firstDate,
+            lastExamDate: lastDate,
+            numberOfMonths: months || 1,
         };
     }, [user, examsTimetable]);
 
@@ -152,21 +163,18 @@ function StudentExamsView() {
         <Card>
             <CardContent className="p-2 md:p-4 flex justify-center">
                 <Calendar
-                    mode="single"
+                    mode="multiple"
+                    min={0}
                     onDayClick={handleDayClick}
                     className="p-0"
                     classNames={{
-                        day: "h-10 w-10 text-base",
-                        day_today: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+                        day_today: "bg-accent text-accent-foreground",
                         day_disabled: "text-muted-foreground/30",
                     }}
-                    month={firstExamDate}
+                    numberOfMonths={numberOfMonths}
                     fromMonth={firstExamDate}
                     toMonth={lastExamDate}
                     disabled={(date) => {
-                        const today = new Date();
-                        today.setHours(0,0,0,0);
-                        // Disable if date has no exams
                         return !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'));
                     }}
                     modifiers={{
@@ -2446,9 +2454,9 @@ function AdminTimetableView() {
       isClassTimetableDistributed, distributeClassTimetable,
       distributeExamsTimetable
   } = useUser();
-  const [activeTab, setActiveTab] = useState('class');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const [activeTab, setActiveTab] = useState('class');
+
   // State for Class Timetable
   const [isClassLoading, setIsClassLoading] = useState(false);
   const [classError, setClassError] = useState<string | null>(null);
@@ -2479,47 +2487,48 @@ function AdminTimetableView() {
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
-  
-  const handleAddExam = (newExam: any) => {
-    setExamsTimetable(prev => {
-        const exams = [...(prev?.exams || []), newExam];
-        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), exams };
-    });
-  };
-  
-  const handleAddPractical = (newPractical: any) => {
-    setExamsTimetable(prev => {
-        const practicals = [...(prev?.practicals || []), newPractical];
-        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), practicals };
-    });
-  };
 
-  // Map state to the active tab
-  const activeState = useMemo(() => {
+  const activeLoadingState = useMemo(() => {
     switch (activeTab) {
-        case 'class':
-            return { isLoading: isClassLoading, setIsLoading: setIsClassLoading, error: classError, setError: setClassError, searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid };
-        case 'exams':
-            return { isLoading: isExamsLoading, setIsLoading: setIsExamsLoading, error: examsError, setError: setExamsError, searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid };
-        case 'resit':
-            return { isLoading: isResitLoading, setIsLoading: setIsResitLoading, error: resitError, setError: setResitError, searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid };
-        default:
-            return { isLoading: false, setIsLoading: () => {}, error: null, setError: () => {}, searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {} };
+        case 'class': return { isLoading: isClassLoading, setIsLoading: setIsClassLoading };
+        case 'exams': return { isLoading: isExamsLoading, setIsLoading: setIsExamsLoading };
+        case 'resit': return { isLoading: isResitLoading, setIsLoading: setIsResitLoading };
+        default: return { isLoading: false, setIsLoading: () => {} };
     }
-  }, [
-    activeTab, 
-    isClassLoading, classError, classSearchTerm, classShowInvalid,
-    isExamsLoading, examsError, examsSearchTerm, examsShowInvalid,
-    isResitLoading, resitError, resitSearchTerm, resitShowInvalid
-  ]);
+  }, [activeTab, isClassLoading, isExamsLoading, isResitLoading]);
 
+  const activeErrorState = useMemo(() => {
+    switch (activeTab) {
+        case 'class': return { error: classError, setError: setClassError };
+        case 'exams': return { error: examsError, setError: setExamsError };
+        case 'resit': return { error: resitError, setError: setResitError };
+        default: return { error: null, setError: () => {} };
+    }
+  }, [activeTab, classError, examsError, resitError]);
+  
+  const activeSearchState = useMemo(() => {
+    switch (activeTab) {
+        case 'class': return { searchTerm: classSearchTerm, setSearchTerm: setClassSearchTerm, showInvalid: classShowInvalid, setShowInvalid: setClassShowInvalid };
+        case 'exams': return { searchTerm: examsSearchTerm, setSearchTerm: setExamsSearchTerm, showInvalid: examsShowInvalid, setShowInvalid: setExamsShowInvalid };
+        case 'resit': return { searchTerm: resitSearchTerm, setSearchTerm: setResitSearchTerm, showInvalid: resitShowInvalid, setShowInvalid: setResitShowInvalid };
+        default: return { searchTerm: '', setSearchTerm: () => {}, showInvalid: false, setShowInvalid: () => {} };
+    }
+  }, [activeTab, classSearchTerm, classShowInvalid, examsSearchTerm, examsShowInvalid, resitSearchTerm, resitShowInvalid]);
 
+  const currentParsedData = useMemo(() => {
+    if (activeTab === 'class') return masterSchedule;
+    if (activeTab === 'exams') return examsTimetable;
+    if (activeTab === 'resit') return specialResitTimetable;
+    return null;
+  }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
+
+  
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    activeState.setIsLoading(true);
-    activeState.setError(null);
+    activeLoadingState.setIsLoading(true);
+    activeErrorState.setError(null);
 
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -2551,9 +2560,9 @@ function AdminTimetableView() {
       }
 
     } catch (err) {
-      activeState.setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
+      activeErrorState.setError(err instanceof Error ? err.message : "An unexpected error occurred during file parsing.");
     } finally {
-      activeState.setIsLoading(false);
+      activeLoadingState.setIsLoading(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -2583,13 +2592,20 @@ function AdminTimetableView() {
         setResitShowInvalid(false);
     }
   };
-
-  const currentParsedData = useMemo(() => {
-    if (activeTab === 'class') return masterSchedule;
-    if (activeTab === 'exams') return examsTimetable;
-    if (activeTab === 'resit') return specialResitTimetable;
-    return null;
-  }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
+  
+  const handleAddExam = (newExam: any) => {
+    setExamsTimetable(prev => {
+        const exams = [...(prev?.exams || []), newExam];
+        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), exams };
+    });
+  };
+  
+  const handleAddPractical = (newPractical: any) => {
+    setExamsTimetable(prev => {
+        const practicals = [...(prev?.practicals || []), newPractical];
+        return { ...(prev || { exams: [], practicals: [], isDistributed: false }), practicals };
+    });
+  };
 
   const groupedPracticals = useMemo(() => {
     if (!examsTimetable?.practicals) return {};
@@ -2664,8 +2680,8 @@ function AdminTimetableView() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeState.isLoading}>
-                  {activeState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                <Button variant="outline" size="icon" onClick={handleUploadClick} disabled={activeLoadingState.isLoading}>
+                  {activeLoadingState.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   <span className="sr-only">Upload New</span>
                 </Button>
               </TooltipTrigger>
@@ -2675,7 +2691,7 @@ function AdminTimetableView() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant={activeState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeState.setShowInvalid(!activeState.showInvalid)} disabled={!currentParsedData}>
+                  <Button variant={activeSearchState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeSearchState.setShowInvalid(!activeSearchState.showInvalid)} disabled={!currentParsedData}>
                   <FilterX className="h-4 w-4" />
                   <span className="sr-only">Filter for review</span>
                   </Button>
@@ -2713,18 +2729,18 @@ function AdminTimetableView() {
             <Input 
               placeholder="Search course, lecturer, room, department..."
               className="pl-10"
-              value={activeState.searchTerm}
-              onChange={(e) => activeState.setSearchTerm(e.target.value)}
+              value={activeSearchState.searchTerm}
+              onChange={(e) => activeSearchState.setSearchTerm(e.target.value)}
             />
           </div>
         )}
       </div>
 
-       {activeState.error && (
+       {activeErrorState.error && (
          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{activeState.error}</AlertDescription>
+            <AlertDescription>{activeErrorState.error}</AlertDescription>
          </Alert>
       )}
 
@@ -3295,4 +3311,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
