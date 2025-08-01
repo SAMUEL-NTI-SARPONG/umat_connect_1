@@ -208,12 +208,10 @@ function StudentExamsView() {
                         className="p-0"
                         classNames={{
                             day_today: "bg-accent text-accent-foreground border-green-500",
-                            day_disabled: "text-muted-foreground/30",
                         }}
                         numberOfMonths={numberOfMonths}
                         fromMonth={firstExamDate}
                         toMonth={lastExamDate}
-                        disabled={(date) => !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))}
                         modifiers={{ examDay: examDays }}
                         modifiersClassNames={{
                             examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
@@ -237,9 +235,9 @@ function StudentExamsView() {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <CardContent className="p-2">
+        <Card>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+                <div className="flex justify-center">
                     <Calendar
                         mode="single"
                         selected={selectedDate}
@@ -247,28 +245,21 @@ function StudentExamsView() {
                         className="p-0"
                         classNames={{
                             day_today: "bg-accent text-accent-foreground border-green-500",
-                            day_disabled: "text-muted-foreground/30",
                         }}
                         numberOfMonths={numberOfMonths}
                         fromMonth={firstExamDate}
                         toMonth={lastExamDate}
-                        disabled={(date) => !examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))}
                         modifiers={{ examDay: examDays }}
                         modifiersClassNames={{
                             examDay: 'bg-primary/80 text-primary-foreground font-bold hover:bg-primary/90 focus:bg-primary/90',
                             day_selected: 'bg-primary text-primary-foreground ring-2 ring-primary-hover ring-offset-2',
                         }}
                     />
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</CardTitle>
-                    <CardDescription>
-                        Here are your exams for the selected day.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="border-l pl-6 -ml-3">
+                    <h2 className="text-lg font-semibold mb-2">
+                        Schedule for {selectedDate ? format(selectedDate, 'PPP') : '...'}
+                    </h2>
                     {selectedDate ? (
                         <ExamDetails exams={displayedExams} />
                     ) : (
@@ -277,9 +268,9 @@ function StudentExamsView() {
                             <p className="text-muted-foreground">Click on a highlighted day in the calendar to see your exam schedule.</p>
                         </div>
                     )}
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+            </CardContent>
+        </Card>
     )
 }
 
