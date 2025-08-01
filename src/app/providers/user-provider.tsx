@@ -185,7 +185,7 @@ interface UserContextType {
   notifications: Notification[];
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'isRead' | 'timestamp'>) => void;
   clearAllNotifications: () => Promise<void>;
   specialResitTimetable: SpecialResitTimetable | null;
   setSpecialResitTimetable: (data: SpecialResitTimetable | null) => void;
@@ -346,10 +346,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchNotifications]);
 
-  const addNotification = useCallback((notificationData: Omit<Notification, 'id'>) => {
+  const addNotification = useCallback((notificationData: Omit<Notification, 'id' | 'isRead' | 'timestamp'>) => {
     const newNotification: Notification = {
       ...notificationData,
-      id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`
+      id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`,
+      isRead: false,
+      timestamp: new Date().toISOString(),
     };
     setNotifications(prev => [newNotification, ...prev]);
   }, []);
@@ -387,8 +389,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             type: 'comment_on_post',
             postId: postId,
             commentId: newComment.id,
-            isRead: false,
-            timestamp: newComment.timestamp,
         });
     }
   }, [user, addNotification]);
@@ -405,7 +405,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           attachedFile,
       };
 
-      const notificationsToAdd: Omit<Notification, 'id'>[] = [];
+      const notificationsToAdd: Omit<Notification, 'id'| 'isRead' | 'timestamp'>[] = [];
       
       setPosts(prevPosts => {
           const updatedPosts = JSON.parse(JSON.stringify(prevPosts));
@@ -434,8 +434,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                           type: 'reply_to_comment',
                           postId: postId,
                           commentId: newReply.id,
-                          isRead: false,
-                          timestamp: newReply.timestamp,
                       });
                   }
                   
@@ -447,8 +445,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                           type: 'reply_to_comment',
                           postId: postId,
                           commentId: newReply.id,
-                          isRead: false,
-                          timestamp: newReply.timestamp,
                       });
                   }
               }
@@ -541,13 +537,46 @@ export function UserProvider({ children }: { children: ReactNode }) {
       toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
       return;
     }
+
+    if (!currentState.exams?.length && !currentState.practicals?.length) {
+      toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
+      return;
+    }
+
+    // This is the intelligent distribution part
+    const allExams = [...(currentState.exams || []), ...(currentState.practicals || [])];
+
+    // Check if distribution adds value
+    const studentsWithSchedules = allUsers.filter(u => {
+      if (u.role !== 'student') return false;
+      const studentSchedule = allExams.filter(exam => {
+        const levelMatch = u.level === exam.level;
+        const deptMatch = u.department && exam.departments?.includes(u.department);
+        return levelMatch && deptMatch;
+      });
+      return studentSchedule.length > 0;
+    });
+
+    // You could add notifications here if needed, for example:
+    // studentsWithSchedules.forEach(student => {
+    //   addNotification({
+    //     recipientId: student.id,
+    //     actorId: user!.id,
+    //     type: 'exam_timetable',
+    //     postId: 0,
+    //     commentId: 0,
+    //   });
+    // });
     
     const distributedData = { ...currentState, isDistributed: true };
     setExamsTimetableState(distributedData);
     localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-    toast({ title: "Exams Timetable Distributed", description: "The exams timetable is now live for all users." });
+    toast({ 
+      title: "Exams Timetable Distributed", 
+      description: `The exams timetable is now live for ${studentsWithSchedules.length} students and relevant staff.`
+    });
 
-  }, [examsTimetable, toast]);
+  }, [examsTimetable, allUsers, user, addNotification, toast]);
 
   const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
     if (!user) return;
