@@ -334,6 +334,9 @@ function cleanName(name: string | null) {
 }
 
 function addDistributionFields(entry: any) {
+    if (!entry.courseCode) {
+        return { ...entry, level: 0, departments: [] };
+    }
     const courseNumMatch = entry.courseCode.match(/\d+/);
     const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
     
@@ -468,7 +471,7 @@ export async function handlePracticalsUpload(fileData: string) {
   
     // Helper to normalize row data for practicals
     function normalizePracticalRow(row: any) {
-      return {
+      const practicalEntry = {
         id: idCounter++,
         date: row['DATE'],
         dateStr: typeof row['DATE'] === 'number' ? excelDateToJSDate(row['DATE']) : row['DATE'],
@@ -482,6 +485,7 @@ export async function handlePracticalsUpload(fileData: string) {
         period: mapPeriod(row['MORN/NOON']),
         is_practical: true,
       };
+      return addDistributionFields(practicalEntry);
     }
   
     // Find the starting row of actual data
