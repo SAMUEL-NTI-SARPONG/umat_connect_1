@@ -113,6 +113,19 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
     );
   }
 
+const deduplicateExams = (exams: ExamEntry[]): ExamEntry[] => {
+  const seen = new Set<string>();
+  return exams.filter((exam) => {
+    // A more robust key to identify a unique exam event
+    const key = `${exam.dateStr}-${exam.period}-${exam.courseCode}-${exam.class}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 function StudentExamsView() {
     const { user, examsTimetable } = useUser();
     const isMobile = useIsMobile();
@@ -133,11 +146,13 @@ function StudentExamsView() {
             return levelMatch && deptMatch;
         });
 
-        if (filteredStudentExams.length === 0) {
+        const dedupedExams = deduplicateExams(filteredStudentExams);
+
+        if (dedupedExams.length === 0) {
           return { studentExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
         }
 
-        const uniqueExamDays = [...new Set(filteredStudentExams.map(exam => exam.dateStr))].filter(Boolean);
+        const uniqueExamDays = [...new Set(dedupedExams.map(exam => exam.dateStr))].filter(Boolean);
         const sortedExamDays = uniqueExamDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
         
         const firstDay = sortedExamDays[0];
@@ -149,7 +164,7 @@ function StudentExamsView() {
         const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
 
         return { 
-            studentExams: filteredStudentExams, 
+            studentExams: dedupedExams, 
             examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
             firstExamDate: firstDate,
             lastExamDate: lastDate,
