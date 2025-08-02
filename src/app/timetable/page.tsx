@@ -91,7 +91,7 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
       <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
         {exams.map((exam) => (
           <div key={exam.id} className={cn(
-            "flex items-start gap-4 p-3 rounded-lg border transition-colors",
+            "flex items-start gap-4 p-3 rounded-lg border",
             hasSelection ? "bg-muted/50" : ""
           )}>
             <div className="flex-shrink-0 w-24">
@@ -118,6 +118,7 @@ function StudentExamsView() {
     const isMobile = useIsMobile();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [displayedExams, setDisplayedExams] = useState<ExamEntry[]>([]);
 
     const { studentExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
         if (!user || !examsTimetable || !examsTimetable.isDistributed) {
@@ -155,8 +156,6 @@ function StudentExamsView() {
             numberOfMonths: months || 1,
         };
     }, [user, examsTimetable]);
-
-    const [displayedExams, setDisplayedExams] = useState<ExamEntry[]>([]);
     
     useEffect(() => {
         if (!isMobile && examDays.length > 0 && !selectedDate) {
@@ -3319,4 +3318,3 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
-
