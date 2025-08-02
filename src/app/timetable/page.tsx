@@ -171,15 +171,6 @@ function StudentExamsView() {
             numberOfMonths: months || 1,
         };
     }, [user, examsTimetable]);
-    
-    useEffect(() => {
-        if (!isMobile && examDays.length > 0 && !selectedDate) {
-            const initialDate = examDays[0];
-            setSelectedDate(initialDate);
-            const formattedDate = format(initialDate, 'dd-MM-yyyy');
-            setDisplayedExams(studentExams.filter(exam => exam.dateStr === formattedDate));
-        }
-    }, [isMobile, examDays, selectedDate, studentExams]);
 
     const handleDayClick = (day: Date) => {
       const hasExam = examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
@@ -3327,6 +3318,8 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
+    
 
     
 
