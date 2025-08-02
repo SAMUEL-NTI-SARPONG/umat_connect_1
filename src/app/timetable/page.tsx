@@ -236,190 +236,216 @@ function StudentExamsView() {
 
 
 function StudentResitView() {
-  const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
-  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
-  const [courseSearchTerm, setCourseSearchTerm] = useState('');
-  
-  // Local state for selections within the modal
-  const [localSelections, setLocalSelections] = useState<Set<number>>(new Set());
+    const { user, specialResitTimetable, studentResitSelections, updateStudentResitSelection } = useUser();
+    const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+    const [courseSearchTerm, setCourseSearchTerm] = useState('');
+    const [localSelections, setLocalSelections] = useState<Set<number>>(new Set());
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [displayedExams, setDisplayedExams] = useState<SpecialResitEntry[]>([]);
 
-  useEffect(() => {
-    if (user && studentResitSelections[user.id]) {
-      setLocalSelections(new Set(studentResitSelections[user.id]));
-    }
-  }, [studentResitSelections, user]);
-  
-  if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
-    return (
-      <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-        <CardContent className="text-center text-muted-foreground">
-          <p className="font-medium">Special Resit Timetable Not Yet Published</p>
-          <p className="text-sm">The timetable will appear here once the administrator distributes it. Please check back later.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  const allEntries = useMemo(() => {
-    if (!specialResitTimetable) return [];
-    // The data is now nested, so we need to flatten it.
-    let entries = specialResitTimetable.sheets.flatMap(sheet => 
-        sheet.entries.flatMap(lecturerSchedule => 
-            lecturerSchedule.courses
-        )
-    );
-
-    if (courseSearchTerm) {
-        const lowercasedFilter = courseSearchTerm.toLowerCase();
-        entries = entries.filter(entry => 
-            (entry.courseCode && entry.courseCode.toLowerCase().includes(lowercasedFilter)) ||
-            (entry.courseName && entry.courseName.toLowerCase().includes(lowercasedFilter))
+    useEffect(() => {
+        if (user && studentResitSelections[user.id]) {
+            setLocalSelections(new Set(studentResitSelections[user.id]));
+        }
+    }, [studentResitSelections, user]);
+    
+    if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Special Resit Timetable Not Yet Published</p>
+                    <p className="text-sm">The timetable will appear here once the administrator distributes it. Please check back later.</p>
+                </CardContent>
+            </Card>
         );
     }
-
-    return entries;
-  }, [specialResitTimetable, courseSearchTerm]);
-
-  const userSelections = (user && studentResitSelections[user.id]) || [];
-  const selectedEntries = allEntries.filter(entry => userSelections.includes(entry.id));
-
-  const handleLocalSelectionChange = (entryId: number, checked: boolean) => {
-    setLocalSelections(prev => {
-        const newSet = new Set(prev);
-        if (checked) {
-            newSet.add(entryId);
-        } else {
-            newSet.delete(entryId);
-        }
-        return newSet;
-    });
-  };
-
-  const handleSaveChanges = () => {
-    if (!user) return;
-    const currentSelections = new Set(userSelections);
-    const newSelections = localSelections;
-
-    // Find what to add
-    newSelections.forEach(id => {
-        if (!currentSelections.has(id)) {
-            updateStudentResitSelection(id, true);
-        }
-    });
-
-    // Find what to remove
-    currentSelections.forEach(id => {
-        if (!newSelections.has(id)) {
-            updateStudentResitSelection(id, false);
-        }
-    });
-    
-    setIsSelectionModalOpen(false);
-  };
   
-  const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Examiner', 'Session'];
+    const allEntries = useMemo(() => {
+        if (!specialResitTimetable) return [];
+        let entries = specialResitTimetable.sheets.flatMap(sheet => 
+            sheet.entries.flatMap(lecturerSchedule => 
+                lecturerSchedule.courses
+            )
+        );
+        return entries;
+    }, [specialResitTimetable]);
 
-  return (
-    <div className="space-y-6">
-      {specialResitTimetable.notice && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Administrator's Notice</AlertTitle>
-          <AlertDescription className="whitespace-pre-wrap">
-            {specialResitTimetable.notice}
-          </AlertDescription>
-        </Alert>
-      )}
+    const { resitDays, selectedEntries, firstResitDate, lastResitDate, numberOfMonths } = useMemo(() => {
+        if (!user) return { resitDays: [], selectedEntries: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
+        
+        const userSelections = studentResitSelections[user.id] || [];
+        const filteredEntries = allEntries.filter(entry => userSelections.includes(entry.id));
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-                <CardTitle>Your Personalized Resit Schedule</CardTitle>
-                <CardDescription>
-                    {selectedEntries.length > 0
-                    ? `Here are the details for your ${selectedEntries.length} selected course(s).`
-                    : "Select your courses to see your personalized schedule."}
-                </CardDescription>
-            </div>
-            <Dialog open={isSelectionModalOpen} onOpenChange={setIsSelectionModalOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline">
-                        <ListChecks className="mr-2 h-4 w-4" />
-                        Select / Edit My Courses
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>Select Your Resit Courses</DialogTitle>
-                        <DialogDescription>Choose the courses you are registered to write from the list below.</DialogDescription>
-                    </DialogHeader>
-                    <div className="relative my-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Search by course code or name..."
-                            className="pl-10"
-                            value={courseSearchTerm}
-                            onChange={(e) => setCourseSearchTerm(e.target.value)}
-                        />
+        if (filteredEntries.length === 0) {
+            return { resitDays: [], selectedEntries: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
+        }
+
+        const uniqueResitDays = [...new Set(filteredEntries.map(entry => entry.date).filter(Boolean) as string[])];
+        const sortedResitDays = uniqueResitDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
+        
+        const firstDay = sortedResitDays[0];
+        const lastDay = sortedResitDays[sortedResitDays.length - 1];
+
+        const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
+        const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
+        const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
+
+        return {
+            resitDays: sortedResitDays.map(d => new Date(d.split('-').reverse().join('-'))),
+            selectedEntries: filteredEntries,
+            firstResitDate: firstDate,
+            lastResitDate: lastDate,
+            numberOfMonths: months || 1,
+        };
+    }, [user, allEntries, studentResitSelections]);
+    
+    const handleDayClick = (day: Date) => {
+        const hasResit = resitDays.some(resitDate => format(resitDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+        if(hasResit) {
+            setSelectedDate(day);
+            const formattedDate = format(day, 'dd-MM-yyyy');
+            setDisplayedExams(selectedEntries.filter(entry => entry.date === formattedDate));
+            setIsModalOpen(true);
+        }
+    };
+    
+    const filteredAllEntries = useMemo(() => {
+        if (courseSearchTerm) {
+            const lowercasedFilter = courseSearchTerm.toLowerCase();
+            return allEntries.filter(entry => 
+                (entry.courseCode && entry.courseCode.toLowerCase().includes(lowercasedFilter)) ||
+                (entry.courseName && entry.courseName.toLowerCase().includes(lowercasedFilter))
+            );
+        }
+        return allEntries;
+    }, [allEntries, courseSearchTerm]);
+
+    const handleLocalSelectionChange = (entryId: number, checked: boolean) => {
+        setLocalSelections(prev => {
+            const newSet = new Set(prev);
+            if (checked) {
+                newSet.add(entryId);
+            } else {
+                newSet.delete(entryId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSaveChanges = () => {
+        if (!user) return;
+        const newSelectionsArray = Array.from(localSelections);
+        // This is a direct update, so it should trigger the parent context correctly.
+        updateStudentResitSelection(newSelectionsArray);
+        setIsSelectionModalOpen(false);
+    };
+
+    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Examiner', 'Session'];
+
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Your Personalized Resit Schedule</CardTitle>
+                        <CardDescription>
+                            {selectedEntries.length > 0
+                                ? `You have ${selectedEntries.length} selected course(s). Dates are highlighted below.`
+                                : "Select your courses to see your personalized schedule."}
+                        </CardDescription>
                     </div>
-                    <ScrollArea className="h-64 border rounded-md p-4">
-                        <div className="space-y-2">
-                        {allEntries.map(entry => (
-                            <div key={entry.id} className="flex items-center space-x-2">
-                            <Checkbox
-                                id={`resit-course-${entry.id}`}
-                                checked={localSelections.has(entry.id)}
-                                onCheckedChange={(checked) => handleLocalSelectionChange(entry.id, !!checked)}
-                            />
-                            <Label htmlFor={`resit-course-${entry.id}`} className="font-normal cursor-pointer">
-                                {entry.courseCode} - {entry.courseName}
-                            </Label>
+                     <Dialog open={isSelectionModalOpen} onOpenChange={setIsSelectionModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <ListChecks className="mr-2 h-4 w-4" />
+                                Select / Edit My Courses
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>Select Your Resit Courses</DialogTitle>
+                                <DialogDescription>Choose the courses you are registered to write from the list below.</DialogDescription>
+                            </DialogHeader>
+                            <div className="relative my-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by course code or name..."
+                                    className="pl-10"
+                                    value={courseSearchTerm}
+                                    onChange={(e) => setCourseSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <ScrollArea className="h-64 border rounded-md p-4">
+                                <div className="space-y-2">
+                                {filteredAllEntries.map(entry => (
+                                    <div key={entry.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`resit-course-${entry.id}`}
+                                        checked={localSelections.has(entry.id)}
+                                        onCheckedChange={(checked) => handleLocalSelectionChange(entry.id, !!checked)}
+                                    />
+                                    <Label htmlFor={`resit-course-${entry.id}`} className="font-normal cursor-pointer">
+                                        {entry.courseCode} - {entry.courseName}
+                                    </Label>
+                                    </div>
+                                ))}
+                                </div>
+                            </ScrollArea>
+                            <DialogFooter>
+                                <Button variant="ghost" onClick={() => setIsSelectionModalOpen(false)}>Cancel</Button>
+                                <Button onClick={handleSaveChanges}>Save Selections</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </CardHeader>
+                <CardContent>
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onDayClick={handleDayClick}
+                        className="w-full"
+                        numberOfMonths={numberOfMonths}
+                        fromMonth={firstResitDate}
+                        toMonth={lastResitDate}
+                        modifiers={{ examDay: resitDays }}
+                        modifiersClassNames={{
+                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                        }}
+                    />
+                </CardContent>
+            </Card>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Resit Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+                        <div className="space-y-4">
+                        {displayedExams.map((exam) => (
+                            <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
+                            <div className="flex-shrink-0 w-24">
+                                <Badge variant="outline">{exam.session}</Badge>
+                            </div>
+                            <div className="flex-1 space-y-1">
+                                <p className="font-medium text-sm">{exam.courseCode}</p>
+                                <p className="text-sm text-muted-foreground">{exam.courseName}</p>
+                                <Separator className="my-2" />
+                                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
+                                <p className="text-xs text-muted-foreground">Examiner: <span className="font-medium text-foreground">{exam.examiner}</span></p>
+                                <p className="text-xs text-muted-foreground">Dept: <span className="font-medium text-foreground">{exam.department}</span></p>
+                            </div>
                             </div>
                         ))}
                         </div>
                     </ScrollArea>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsSelectionModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveChanges}>Save Selections</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </CardHeader>
-        <CardContent>
-            {selectedEntries.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {selectedEntries.map((entry) => (
-                                <TableRow key={entry.id}>
-                                    <TableCell>{entry.date}</TableCell>
-                                    <TableCell>{entry.courseCode}</TableCell>
-                                    <TableCell>{entry.courseName}</TableCell>
-                                    <TableCell>{entry.department}</TableCell>
-                                    <TableCell>{entry.room}</TableCell>
-                                    <TableCell>{entry.examiner}</TableCell>
-                                    <TableCell>{entry.session}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground py-12">
-                    <p>Your schedule will appear here once you select your courses.</p>
-                </div>
-            )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+        </div>
+    );
 }
-
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const { user, emptySlots, isClassTimetableDistributed } = useUser();
@@ -1119,8 +1145,12 @@ function StaffTimetableView({
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
-        endTimes.push(currentSlot.split(' - ')[1].trim());
+        if (prevSlot && prevSlot.includes(' - ') && currentSlot && currentSlot.includes(' - ')) {
+          if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        }
+        if (currentSlot && currentSlot.includes(' - ')) {
+            endTimes.push(currentSlot.split(' - ')[1].trim());
+        }
       }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -1138,8 +1168,12 @@ function StaffTimetableView({
         for (let i = startIndex; i < roomDaySlots.length; i++) {
             const currentSlot = roomDaySlots[i];
             const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-            if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
-            endTimes.push(currentSlot.split(' - ')[1].trim());
+            if (prevSlot && prevSlot.includes(' - ') && currentSlot && currentSlot.includes(' - ')) {
+                if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+            }
+            if (currentSlot && currentSlot.includes(' - ')) {
+                endTimes.push(currentSlot.split(' - ')[1].trim());
+            }
         }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -3273,8 +3307,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
-
-    
 
     
 
