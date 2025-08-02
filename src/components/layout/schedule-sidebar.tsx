@@ -1,30 +1,14 @@
 
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
+import { useUser, type TimetableEntry, isLecturerMatch } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
 import { BookUser } from 'lucide-react';
 import AdminStats from './admin-stats';
-
-// Helper function to check if a timetable entry's lecturer name matches a staff member's name.
-const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-  const staffNameLower = staffName.toLowerCase();
-  const entryNameLower = entryLecturerName.toLowerCase();
-
-  // Get significant parts of the staff member's name from their profile
-  const staffNameParts = staffNameLower
-    .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
-    .split(' ')
-    .filter(p => p.length > 1); // Ignore single initials/short parts
-
-  if (staffNameParts.length === 0) return false;
-
-  // Check if all significant parts of the staff's name are present in the entry's lecturer name
-  return staffNameParts.every(part => entryNameLower.includes(part));
-};
 
 function ScheduleItem({
   title,

@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2 } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatch } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -837,23 +838,6 @@ function StaffResitView() {
       </div>
     );
   }
-
-const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-  if (!entryLecturerName || !staffName) return false;
-
-  const entryNameLower = entryLecturerName.toLowerCase();
-  
-  // Get significant parts of the staff member's name from their profile
-  const staffNameParts = staffName.toLowerCase()
-    .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
-    .split(' ')
-    .filter(p => p.length > 1); // Ignore single initials/short parts
-
-  if (staffNameParts.length === 0) return false;
-
-  // Check if all significant parts of the staff's name are present in the entry's lecturer name
-  return staffNameParts.every(part => entryNameLower.includes(part));
-};
 
 function StaffTimetableView({
   schedule,

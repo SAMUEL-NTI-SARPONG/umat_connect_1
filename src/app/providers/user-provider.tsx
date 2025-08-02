@@ -141,12 +141,13 @@ export interface Faculty {
 }
 
 // Helper function to check if a timetable entry's lecturer name matches a staff member's name.
-const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-  const staffNameLower = staffName.toLowerCase();
+export const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
+  if (!entryLecturerName || !staffName) return false;
+  
   const entryNameLower = entryLecturerName.toLowerCase();
 
   // Get significant parts of the staff member's name from their profile
-  const staffNameParts = staffNameLower
+  const staffNameParts = staffName.toLowerCase()
     .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
     .split(' ')
     .filter(p => p.length > 1); // Ignore single initials/short parts
