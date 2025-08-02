@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -22,7 +21,7 @@ function Calendar({
       className={cn("p-0", className)}
       classNames={{
         months: "flex flex-col space-y-4",
-        month: "space-y-4 border rounded-lg shadow-sm p-3",
+        month: "space-y-4 border rounded-lg shadow-sm p-3 w-full max-w-md mx-auto",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
