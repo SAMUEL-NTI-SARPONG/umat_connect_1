@@ -128,7 +128,6 @@ const deduplicateExams = (exams: ExamEntry[]): ExamEntry[] => {
 
 function StudentExamsView() {
     const { user, examsTimetable } = useUser();
-    const isMobile = useIsMobile();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [displayedExams, setDisplayedExams] = useState<ExamEntry[]>([]);
@@ -178,9 +177,7 @@ function StudentExamsView() {
         setSelectedDate(day);
         const formattedDate = format(day, 'dd-MM-yyyy');
         setDisplayedExams(studentExams.filter(exam => exam.dateStr === formattedDate));
-        if (isMobile) {
-            setIsModalOpen(true);
-        }
+        setIsModalOpen(true);
       }
     };
 
@@ -206,75 +203,37 @@ function StudentExamsView() {
         );
     }
   
-    if (isMobile) {
-        return (
-            <Card>
-                <CardContent className="p-2 md:p-4">
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onDayClick={handleDayClick}
-                        className="w-full"
-                        numberOfMonths={numberOfMonths}
-                        fromMonth={firstExamDate}
-                        toMonth={lastExamDate}
-                        modifiers={{ examDay: examDays }}
-                        modifiersClassNames={{
-                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                        }}
-                    />
-                </CardContent>
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
-                            <DialogDescription>
-                                Here are your exams for this day.
-                            </DialogDescription>
-                        </DialogHeader>
-                       <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
-                    </DialogContent>
-                </Dialog>
-            </Card>
-        );
-    }
-
     return (
         <Card>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
-                <div>
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onDayClick={handleDayClick}
-                        className="w-full"
-                        numberOfMonths={numberOfMonths}
-                        fromMonth={firstExamDate}
-                        toMonth={lastExamDate}
-                        modifiers={{ examDay: examDays }}
-                        modifiersClassNames={{
-                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                        }}
-                    />
-                </div>
-                <div className="border-l pl-6 -ml-3">
-                    <h2 className="text-lg font-semibold mb-2">
-                        Schedule for {selectedDate ? format(selectedDate, 'PPP') : '...'}
-                    </h2>
-                    {selectedDate ? (
-                        <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                            <h1 className="text-lg font-semibold mb-2">Select a Day</h1>
-                            <p className="text-sm text-muted-foreground">Click on a highlighted day in the calendar to see your exam schedule.</p>
-                        </div>
-                    )}
-                </div>
+            <CardContent className="p-2 md:p-4">
+                <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onDayClick={handleDayClick}
+                    className="w-full"
+                    numberOfMonths={numberOfMonths}
+                    fromMonth={firstExamDate}
+                    toMonth={lastExamDate}
+                    modifiers={{ examDay: examDays }}
+                    modifiersClassNames={{
+                        examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                        day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                    }}
+                />
             </CardContent>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
+                        <DialogDescription>
+                            Here are your exams for this day.
+                        </DialogDescription>
+                    </DialogHeader>
+                   <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
+                </DialogContent>
+            </Dialog>
         </Card>
-    )
+    );
 }
 
 
