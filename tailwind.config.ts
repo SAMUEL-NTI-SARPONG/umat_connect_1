@@ -69,6 +69,9 @@ export default {
         'exam-day': '#03A6A1',
         'selected-day': '#ED3500',
       },
+      borderColor: {
+        'selected-day': '#ED3500',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
