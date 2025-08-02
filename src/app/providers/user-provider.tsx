@@ -253,7 +253,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setStudentResitSelections(JSON.parse(storedSelections));
         }
         const storedExamsData = localStorage.getItem('examsTimetable');
-        if (storedExamsData) {
+        if (storedExamsData && storedExamsData !== 'undefined') {
             setExamsTimetableState(JSON.parse(storedExamsData));
         }
     } catch(e) {
