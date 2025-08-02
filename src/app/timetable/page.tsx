@@ -204,23 +204,21 @@ function StudentExamsView() {
     }
   
     return (
-        <Card>
-            <CardContent className="p-2 md:p-4">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onDayClick={handleDayClick}
-                    className="w-full"
-                    numberOfMonths={numberOfMonths}
-                    fromMonth={firstExamDate}
-                    toMonth={lastExamDate}
-                    modifiers={{ examDay: examDays }}
-                    modifiersClassNames={{
-                        examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                        day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                    }}
-                />
-            </CardContent>
+        <>
+            <Calendar
+                mode="single"
+                selected={selectedDate}
+                onDayClick={handleDayClick}
+                className="w-full"
+                numberOfMonths={numberOfMonths}
+                fromMonth={firstExamDate}
+                toMonth={lastExamDate}
+                modifiers={{ examDay: examDays }}
+                modifiersClassNames={{
+                    examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                    day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                }}
+            />
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -232,7 +230,7 @@ function StudentExamsView() {
                    <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
                 </DialogContent>
             </Dialog>
-        </Card>
+        </>
     );
 }
 
@@ -497,13 +495,22 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-      <ScrollArea className="w-full whitespace-nowrap">
+      <div className="flex justify-center">
         <TabsList>
-          <TabsTrigger value="class">Class Timetable</TabsTrigger>
-          <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-          <TabsTrigger value="resit">Special Resit</TabsTrigger>
+          <TabsTrigger value="class">
+            <span className="sm:hidden">Class</span>
+            <span className="hidden sm:inline">Class Timetable</span>
+          </TabsTrigger>
+          <TabsTrigger value="exams">
+            <span className="sm:hidden">Exams</span>
+            <span className="hidden sm:inline">Exams Timetable</span>
+          </TabsTrigger>
+          <TabsTrigger value="resit">
+            <span className="sm:hidden">Resit</span>
+            <span className="hidden sm:inline">Special Resit</span>
+          </TabsTrigger>
         </TabsList>
-      </ScrollArea>
+      </div>
         <TabsContent value="class" className="mt-6">
             {!isClassTimetableDistributed ? (
                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -3281,6 +3288,8 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
+    
 
     
 
