@@ -71,7 +71,6 @@ export default {
       },
       borderColor: {
         DEFAULT: 'hsl(var(--border))',
-        'selected-day': '#113F67',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -104,5 +103,3 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
-    
