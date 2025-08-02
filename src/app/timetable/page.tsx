@@ -78,7 +78,7 @@ const statusConfig = {
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function ExamDetails({ exams }: { exams: ExamEntry[] }) {
+function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection: boolean }) {
     if (exams.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -91,7 +91,10 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     return (
       <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
         {exams.map((exam) => (
-          <div key={exam.id} className="flex items-start gap-4 p-3 border rounded-lg bg-background/50">
+          <div key={exam.id} className={cn(
+            "flex items-start gap-4 p-3 border rounded-lg bg-background/50 transition-colors",
+            hasSelection && "border-selected-day border-2"
+          )}>
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
             </div>
@@ -226,7 +229,7 @@ function StudentExamsView() {
                                 Here are your exams for this day.
                             </DialogDescription>
                         </DialogHeader>
-                       <ExamDetails exams={displayedExams} />
+                       <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
                     </DialogContent>
                 </Dialog>
             </Card>
@@ -257,7 +260,7 @@ function StudentExamsView() {
                         Schedule for {selectedDate ? format(selectedDate, 'PPP') : '...'}
                     </h2>
                     {selectedDate ? (
-                        <ExamDetails exams={displayedExams} />
+                        <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center p-8">
                             <h1 className="text-lg font-semibold mb-2">Select a Day</h1>
@@ -3311,6 +3314,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
 
 
 
