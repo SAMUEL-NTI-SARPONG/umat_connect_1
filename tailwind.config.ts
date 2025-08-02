@@ -70,6 +70,7 @@ export default {
         'selected-day': '#ED3500',
       },
       borderColor: {
+        DEFAULT: 'hsl(var(--border))',
         'selected-day': '#ED3500',
       },
       borderRadius: {
