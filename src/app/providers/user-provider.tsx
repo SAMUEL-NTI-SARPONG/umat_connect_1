@@ -142,20 +142,58 @@ export interface Faculty {
 
 // Helper function to check if a timetable entry's lecturer name matches a staff member's name.
 export const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-  if (!entryLecturerName || !staffName) return false;
-  
-  const entryNameLower = entryLecturerName.toLowerCase();
+    if (!entryLecturerName || !staffName) return false;
 
-  // Get significant parts of the staff member's name from their profile
-  const staffNameParts = staffName.toLowerCase()
-    .replace(/^(dr|prof|mr|mrs|ms)\.?\s*/, '') // Remove common titles
-    .split(' ')
-    .filter(p => p.length > 1); // Ignore single initials/short parts
+    // Normalize both names: lowercase, remove titles and punctuation.
+    const normalize = (name: string) => 
+        name.toLowerCase()
+           .replace(/^(prof|dr|mr|mrs|ms)\.?\s*/, '') // Remove titles
+           .replace(/[.,]/g, '') // Remove dots and commas
+           .trim();
 
-  if (staffNameParts.length === 0) return false;
+    const timetableName = normalize(entryLecturerName);
+    const staffProfileName = normalize(staffName);
 
-  // Check if all significant parts of the staff's name are present in the entry's lecturer name
-  return staffNameParts.every(part => entryNameLower.includes(part));
+    // Split names into parts for flexible matching.
+    const timetableParts = timetableName.split(' ').filter(Boolean);
+    const staffParts = staffProfileName.split(' ').filter(Boolean);
+
+    // Exact match is the best case.
+    if (timetableName === staffProfileName) {
+        return true;
+    }
+
+    // Check if the surname matches. The surname is likely the last word.
+    const staffSurname = staffParts[staffParts.length - 1];
+    if (!staffSurname) return false;
+    
+    // Scenario 1: Timetable has "Surname Initial" (e.g., "Mensah Y")
+    const surnameInitialPattern = new RegExp(`^${staffSurname}\\s+\\w$`);
+    if (surnameInitialPattern.test(timetableName)) {
+        return true;
+    }
+    
+    // Scenario 2: Timetable has "Initial. Surname" (e.g., "Y. Mensah")
+    const initialSurnamePattern = new RegExp(`^\\w\\s+${staffSurname}$`);
+     if (initialSurnamePattern.test(timetableName)) {
+        return true;
+    }
+
+    // Scenario 3: All parts of the staff's name from profile exist in the timetable name.
+    // This handles cases where timetable has "Dr. Yaw Mensah" and profile has "Yaw Mensah"
+    const allStaffPartsPresent = staffParts.every(part => timetableName.includes(part));
+    if (allStaffPartsPresent) {
+        return true;
+    }
+
+    // Scenario 4: Timetable name is just the surname
+    if (timetableParts.length === 1 && timetableParts[0] === staffSurname) {
+        return true;
+    }
+
+    // Fallback: Check if the surname from the profile is present in the timetable entry name.
+    // This is less precise but can catch some variations.
+    return timetableName.includes(staffSurname);
 };
 
 interface UserContextType {
@@ -802,3 +840,5 @@ export function useUser() {
   }
   return context;
 }
+
+    

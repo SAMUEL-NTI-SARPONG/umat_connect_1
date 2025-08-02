@@ -546,3 +546,5 @@ export async function handlePracticalsUpload(fileData: string) {
   
     return timetableData;
 }
+
+    
