@@ -93,7 +93,7 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
         {exams.map((exam) => (
           <div key={exam.id} className={cn(
             "flex items-start gap-4 p-3 border rounded-lg bg-background/50 transition-colors",
-            hasSelection && "border-selected-day border-2"
+            hasSelection && "border-selected-day"
           )}>
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
@@ -3315,7 +3315,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
  
 
-
-
-
-
+    

@@ -67,11 +67,11 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
         'exam-day': '#03A6A1',
-        'selected-day': '#ED3500',
+        'selected-day': '#113F67',
       },
       borderColor: {
         DEFAULT: 'hsl(var(--border))',
-        'selected-day': '#ED3500',
+        'selected-day': '#113F67',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -104,3 +104,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    
