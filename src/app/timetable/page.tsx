@@ -88,25 +88,27 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     }
   
     return (
-      <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
-        {exams.map((exam) => (
-          <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
-            <div className="flex-shrink-0 w-24">
-              <Badge variant="outline">{exam.period}</Badge>
+      <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+        <div className="space-y-4">
+          {exams.map((exam) => (
+            <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
+              <div className="flex-shrink-0 w-24">
+                <Badge variant="outline">{exam.period}</Badge>
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-medium text-sm">{exam.courseCode}</p>
+                <p className="text-sm text-muted-foreground">{exam.courseName}</p>
+                <p className="text-xs text-muted-foreground">Class: <span className="font-medium text-foreground">{exam.class}</span></p>
+                <Separator className="my-2" />
+                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
+                <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
+                <p className="text-xs text-muted-foreground">Invigilator: <span className="font-medium text-foreground">{exam.invigilator}</span></p>
+                {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
+              </div>
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="font-medium text-sm">{exam.courseCode}</p>
-              <p className="text-sm text-muted-foreground">{exam.courseName}</p>
-              <p className="text-xs text-muted-foreground">Class: <span className="font-medium text-foreground">{exam.class}</span></p>
-              <Separator className="my-2" />
-              <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
-              <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
-              <p className="text-xs text-muted-foreground">Invigilator: <span className="font-medium text-foreground">{exam.invigilator}</span></p>
-              {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </ScrollArea>
     );
   }
 
@@ -1988,7 +1990,6 @@ function TimetableDisplay({
   }, [selectedEntry, isEditModalOpen, isExamsTimetable]);
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
-    // Admins can always edit the exams timetable
     if (isDistributed && !isExamsTimetable) return;
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
