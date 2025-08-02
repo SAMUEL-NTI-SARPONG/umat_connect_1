@@ -5,7 +5,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2 } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,7 @@ function ExamDetails({ exams }: { exams: ExamEntry[] }) {
             <div className="flex-1 space-y-1">
               <p className="font-medium text-sm">{exam.courseCode}</p>
               <p className="text-sm text-muted-foreground">{exam.courseName}</p>
+              <p className="text-xs text-muted-foreground">Class: <span className="font-medium text-foreground">{exam.class}</span></p>
               <Separator className="my-2" />
               <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
               <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
@@ -153,27 +154,23 @@ function StudentExamsView() {
         };
     }, [user, examsTimetable]);
 
+    const [displayedExams, setDisplayedExams] = useState<ExamEntry[]>([]);
+    
     useEffect(() => {
         if (!isMobile && examDays.length > 0 && !selectedDate) {
-            setSelectedDate(examDays[0]);
+            const initialDate = examDays[0];
+            setSelectedDate(initialDate);
+            const formattedDate = format(initialDate, 'dd-MM-yyyy');
+            setDisplayedExams(studentExams.filter(exam => exam.dateStr === formattedDate));
         }
-    }, [isMobile, examDays, selectedDate]);
+    }, [isMobile, examDays, selectedDate, studentExams]);
 
-    const displayedExams = useMemo(() => {
-        if (!selectedDate) return [];
-        const formattedDate = format(selectedDate, 'dd-MM-yyyy');
-        return studentExams
-            .filter(exam => exam.dateStr === formattedDate)
-            .sort((a, b) => {
-                const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
-                return periodOrder[a.period] - periodOrder[b.period];
-            });
-    }, [selectedDate, studentExams]);
-    
     const handleDayClick = (day: Date) => {
       const hasExam = examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
       if(hasExam) {
         setSelectedDate(day);
+        const formattedDate = format(day, 'dd-MM-yyyy');
+        setDisplayedExams(studentExams.filter(exam => exam.dateStr === formattedDate));
         if (isMobile) {
             setIsModalOpen(true);
         }
@@ -3314,6 +3311,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
 
 
 
