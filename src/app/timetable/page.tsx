@@ -497,11 +497,13 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <ScrollArea className="w-full whitespace-nowrap">
+        <TabsList>
           <TabsTrigger value="class">Class Timetable</TabsTrigger>
           <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
           <TabsTrigger value="resit">Special Resit</TabsTrigger>
         </TabsList>
+      </ScrollArea>
         <TabsContent value="class" className="mt-6">
             {!isClassTimetableDistributed ? (
                  <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -520,11 +522,13 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </div>
 
             <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-                <TabsList className="grid w-full grid-cols-7">
-                {days.map(day => (
-                    <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
-                ))}
-                </TabsList>
+                <ScrollArea className="w-full whitespace-nowrap">
+                    <TabsList>
+                    {days.map(day => (
+                        <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
+                    ))}
+                    </TabsList>
+                </ScrollArea>
                 <div className="py-6">
                 {days.map(day => (
                     <TabsContent key={day} value={day}>
