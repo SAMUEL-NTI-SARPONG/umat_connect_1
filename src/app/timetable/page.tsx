@@ -92,7 +92,7 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
         {exams.map((exam) => (
           <div key={exam.id} className={cn(
             "flex items-start gap-4 p-3 rounded-lg transition-colors",
-            hasSelection ? "bg-muted/30" : ""
+            hasSelection ? "bg-muted/30 border border-selected-day" : ""
           )}>
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
