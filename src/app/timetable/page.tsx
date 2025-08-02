@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -92,8 +91,8 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
       <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
         {exams.map((exam) => (
           <div key={exam.id} className={cn(
-            "flex items-start gap-4 p-3 rounded-lg bg-background/50 transition-colors border border-transparent",
-            hasSelection && "border-selected-day bg-muted/30"
+            "flex items-start gap-4 p-3 rounded-lg transition-colors border",
+            hasSelection ? "border-selected-day bg-muted/30" : "border-transparent"
           )}>
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
@@ -3314,5 +3313,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
+
+    
 
     
