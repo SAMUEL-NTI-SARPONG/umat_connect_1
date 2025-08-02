@@ -77,7 +77,7 @@ const statusConfig = {
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection: boolean }) {
+function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     if (exams.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -90,10 +90,7 @@ function ExamDetails({ exams, hasSelection }: { exams: ExamEntry[], hasSelection
     return (
       <div className="space-y-4 max-h-[60vh] md:max-h-full overflow-y-auto pr-2">
         {exams.map((exam) => (
-          <div key={exam.id} className={cn(
-            "flex items-start gap-4 p-3 rounded-lg border",
-            hasSelection ? "bg-muted/50" : ""
-          )}>
+          <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
             <div className="flex-shrink-0 w-24">
               <Badge variant="outline">{exam.period}</Badge>
             </div>
@@ -227,7 +224,7 @@ function StudentExamsView() {
                             Here are your exams for this day.
                         </DialogDescription>
                     </DialogHeader>
-                   <ExamDetails exams={displayedExams} hasSelection={!!selectedDate} />
+                   <ExamDetails exams={displayedExams} />
                 </DialogContent>
             </Dialog>
         </>
@@ -496,20 +493,22 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   return (
     <Tabs defaultValue="class" className="w-full">
       <div className="flex justify-center">
-        <TabsList>
-          <TabsTrigger value="class">
-            <span className="sm:hidden">Class</span>
-            <span className="hidden sm:inline">Class Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="exams">
-            <span className="sm:hidden">Exams</span>
-            <span className="hidden sm:inline">Exams Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="resit">
-            <span className="sm:hidden">Resit</span>
-            <span className="hidden sm:inline">Special Resit</span>
-          </TabsTrigger>
-        </TabsList>
+        <ScrollArea className="w-full whitespace-nowrap">
+          <TabsList>
+            <TabsTrigger value="class">
+              <span className="sm:hidden">Class</span>
+              <span className="hidden sm:inline">Class Timetable</span>
+            </TabsTrigger>
+            <TabsTrigger value="exams">
+              <span className="sm:hidden">Exams</span>
+              <span className="hidden sm:inline">Exams Timetable</span>
+            </TabsTrigger>
+            <TabsTrigger value="resit">
+              <span className="sm:hidden">Resit</span>
+              <span className="hidden sm:inline">Special Resit</span>
+            </TabsTrigger>
+          </TabsList>
+        </ScrollArea>
       </div>
         <TabsContent value="class" className="mt-6">
             {!isClassTimetableDistributed ? (
@@ -1989,7 +1988,8 @@ function TimetableDisplay({
   }, [selectedEntry, isEditModalOpen, isExamsTimetable]);
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
-    if (isDistributed) return;
+    // Admins can always edit the exams timetable
+    if (isDistributed && !isExamsTimetable) return;
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
   };
@@ -2130,7 +2130,7 @@ function TimetableDisplay({
                     </AlertDialog>
                 )
                 )}
-                {isExamsTimetable && onAddExam && !isDistributed && (
+                {isExamsTimetable && onAddExam && (
                     <Button variant="outline" onClick={onAddExam}>
                         <PlusCircle className="h-4 w-4 mr-2" />
                         Add Exam
@@ -2178,7 +2178,7 @@ function TimetableDisplay({
                             </TableHeader>
                             <TableBody>
                                 {sortedEntries.map((entry: any) => (
-                                <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className={cn(!isDistributed && "cursor-pointer")}>
+                                <TableRow key={entry.id} onClick={() => handleRowClick(entry)} className="cursor-pointer">
                                     <TableCell>
                                       <Badge variant={entry.period === 'Morning' ? 'default' : entry.period === 'Afternoon' ? 'secondary' : 'outline'} className="font-medium">{entry.period}</Badge>
                                     </TableCell>
@@ -3288,8 +3288,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
-
-    
 
     
 
