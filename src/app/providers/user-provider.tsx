@@ -163,7 +163,7 @@ export const isLecturerMatch = (entryLecturerName: string, staffName: string): b
     const staffParts = staffProfileName.split(' ').filter(Boolean);
     const timetableParts = timetableName.split(' ').filter(Boolean);
     
-    if (staffParts.length < 2) return timetableName.includes(staffProfileName); // Fallback for single-name profiles
+    if (staffParts.length < 1) return false;
 
     const staffFirstInitial = staffParts[0][0];
     const staffSurname = staffParts[staffParts.length - 1];
@@ -179,20 +179,26 @@ export const isLecturerMatch = (entryLecturerName: string, staffName: string): b
     }
 
     // Case 3: Timetable has only surname (e.g., "boateng")
-    // This is risky if there are multiple lecturers with the same surname. Only match if profile is also just one name.
-    if (timetableParts.length === 1 && timetableParts[0] === staffSurname) {
-        // Only match if the staff profile is also just a surname, to avoid ambiguity
-        return staffParts.length === 1;
+    // This is risky if there are multiple lecturers with the same surname. Match only if the surname is an exact word.
+    if (timetableParts.some(part => part === staffSurname)) {
+        // If timetable name is just the surname, and it matches, it's a good match.
+        if (timetableParts.length === 1 && timetableParts[0] === staffSurname) return true;
+        // If the profile is just a surname, it's a match.
+        if (staffParts.length === 1 && staffParts[0] === staffSurname) return true;
+        // If there's more to the name, we need to be more careful.
+        // This avoids matching "boateng" to "kumi-boateng".
+        // It's already handled by the specific cases above, but this can be a fallback.
+        // A simple `includes` is too broad, so we check for exact part match.
+        return timetableParts.includes(staffSurname);
     }
     
-    // Case 4: Full name match in different order
+    // Case 4: Full name match in different order, but all parts must be present
     const allStaffPartsPresent = staffParts.every(part => timetableName.includes(part));
     if (allStaffPartsPresent) {
         return true;
     }
 
-    // Fallback to previous logic, but less precise
-    return timetableName.includes(staffSurname);
+    return false;
 };
 
 interface UserContextType {
@@ -835,3 +841,4 @@ export function useUser() {
     
 
     
+
