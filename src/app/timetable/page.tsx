@@ -1280,10 +1280,11 @@ function StaffTimetableView({
                             <Table>
                                 <TableHeader className="hidden md:table-header-group">
                                     <TableRow>
-                                        <TableHead className="w-1/4">Time</TableHead>
+                                        <TableHead className="w-[20%]">Time</TableHead>
                                         <TableHead>Course</TableHead>
-                                        <TableHead className="w-1/4">Location</TableHead>
-                                        <TableHead className="w-1/4">Status</TableHead>
+                                        <TableHead className="w-[20%]">Location</TableHead>
+                                        <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
+                                        <TableHead className="w-[15%]">Status</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1305,6 +1306,10 @@ function StaffTimetableView({
                                                 <div className="font-medium break-words pl-5">{event.room}</div>
                                               </div>
                                               <div>
+                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><UserIcon className="w-3 h-3"/>Lecturer</div>
+                                                <div className="font-medium break-words pl-5">{event.lecturer}</div>
+                                              </div>
+                                              <div>
                                                 <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
                                                 <div className="pl-5">
                                                   <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
@@ -1318,6 +1323,7 @@ function StaffTimetableView({
                                         <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
                                         <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
                                         <TableCell className="hidden md:table-cell">{event.room}</TableCell>
+                                        <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
                                         <TableCell className="hidden md:table-cell">
                                             <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
                                                 {statusConfig[event.status].text}
@@ -1574,7 +1580,7 @@ function ResitTimetableDisplay({
     setParsedData: (data: SpecialResitTimetable | null) => void;
     showInvalid: boolean;
   }) {
-    const { toast } = useToast();
+    const { toast } = useUser();
     const { distributeSpecialResitTimetable } = useUser();
     const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
     const [isEditingNotice, setIsEditingNotice] = useState(false);

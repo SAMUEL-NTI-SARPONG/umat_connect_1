@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React from 'react';
@@ -60,7 +61,10 @@ export default function LecturerReviewModal({
                 >
                   <div>
                     <p className="font-semibold">{course.courseCode}</p>
-                    <p className="text-sm text-muted-foreground">{course.departments.join(', ')} - Level {course.level}</p>
+                    <div className="text-sm text-muted-foreground">
+                        <p>{course.lecturer}</p>
+                        <p>{course.departments.join(', ')} - Level {course.level}</p>
+                    </div>
                   </div>
                   {!isHidden && (
                     <Button 
