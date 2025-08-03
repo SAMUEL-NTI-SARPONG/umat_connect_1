@@ -231,7 +231,7 @@ interface UserContextType {
   setSpecialResitTimetable: (data: SpecialResitTimetable | null) => void;
   distributeSpecialResitTimetable: () => void;
   studentResitSelections: StudentResitSelections;
-  updateStudentResitSelection: (entryId: number, isSelected: boolean) => void;
+  updateStudentResitSelection: (entryIds: number[]) => void;
   examsTimetable: ExamsTimetable | null;
   setExamsTimetable: (data: ExamsTimetable | null) => void;
   distributeExamsTimetable: () => void;
@@ -619,19 +619,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   }, [examsTimetable, allUsers, user, addNotification, toast]);
 
-  const updateStudentResitSelection = useCallback((entryId: number, isSelected: boolean) => {
+  const updateStudentResitSelection = useCallback((entryIds: number[]) => {
     if (!user) return;
     
     setStudentResitSelections(prev => {
-        const currentUserSelections = prev[user.id] || [];
-        let newSelections;
-        if (isSelected) {
-            newSelections = [...new Set([...currentUserSelections, entryId])];
-        } else {
-            newSelections = currentUserSelections.filter(id => id !== entryId);
-        }
-        
-        const newState = { ...prev, [user.id]: newSelections };
+        const newState = { ...prev, [user.id]: entryIds };
         localStorage.setItem('studentResitSelections', JSON.stringify(newState));
         return newState;
     });
@@ -840,5 +832,7 @@ export function useUser() {
   }
   return context;
 }
+
+    
 
     
