@@ -703,11 +703,10 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
         if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
     
         const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
-        const staffName = user.name.toLowerCase();
         
         return allExams.filter(exam => 
-          (exam.lecturer && exam.lecturer.toLowerCase().includes(staffName)) || 
-          (exam.invigilator && exam.invigilator.toLowerCase().includes(staffName))
+          (exam.lecturer && isLecturerMatch(exam.lecturer, user.name)) || 
+          (exam.invigilator && isLecturerMatch(exam.invigilator, user.name))
         );
       }, [user, examsTimetable]);
   
@@ -743,9 +742,8 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
                 </TableHeader>
                 <TableBody>
                   {staffExams.map(exam => {
-                    const staffName = user!.name.toLowerCase();
-                    const isLecturer = exam.lecturer && exam.lecturer.toLowerCase().includes(staffName);
-                    const isInvigilator = exam.invigilator && exam.invigilator.toLowerCase().includes(staffName);
+                    const isLecturer = exam.lecturer && isLecturerMatch(exam.lecturer, user!.name);
+                    const isInvigilator = exam.invigilator && isLecturerMatch(exam.invigilator, user!.name);
                     let role = '';
                     if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
                     else if (isLecturer) role = 'Lecturer';
@@ -1144,13 +1142,14 @@ function StaffTimetableView({
     if (startTime && startIndex !== -1) {
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
+        if (!currentSlot || !currentSlot.includes(' - ')) continue;
+
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.includes(' - ') && currentSlot && currentSlot.includes(' - ')) {
+        if (prevSlot && prevSlot.includes(' - ')) {
           if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
         }
-        if (currentSlot && currentSlot.includes(' - ')) {
-            endTimes.push(currentSlot.split(' - ')[1].trim());
-        }
+        
+        endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -1167,13 +1166,14 @@ function StaffTimetableView({
     if (createStartTime && startIndex !== -1) {
         for (let i = startIndex; i < roomDaySlots.length; i++) {
             const currentSlot = roomDaySlots[i];
+            if (!currentSlot || !currentSlot.includes(' - ')) continue;
+
             const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-            if (prevSlot && prevSlot.includes(' - ') && currentSlot && currentSlot.includes(' - ')) {
+            if (prevSlot && prevSlot.includes(' - ')) {
                 if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
             }
-            if (currentSlot && currentSlot.includes(' - ')) {
-                endTimes.push(currentSlot.split(' - ')[1].trim());
-            }
+            
+            endTimes.push(currentSlot.split(' - ')[1].trim());
         }
     }
     return { rooms, times: roomDaySlots, startTimes, endTimes };
@@ -1994,8 +1994,13 @@ function TimetableDisplay({
     if (startTime && startIndex !== -1) {
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
+        if (!currentSlot || !currentSlot.includes(' - ')) continue;
+
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        if (prevSlot && prevSlot.includes(' - ')) {
+          if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+        }
+        
         endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
@@ -3321,3 +3326,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
