@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -140,66 +139,330 @@ export interface Faculty {
   departments: Department[];
 }
 
-// Helper function to check if a timetable entry's lecturer name matches a staff member's name.
-export const isLecturerMatch = (entryLecturerName: string, staffName: string): boolean => {
-    if (!entryLecturerName || !staffName) return false;
+// Interface for staff account data
+interface StaffAccount {
+  surname: string;
+  firstname: string;
+  otherName?: string;
+  title?: string;
+  id: string;
+}
 
-    // Normalize both names: lowercase, remove titles and punctuation.
-    const normalize = (name: string) =>
-      name
-        .toLowerCase()
-        .replace(/^(prof|dr|mr|mrs|ms)\.?\s*/, '') // Remove titles
-        .replace(/[.,]/g, '') // Remove dots and commas
-        .trim();
+// Improved Levenshtein distance with early termination
+function levenshteinDistance(a: string, b: string, maxDistance?: number): number {
+  if (Math.abs(a.length - b.length) > (maxDistance || Infinity)) {
+    return maxDistance || Infinity;
+  }
 
-    const timetableName = normalize(entryLecturerName);
-    const staffProfileName = normalize(staffName);
+  const matrix: number[][] = Array(a.length + 1)
+    .fill(0)
+    .map(() => Array(b.length + 1).fill(0));
 
-    // Exact match is the best case.
-    if (timetableName === staffProfileName) {
-        return true;
-    }
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
 
-    const staffParts = staffProfileName.split(' ').filter(Boolean);
-    const timetableParts = timetableName.split(' ').filter(Boolean);
-    
-    if (staffParts.length < 1) return false;
-
-    const staffFirstInitial = staffParts[0][0];
-    const staffSurname = staffParts[staffParts.length - 1];
-
-    // Case 1: Timetable has "Surname Initial" (e.g., "boateng s")
-    if (timetableParts.length === 2 && timetableParts[0] === staffSurname && timetableParts[1].length === 1) {
-        return timetableParts[1] === staffFirstInitial;
-    }
-    
-    // Case 2: Timetable has "Initial Surname" (e.g., "s boateng")
-    if (timetableParts.length === 2 && timetableParts[1] === staffSurname && timetableParts[0].length === 1) {
-        return timetableParts[0] === staffFirstInitial;
-    }
-
-    // Case 3: Timetable has only surname (e.g., "boateng")
-    // This is risky if there are multiple lecturers with the same surname. Match only if the surname is an exact word.
-    if (timetableParts.some(part => part === staffSurname)) {
-        // If timetable name is just the surname, and it matches, it's a good match.
-        if (timetableParts.length === 1 && timetableParts[0] === staffSurname) return true;
-        // If the profile is just a surname, it's a match.
-        if (staffParts.length === 1 && staffParts[0] === staffSurname) return true;
-        // If there's more to the name, we need to be more careful.
-        // This avoids matching "boateng" to "kumi-boateng".
-        // It's already handled by the specific cases above, but this can be a fallback.
-        // A simple `includes` is too broad, so we check for exact part match.
-        return timetableParts.includes(staffSurname);
+  for (let i = 1; i <= a.length; i++) {
+    let minRowValue = Infinity;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1].toLowerCase() === b[j - 1].toLowerCase() ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1, // deletion
+        matrix[i][j - 1] + 1, // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+      minRowValue = Math.min(minRowValue, matrix[i][j]);
     }
     
-    // Case 4: Full name match in different order, but all parts must be present
-    const allStaffPartsPresent = staffParts.every(part => timetableName.includes(part));
-    if (allStaffPartsPresent) {
-        return true;
+    // Early termination if minimum distance in row exceeds threshold
+    if (maxDistance && minRowValue > maxDistance) {
+      return maxDistance + 1;
     }
+  }
+  
+  return matrix[a.length][b.length];
+}
 
-    return false;
+// Enhanced name normalization
+function normalizeName(name: string): string {
+  if (!name) return '';
+  
+  // Common academic titles (more comprehensive)
+  const titles = [
+    'DR', 'PROF', 'PROFESSOR', 'ASSOC PROF', 'ASSOCIATE PROFESSOR', 
+    'ASST PROF', 'ASSISTANT PROFESSOR', 'MR', 'MS', 'MRS', 'MISS',
+    'ENGR', 'ENGINEER', 'REV', 'REVEREND', 'HON', 'HONORABLE'
+  ];
+  
+  let normalized = name.toLowerCase().trim();
+  
+  // Remove titles (fixed regex escaping)
+  titles.forEach((title) => {
+    const regex = new RegExp(`\\b${title.toLowerCase()}\\b`, 'gi');
+    normalized = normalized.replace(regex, '');
+  });
+  
+  // Remove common punctuation and normalize spaces
+  normalized = normalized
+    .replace(/[.,;:'"()[\\]{}]/g, '') // Remove punctuation
+    .replace(/[-_]/g, ' ') // Convert dashes and underscores to spaces
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+    
+  return normalized;
+}
+
+// Enhanced timetable name parsing
+function parseTimetableName(name: string): { 
+  surname: string; 
+  firstname?: string; 
+  otherName?: string;
+  initials?: string[];
+} {
+  const normalized = normalizeName(name);
+  if (!normalized) return { surname: '' };
+  
+  const parts = normalized.split(' ').filter(part => part.length > 0);
+  
+  if (parts.length === 0) return { surname: '' };
+  if (parts.length === 1) return { surname: parts[0] };
+  
+  // Identify initials (single characters or characters followed by period)
+  const initials: string[] = [];
+  const fullNames: string[] = [];
+  
+  parts.forEach(part => {
+    const cleanPart = part.replace('.', '');
+    if (cleanPart.length === 1) {
+      initials.push(cleanPart.toUpperCase());
+    } else {
+      fullNames.push(cleanPart);
+    }
+  });
+  
+  // Handle different name patterns
+  let surname = '';
+  let firstname = '';
+  let otherName = '';
+  
+  if (fullNames.length >= 1) {
+    // Last full name is typically the surname
+    surname = fullNames[fullNames.length - 1];
+    
+    if (fullNames.length >= 2) {
+      // First full name is typically the firstname
+      firstname = fullNames[0];
+      
+      // Middle names
+      if (fullNames.length > 2) {
+        otherName = fullNames.slice(1, -1).join(' ');
+      }
+    }
+    
+    // Add initials to otherName if we have them
+    if (initials.length > 0) {
+      if (otherName) {
+        otherName = `${initials.join(' ')} ${otherName}`;
+      } else {
+        otherName = initials.join(' ');
+      }
+    }
+  } else if (initials.length >= 2) {
+    // Only initials available - last one is surname initial
+    surname = initials[initials.length - 1];
+    firstname = initials[0];
+    if (initials.length > 2) {
+      otherName = initials.slice(1, -1).join(' ');
+    }
+  }
+  
+  return {
+    surname,
+    ...(firstname && { firstname }),
+    ...(otherName && { otherName }),
+    initials
+  };
+}
+
+// Enhanced similarity calculation
+function calculateNameSimilarity(parsed: ReturnType<typeof parseTimetableName>, staff: StaffAccount): number {
+  const staffSurname = normalizeName(staff.surname);
+  const staffFirstname = staff.firstname ? normalizeName(staff.firstname) : '';
+  const staffOtherName = staff.otherName ? normalizeName(staff.otherName) : '';
+  
+  if (!parsed.surname || !staffSurname) return 0;
+  
+  // Surname similarity (most important)
+  const surnameDistance = levenshteinDistance(parsed.surname, staffSurname, 3);
+  const surnameSimilarity = surnameDistance <= 3 ? 
+    1 - surnameDistance / Math.max(parsed.surname.length, staffSurname.length) : 0;
+  
+  // If surname similarity is too low, don't bother with other calculations
+  if (surnameSimilarity < 0.6) return 0;
+  
+  let firstnameSimilarity = 0;
+  if (parsed.firstname && staffFirstname) {
+    if (parsed.firstname.length === 1) {
+      // Initial matching
+      firstnameSimilarity = parsed.firstname.toLowerCase() === staffFirstname[0].toLowerCase() ? 1 : 0;
+    } else {
+      const firstnameDistance = levenshteinDistance(parsed.firstname, staffFirstname, 2);
+      firstnameSimilarity = firstnameDistance <= 2 ? 
+        1 - firstnameDistance / Math.max(parsed.firstname.length, staffFirstname.length) : 0;
+    }
+  } else if (!parsed.firstname && !staffFirstname) {
+    firstnameSimilarity = 0.5; // Neutral when both missing
+  }
+  
+  let otherNameSimilarity = 0;
+  if (parsed.otherName && staffOtherName) {
+    // Handle multiple initials or names in otherName
+    const parsedOthers = parsed.otherName.split(' ');
+    const staffOthers = staffOtherName.split(' ');
+    
+    let matches = 0;
+    let total = Math.max(parsedOthers.length, staffOthers.length);
+    
+    for (const parsedOther of parsedOthers) {
+      for (const staffOther of staffOthers) {
+        if (parsedOther.length === 1 || staffOther.length === 1) {
+          // Initial matching
+          if (parsedOther[0].toLowerCase() === staffOther[0].toLowerCase()) {
+            matches++;
+            break;
+          }
+        } else {
+          // Full name matching
+          const distance = levenshteinDistance(parsedOther, staffOther, 2);
+          if (distance <= 1) {
+            matches += 1 - distance / Math.max(parsedOther.length, staffOther.length);
+            break;
+          }
+        }
+      }
+    }
+    
+    otherNameSimilarity = total > 0 ? matches / total : 0;
+  } else if (!parsed.otherName && !staffOtherName) {
+    otherNameSimilarity = 0.5; // Neutral when both missing
+  }
+  
+  // Weighted scoring with adaptive weights
+  let surnameWeight = 0.7;
+  let firstnameWeight = 0.25;
+  let otherNameWeight = 0.05;
+  
+  // Adjust weights if we have limited information
+  if (!parsed.firstname || !staffFirstname) {
+    surnameWeight = 0.8;
+    firstnameWeight = 0.1;
+    otherNameWeight = 0.1;
+  }
+  
+  if (!parsed.otherName || !staffOtherName) {
+    surnameWeight = 0.75;
+    firstnameWeight = 0.25;
+    otherNameWeight = 0;
+  }
+  
+  return surnameWeight * surnameSimilarity + 
+         firstnameWeight * firstnameSimilarity + 
+         otherNameWeight * otherNameSimilarity;
+}
+
+// Enhanced name matching with multiple threshold levels
+function matchLecturerNames(
+  timetableName: string,
+  staffDatabase: StaffAccount[]
+): { matchedAccount: StaffAccount | null; confidence: number; matchType: string }[] {
+  if (!timetableName || !staffDatabase || staffDatabase.length === 0) {
+    return [{ matchedAccount: null, confidence: 0, matchType: 'no_data' }];
+  }
+  
+  const results: { matchedAccount: StaffAccount | null; confidence: number; matchType: string }[] = [];
+  
+  // Handle multiple lecturers (co-lecturers)
+  const coLecturers = timetableName.split(/[\/&,]/).map(name => name.trim()).filter(name => name.length > 0);
+  
+  for (const lecturerName of coLecturers) {
+    if (!lecturerName) {
+      results.push({ matchedAccount: null, confidence: 0, matchType: 'empty_name' });
+      continue;
+    }
+    
+    const parsed = parseTimetableName(lecturerName);
+    let bestMatch: StaffAccount | null = null;
+    let bestScore = 0;
+    let matchType = 'no_match';
+    
+    // First pass: Look for high-confidence matches
+    for (const staff of staffDatabase) {
+      const score = calculateNameSimilarity(parsed, staff);
+      
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = staff;
+      }
+    }
+    
+    // Determine match type and confidence threshold
+    if (bestScore >= 0.9) {
+      matchType = 'high_confidence';
+    } else if (bestScore >= 0.75) {
+      matchType = 'medium_confidence';
+    } else if (bestScore >= 0.6) {
+      matchType = 'low_confidence';
+    } else {
+      bestMatch = null;
+      matchType = 'no_match';
+      bestScore = 0;
+    }
+    
+    results.push({ 
+      matchedAccount: bestMatch, 
+      confidence: bestScore,
+      matchType 
+    });
+  }
+  
+  return results;
+}
+
+// Function to convert a User object to a StaffAccount object
+const userToStaffAccount = (user: User): StaffAccount => {
+  const name = user.name || '';
+  const parts = name.split(' ').filter(Boolean);
+  let title = '';
+  const titles = ['Prof.', 'Professor', 'Dr.', 'Doctor', 'Mr.', 'Mrs.', 'Ms.', 'Miss', 'Engr.'];
+  if (parts.length > 0 && titles.includes(parts[0])) {
+    title = parts.shift() || '';
+  }
+  const surname = parts.pop() || '';
+  const firstname = parts.shift() || '';
+  const otherName = parts.join(' ');
+  return {
+    id: String(user.id),
+    title,
+    firstname,
+    surname,
+    otherName,
+  };
 };
+
+export const isLecturerMatch = (entryLecturerName: string, staffUser: User): boolean => {
+    if (!entryLecturerName || !staffUser) return false;
+    
+    const staffAccount = userToStaffAccount(staffUser);
+    const allStaffAsAccounts = defaultUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
+
+    const matches = matchLecturerNames(entryLecturerName, allStaffAsAccounts);
+
+    // Check if any of the matches is a medium or high confidence match to the specific staffUser
+    return matches.some(match => 
+        match.matchedAccount?.id === staffAccount.id &&
+        (match.matchType === 'high_confidence' || match.matchType === 'medium_confidence')
+    );
+};
+
 
 interface UserContextType {
   user: User | null;
@@ -837,8 +1100,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
-
-    
-
