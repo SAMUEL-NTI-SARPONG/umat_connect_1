@@ -888,6 +888,17 @@ function StaffResitView() {
       );
     }
     
+    if (staffResitSchedule.length === 0) {
+      return (
+        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+          <CardContent className="text-center text-muted-foreground">
+            <p className="font-medium">No Resit Duties Found</p>
+            <p className="text-sm">No resit supervision duties were found for you.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
     const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Original Examiner', 'Session'];
   
     return (
@@ -906,41 +917,33 @@ function StaffResitView() {
           <CardHeader>
               <CardTitle>Your Resit Supervision Schedule</CardTitle>
               <CardDescription>
-                  {staffResitSchedule.length > 0
-                  ? `You have ${staffResitSchedule.length} supervision(s) scheduled.`
-                  : "You have no resit supervisions scheduled."}
+                  {`You have ${staffResitSchedule.length} supervision(s) scheduled.`}
               </CardDescription>
           </CardHeader>
           <CardContent>
-              {staffResitSchedule.length > 0 ? (
-                  <div className="overflow-x-auto">
-                      <Table>
-                          <TableHeader>
-                              <TableRow>
-                                  {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+              <div className="overflow-x-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {staffResitSchedule.map((entry) => (
+                              <TableRow key={entry.id}>
+                                  <TableCell>{entry.date}</TableCell>
+                                  <TableCell>{entry.courseCode}</TableCell>
+                                  <TableCell>{entry.courseName}</TableCell>
+                                  <TableCell>{entry.department}</TableCell>
+                                  <TableCell>{entry.numberOfStudents}</TableCell>
+                                  <TableCell>{entry.room}</TableCell>
+                                  <TableCell>{entry.examiner}</TableCell>
+                                  <TableCell>{entry.session}</TableCell>
                               </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {staffResitSchedule.map((entry) => (
-                                  <TableRow key={entry.id}>
-                                      <TableCell>{entry.date}</TableCell>
-                                      <TableCell>{entry.courseCode}</TableCell>
-                                      <TableCell>{entry.courseName}</TableCell>
-                                      <TableCell>{entry.department}</TableCell>
-                                      <TableCell>{entry.numberOfStudents}</TableCell>
-                                      <TableCell>{entry.room}</TableCell>
-                                      <TableCell>{entry.examiner}</TableCell>
-                                      <TableCell>{entry.session}</TableCell>
-                                  </TableRow>
-                              ))}
-                          </TableBody>
-                      </Table>
-                  </div>
-              ) : (
-                  <div className="text-center text-muted-foreground py-12">
-                      <p>No supervision duties found for you in the special resit timetable.</p>
-                  </div>
-              )}
+                          ))}
+                      </TableBody>
+                  </Table>
+              </div>
           </CardContent>
         </Card>
       </div>
@@ -1656,13 +1659,15 @@ function ResitTimetableDisplay({
     searchTerm,
     setParsedData,
     showInvalid,
+    onDistribute,
   }: {
     parsedData: SpecialResitTimetable | null;
     searchTerm: string;
     setParsedData: (data: SpecialResitTimetable | null) => void;
     showInvalid: boolean;
+    onDistribute: () => void;
   }) {
-    const { toast, distributeSpecialResitTimetable } = useUser();
+    const { toast } = useUser();
     const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
     const [isEditingNotice, setIsEditingNotice] = useState(false);
     
@@ -1752,9 +1757,8 @@ function ResitTimetableDisplay({
     };
 
     const handleDistribute = () => {
-        distributeSpecialResitTimetable();
+        onDistribute();
         setIsDistributeConfirmOpen(false);
-        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
     };
 
     const flattenedAndFilteredData = useMemo(() => {
@@ -2077,7 +2081,7 @@ function TimetableDisplay({
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
     if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
+      for (let i = startIndex; i < roomDaySlots.length, i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         if (!currentSlot || !currentSlot.includes(' - ')) continue;
 
@@ -2125,7 +2129,11 @@ function TimetableDisplay({
   const handleDistribute = () => {
     if (onDistribute) {
         const result = onDistribute();
-        toast({ title: "Timetable Distribution", description: result.message });
+        if (result.success) {
+            toast({ title: "Timetable Distribution", description: result.message });
+        } else {
+            toast({ title: "Distribution Failed", description: result.message, variant: "destructive" });
+        }
     }
     setIsDistributeConfirmOpen(false);
   };
@@ -2417,7 +2425,7 @@ function TimetableDisplay({
         </AlertDialog>
       
       {/* Edit Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+      <Dialog open={isEditModalOpen} onOpenChange={closeAllModals}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit Timetable Entry</DialogTitle>
@@ -2617,6 +2625,7 @@ function AdminTimetableView() {
       examsTimetable, setExamsTimetable,
       isClassTimetableDistributed, distributeClassTimetable,
       distributeExamsTimetable,
+      distributeSpecialResitTimetable,
   } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2657,6 +2666,11 @@ function AdminTimetableView() {
     const result = distributeExamsTimetable();
     return result;
   }, [distributeExamsTimetable]);
+
+  const handleDistributeResit = useCallback(() => {
+    distributeSpecialResitTimetable();
+    toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+  }, [distributeSpecialResitTimetable, toast]);
   
   const allExamEntries = useMemo(() => {
     if (!examsTimetable) return null;
@@ -2970,6 +2984,7 @@ function AdminTimetableView() {
             searchTerm={resitSearchTerm}
             setParsedData={setSpecialResitTimetable}
             showInvalid={resitShowInvalid}
+            onDistribute={handleDistributeResit}
           />
         </TabsContent>
       </Tabs>
@@ -3468,3 +3483,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
 
+
+
+    
