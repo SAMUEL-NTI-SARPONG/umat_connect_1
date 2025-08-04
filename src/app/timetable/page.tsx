@@ -1751,6 +1751,12 @@ function ResitTimetableDisplay({
         setEditedFormData({ ...editedFormData, [field]: finalValue });
     };
 
+    const handleDistribute = () => {
+        distributeSpecialResitTimetable();
+        setIsDistributeConfirmOpen(false);
+        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
+    };
+
     const flattenedAndFilteredData = useMemo(() => {
       if (!parsedData) return [];
   
@@ -1835,10 +1841,7 @@ function ResitTimetableDisplay({
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => {
-                                      distributeSpecialResitTimetable();
-                                      setIsDistributeConfirmOpen(false);
-                                  }}>Distribute</AlertDialogAction>
+                                  <AlertDialogAction onClick={handleDistribute}>Distribute</AlertDialogAction>
                               </AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
@@ -2047,8 +2050,9 @@ function TimetableDisplay({
   onViewPracticals?: () => void;
   onAddExam?: () => void;
   isDistributed?: boolean;
-  onDistribute?: () => void;
+  onDistribute?: () => { success: boolean, message: string, studentCount?: number };
 }) {
+  const { toast } = useToast();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -2116,6 +2120,14 @@ function TimetableDisplay({
      const updatedEntry = { ...editedFormData, time: isExamsTimetable ? (editedFormData as any).period : `${startTime} - ${endTime}` };
      setParsedData(parsedData.map(item => item.id === updatedEntry.id ? updatedEntry : item));
      closeAllModals();
+  };
+
+  const handleDistribute = () => {
+    if (onDistribute) {
+        const result = onDistribute();
+        toast({ title: "Timetable Distribution", description: result.message });
+    }
+    setIsDistributeConfirmOpen(false);
   };
 
   const handleEditInputChange = (field: keyof ExamEntry | "period" | "class" | "invigilator" | "courseName" | "is_practical", value: string | number | string[] | boolean) => {
@@ -2232,10 +2244,7 @@ function TimetableDisplay({
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => {
-                                    onDistribute();
-                                    setIsDistributeConfirmOpen(false);
-                                }}>Distribute</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDistribute}>Distribute</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -2607,6 +2616,7 @@ function AdminTimetableView() {
       specialResitTimetable, setSpecialResitTimetable,
       examsTimetable, setExamsTimetable,
       isClassTimetableDistributed, distributeClassTimetable,
+      distributeExamsTimetable,
   } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -2643,12 +2653,10 @@ function AdminTimetableView() {
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
   
-  const { distributeExamsTimetable } = useUser();
-
   const handleDistributeExams = useCallback(() => {
     const result = distributeExamsTimetable();
-    toast(result);
-  }, [distributeExamsTimetable, toast]);
+    return result;
+  }, [distributeExamsTimetable]);
   
   const allExamEntries = useMemo(() => {
     if (!examsTimetable) return null;
@@ -2928,7 +2936,7 @@ function AdminTimetableView() {
             description={`A total of ${masterSchedule?.length || 0} entries were found. Click a row to edit or delete.`}
             placeholder="Upload a class timetable to begin."
             isDistributed={isClassTimetableDistributed}
-            onDistribute={distributeClassTimetable}
+            onDistribute={distributeClassTimetable as any}
           />
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
@@ -3455,6 +3463,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
 
 
 

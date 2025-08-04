@@ -381,7 +381,7 @@ function matchLecturerNames(
   const results: { matchedAccount: StaffAccount | null; confidence: number; matchType: string }[] = [];
   
   // Handle multiple lecturers (co-lecturers)
-  const coLecturers = timetableName.split(/[\/&,]/).map(name => name.trim()).filter(name => name.length > 0);
+  const coLecturers = timetableName.split(/[/&,]/).map(name => name.trim()).filter(name => name.length > 0);
   
   for (const lecturerName of coLecturers) {
     if (!lecturerName) {
@@ -891,10 +891,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
             console.error("Failed to write to localStorage:", error);
         }
         
-        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
         return distributedData;
     });
-  }, [allUsers, toast]);
+  }, [allUsers]);
   
   const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
     setExamsTimetableState(data);
