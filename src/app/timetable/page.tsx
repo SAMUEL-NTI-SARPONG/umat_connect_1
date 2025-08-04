@@ -6,7 +6,7 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2 } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatch } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -697,7 +697,7 @@ const initialCreateFormState = {
 };
 
 function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | null }) {
-    const { user } = useUser();
+    const { user, allUsers } = useUser();
   
     const staffExams = useMemo(() => {
         if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
@@ -705,10 +705,10 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
         const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
         
         return allExams.filter(exam => 
-          (exam.lecturer && isLecturerMatch(exam.lecturer, user.name)) || 
-          (exam.invigilator && isLecturerMatch(exam.invigilator, user.name))
+          (exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user, allUsers)) || 
+          (exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user, allUsers))
         );
-      }, [user, examsTimetable]);
+      }, [user, allUsers, examsTimetable]);
   
     if (!examsTimetable || !examsTimetable.isDistributed) {
       return (
@@ -721,7 +721,7 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
       );
     }
     
-    const headers = ['Date', 'Period', 'Role', 'Course Code', 'Course Name', 'Room'];
+    const headers = ['Date', 'Period', 'Role', 'Course Code', 'Course Name', 'Personnel', 'Room'];
   
     return (
       <Card>
@@ -742,8 +742,8 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
                 </TableHeader>
                 <TableBody>
                   {staffExams.map(exam => {
-                    const isLecturer = exam.lecturer && isLecturerMatch(exam.lecturer, user!.name);
-                    const isInvigilator = exam.invigilator && isLecturerMatch(exam.invigilator, user!.name);
+                    const isLecturer = exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user!, allUsers);
+                    const isInvigilator = exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user!, allUsers);
                     let role = '';
                     if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
                     else if (isLecturer) role = 'Lecturer';
@@ -759,6 +759,10 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
                             {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
                         </TableCell>
                         <TableCell>{exam.courseName}</TableCell>
+                        <TableCell>
+                            <p><span className="font-semibold">Lecturer:</span> {exam.lecturer}</p>
+                            <p><span className="font-semibold">Invigilator:</span> {exam.invigilator}</p>
+                        </TableCell>
                         <TableCell>{exam.room}</TableCell>
                         </TableRow>
                     );
@@ -777,21 +781,19 @@ function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | n
   }
 
 function StaffResitView() {
-    const { user, specialResitTimetable } = useUser();
+    const { user, allUsers, specialResitTimetable } = useUser();
   
     const staffResitSchedule = useMemo(() => {
       if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) return [];
-      
-      const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
-      
+            
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
 
       const scheduleForStaff = allSchedules.find(lecturerSchedule => 
-        staffNameParts.some(part => lecturerSchedule.lecturer.toLowerCase().includes(part))
+        isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
       );
       
       return scheduleForStaff ? scheduleForStaff.courses : [];
-    }, [user, specialResitTimetable]);
+    }, [user, allUsers, specialResitTimetable]);
   
     if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
       return (
@@ -878,7 +880,7 @@ function StaffTimetableView({
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
   examsTimetable: ExamsTimetable | null;
 }) {
-  const { user, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
+  const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -915,7 +917,7 @@ function StaffTimetableView({
   const staffCourses = useMemo(() => {
     if (!masterSchedule || !user) return [];
     
-    const allEntriesForStaff = masterSchedule.filter(entry => isLecturerMatch(entry.lecturer, user.name));
+    const allEntriesForStaff = masterSchedule.filter(entry => isLecturerMatchWithUsers(entry.lecturer, user, allUsers));
 
     const groupedByNormalizedId = allEntriesForStaff.reduce((acc, entry) => {
         const { normalizedId, displayCode } = normalizeCourse(entry);
@@ -932,7 +934,7 @@ function StaffTimetableView({
     }, {} as Record<string, TimetableEntry & { originalIds: Set<number> }>);
 
     return Object.values(groupedByNormalizedId);
-  }, [masterSchedule, user]);
+  }, [masterSchedule, user, allUsers]);
 
   const allRejectedIds = useMemo(() => {
     if (!user || !rejectedEntries[user.id]) return new Set<number>();
@@ -1580,8 +1582,7 @@ function ResitTimetableDisplay({
     setParsedData: (data: SpecialResitTimetable | null) => void;
     showInvalid: boolean;
   }) {
-    const { toast } = useUser();
-    const { distributeSpecialResitTimetable } = useUser();
+    const { toast, distributeSpecialResitTimetable } = useUser();
     const [localNotice, setLocalNotice] = useState(parsedData?.notice || '');
     const [isEditingNotice, setIsEditingNotice] = useState(false);
     
@@ -3245,6 +3246,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
 export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void }) {
   const { 
     user, 
+    allUsers,
     masterSchedule, 
     setMasterSchedule,
     updateScheduleStatus,
@@ -3266,9 +3268,9 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     if (!combinedSchedule || !user || user.role !== 'staff') return [];
     
     return combinedSchedule.filter(entry => 
-      isLecturerMatch(entry.lecturer, user.name)
+      isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
     );
-  }, [combinedSchedule, user]);
+  }, [combinedSchedule, user, allUsers]);
 
   const studentSchedule = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
@@ -3326,4 +3328,3 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
-

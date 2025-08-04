@@ -448,15 +448,14 @@ const userToStaffAccount = (user: User): StaffAccount => {
   };
 };
 
-export const isLecturerMatch = (entryLecturerName: string, staffUser: User): boolean => {
+export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: User, allUsers: User[]): boolean => {
     if (!entryLecturerName || typeof entryLecturerName !== 'string' || !staffUser) return false;
-    
+
     const staffAccount = userToStaffAccount(staffUser);
-    const allStaffAsAccounts = defaultUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
+    const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
 
     const matches = matchLecturerNames(entryLecturerName, allStaffAsAccounts);
 
-    // Check if any of the matches is a medium or high confidence match to the specific staffUser
     return matches.some(match => 
         match.matchedAccount?.id === staffAccount.id &&
         (match.matchType === 'high_confidence' || match.matchType === 'medium_confidence')

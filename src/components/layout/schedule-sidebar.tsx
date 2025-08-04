@@ -5,7 +5,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { useUser, type TimetableEntry, isLecturerMatch } from '@/app/providers/user-provider';
+import { useUser, type TimetableEntry, isLecturerMatchWithUsers } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
 import { BookUser } from 'lucide-react';
 import AdminStats from './admin-stats';
@@ -42,7 +42,7 @@ function ScheduleItem({
 }
 
 export default function ScheduleSidebar() {
-  const { user, masterSchedule, staffSchedules, rejectedEntries } = useUser();
+  const { user, allUsers, masterSchedule, staffSchedules, rejectedEntries } = useUser();
 
   const todaysSchedule = useMemo(() => {
     if (!user) return [];
@@ -65,14 +65,14 @@ export default function ScheduleSidebar() {
     if (user.role === 'staff') {
         const staffEntries = combinedSchedule.filter(entry => 
             entry.day === today &&
-            isLecturerMatch(entry.lecturer, user.name)
+            isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
         );
 
         const userRejectedIds = new Set(rejectedEntries[user.id] || []);
         if (userRejectedIds.size === 0) return staffEntries;
 
         const staffCourses = (masterSchedule || []).filter(entry =>
-            isLecturerMatch(entry.lecturer, user.name)
+            isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
         );
         
         const rejectedMasterIds = new Set<number>();
@@ -87,7 +87,7 @@ export default function ScheduleSidebar() {
     }
 
     return []; // No personal schedule for admin
-  }, [masterSchedule, staffSchedules, user, rejectedEntries]);
+  }, [masterSchedule, staffSchedules, user, rejectedEntries, allUsers]);
 
   const hasSchedule = todaysSchedule.length > 0;
 
@@ -123,5 +123,3 @@ export default function ScheduleSidebar() {
     </div>
   );
 }
-
-    
