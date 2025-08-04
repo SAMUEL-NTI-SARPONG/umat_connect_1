@@ -696,89 +696,162 @@ const initialCreateFormState = {
   time: '',
 };
 
-function StaffExamsView({ examsTimetable }: { examsTimetable: ExamsTimetable | null }) {
-    const { user, allUsers } = useUser();
-  
-    const staffExams = useMemo(() => {
-        if (!user || !examsTimetable || !examsTimetable.isDistributed) return [];
-    
-        const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
-        
-        return allExams.filter(exam => 
-          (exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user, allUsers)) || 
-          (exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user, allUsers))
-        );
-      }, [user, allUsers, examsTimetable]);
-  
-    if (!examsTimetable || !examsTimetable.isDistributed) {
+function StaffExamDetails({ exams }: { exams: (ExamEntry & { role: string })[] }) {
+    if (exams.length === 0) {
       return (
-        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-          <CardContent className="text-center text-muted-foreground">
-            <p className="font-medium">Exams Timetable Not Available</p>
-            <p className="text-sm">The exams timetable will appear here once it's published.</p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+          <h1 className="text-lg font-semibold mb-2">No Duties Today</h1>
+          <p className="text-sm text-muted-foreground">You have no exam duties scheduled for the selected day.</p>
+        </div>
       );
     }
-    
-    const headers = ['Date', 'Period', 'Role', 'Course Code', 'Course Name', 'Personnel', 'Room'];
   
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Your Exam Duties Schedule</CardTitle>
-          <CardDescription>
-            {staffExams.length > 0
-              ? `You have ${staffExams.length} scheduled exam duties.`
-              : "No exam duties found for you."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {staffExams.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>{headers.map(h => <TableHead key={h}>{h}</TableHead>)}</TableRow>
-                </TableHeader>
-                <TableBody>
-                  {staffExams.map(exam => {
-                    const isLecturer = exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user!, allUsers);
-                    const isInvigilator = exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user!, allUsers);
-                    let role = '';
-                    if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
-                    else if (isLecturer) role = 'Lecturer';
-                    else if (isInvigilator) role = 'Invigilator';
-
-                    return (
-                        <TableRow key={exam.id}>
-                        <TableCell>{exam.dateStr}</TableCell>
-                        <TableCell><Badge variant="outline">{exam.period}</Badge></TableCell>
-                        <TableCell><Badge variant="secondary">{role}</Badge></TableCell>
-                        <TableCell>
-                            <div className="font-medium">{exam.courseCode}</div>
-                            {exam.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
-                        </TableCell>
-                        <TableCell>{exam.courseName}</TableCell>
-                        <TableCell>
-                            <p><span className="font-semibold">Lecturer:</span> {exam.lecturer}</p>
-                            <p><span className="font-semibold">Invigilator:</span> {exam.invigilator}</p>
-                        </TableCell>
-                        <TableCell>{exam.room}</TableCell>
-                        </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+      <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+        <div className="space-y-4">
+          {exams.map((exam) => (
+            <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
+              <div className="flex-shrink-0 w-24 space-y-1">
+                <Badge variant="outline">{exam.period}</Badge>
+                <Badge variant="secondary">{exam.role}</Badge>
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-medium text-sm">{exam.courseCode}</p>
+                <p className="text-sm text-muted-foreground">{exam.courseName}</p>
+                <p className="text-xs text-muted-foreground">Class: <span className="font-medium text-foreground">{exam.class}</span></p>
+                <Separator className="my-2" />
+                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
+                <p className="text-xs text-muted-foreground">Lecturer: <span className="font-medium text-foreground">{exam.lecturer}</span></p>
+                <p className="text-xs text-muted-foreground">Invigilator: <span className="font-medium text-foreground">{exam.invigilator}</span></p>
+                {exam.is_practical && <Badge variant="destructive" className="mt-1">Practical</Badge>}
+              </div>
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-12">
-              <p>No exam duties found for you in the timetable.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </ScrollArea>
     );
   }
+
+function StaffExamsView() {
+    const { user, allUsers, examsTimetable } = useUser();
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [displayedExams, setDisplayedExams] = useState<(ExamEntry & { role: string })[]>([]);
+
+    const { staffExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
+        if (!user || !examsTimetable || !examsTimetable.isDistributed) {
+            return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
+        }
+
+        const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
+
+        const filteredStaffExams = allExams
+            .map(exam => {
+                const isLecturer = exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user, allUsers);
+                const isInvigilator = exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user, allUsers);
+                let role = '';
+                if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
+                else if (isLecturer) role = 'Lecturer';
+                else if (isInvigilator) role = 'Invigilator';
+
+                return { ...exam, role };
+            })
+            .filter(exam => exam.role);
+
+        if (filteredStaffExams.length === 0) {
+            return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
+        }
+
+        const uniqueExamDays = [...new Set(filteredStaffExams.map(exam => exam.dateStr))].filter(Boolean);
+        const sortedExamDays = uniqueExamDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
+
+        const firstDay = sortedExamDays[0];
+        const lastDay = sortedExamDays[sortedExamDays.length - 1];
+
+        const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
+        const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
+
+        const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
+
+        return {
+            staffExams: filteredStaffExams,
+            examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
+            firstExamDate: firstDate,
+            lastExamDate: lastDate,
+            numberOfMonths: months || 1,
+        };
+    }, [user, allUsers, examsTimetable]);
+
+    const handleDayClick = (day: Date) => {
+        const hasExam = examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+        if (hasExam) {
+            setSelectedDate(day);
+            const formattedDate = format(day, 'dd-MM-yyyy');
+            setDisplayedExams(staffExams.filter(exam => exam.dateStr === formattedDate));
+            setIsModalOpen(true);
+        }
+    };
+
+    if (!examsTimetable || !examsTimetable.isDistributed) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Exams Timetable Not Available</p>
+                    <p className="text-sm">The exams timetable will appear here once it's published.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (staffExams.length === 0) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">No Exam Duties Found</p>
+                    <p className="text-sm">No exam duties were found for you in the timetable.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Your Exam Duties Schedule</CardTitle>
+                <CardDescription>
+                    {`You have ${staffExams.length} scheduled exam duties. Dates with duties are highlighted.`}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onDayClick={handleDayClick}
+                    className="w-full"
+                    numberOfMonths={numberOfMonths}
+                    fromMonth={firstExamDate}
+                    toMonth={lastExamDate}
+                    modifiers={{ examDay: examDays }}
+                    modifiersClassNames={{
+                        examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                        day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                    }}
+                />
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Duties for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
+                            <DialogDescription>
+                                Here are your exam duties for this day.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <StaffExamDetails exams={displayedExams} />
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    );
+}
 
 function StaffResitView() {
     const { user, allUsers, specialResitTimetable } = useUser();
@@ -871,14 +944,12 @@ function StaffTimetableView({
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
-  examsTimetable,
 }: {
   schedule: TimetableEntry[];
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
-  examsTimetable: ExamsTimetable | null;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1562,7 +1633,7 @@ function StaffTimetableView({
         )}
       </TabsContent>
        <TabsContent value="exams" className="mt-6">
-            <StaffExamsView examsTimetable={examsTimetable} />
+            <StaffExamsView />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
             <StaffResitView />
@@ -2512,8 +2583,8 @@ function AdminTimetableView() {
       specialResitTimetable, setSpecialResitTimetable,
       examsTimetable, setExamsTimetable,
       isClassTimetableDistributed, distributeClassTimetable,
-      distributeExamsTimetable
   } = useUser();
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('class');
 
@@ -2547,6 +2618,13 @@ function AdminTimetableView() {
   const [resitError, setResitError] = useState<string | null>(null);
   const [resitSearchTerm, setResitSearchTerm] = useState('');
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
+  
+  const { distributeExamsTimetable } = useUser();
+
+  const handleDistributeExams = () => {
+    const result = distributeExamsTimetable();
+    toast.toast(result);
+  };
 
   const activeLoadingState = useMemo(() => {
     switch (activeTab) {
@@ -2838,7 +2916,7 @@ function AdminTimetableView() {
             onViewPracticals={() => setIsPracticalsModalOpen(true)}
             onAddExam={() => setIsAddExamModalOpen(true)}
             isDistributed={examsTimetable?.isDistributed}
-            onDistribute={distributeExamsTimetable}
+            onDistribute={handleDistributeExams}
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
@@ -3254,7 +3332,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     setEmptySlots,
     staffSchedules,
     addStaffSchedule,
-    examsTimetable,
     isClassTimetableDistributed,
   } = useUser();
   
@@ -3303,7 +3380,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
-                  examsTimetable={examsTimetable}
                />;
       case 'administrator':
         return <AdminTimetableView />
@@ -3328,3 +3404,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
