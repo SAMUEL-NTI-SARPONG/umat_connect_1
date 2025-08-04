@@ -502,7 +502,7 @@ interface UserContextType {
   updateStudentResitSelection: (entryIds: number[]) => void;
   examsTimetable: ExamsTimetable | null;
   setExamsTimetable: (data: ExamsTimetable | null) => void;
-  distributeExamsTimetable: () => void;
+  distributeExamsTimetable: () => { success: boolean; message: string; studentCount?: number };
   faculties: Faculty[];
   departmentMap: Map<string, string>;
   allDepartments: string[];
@@ -867,50 +867,47 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const distributeExamsTimetable = useCallback(() => {
     if (!examsTimetable) {
-      toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
-      return;
+      return { success: false, message: "No exam timetable available to distribute." };
     }
     if (!examsTimetable.exams?.length && !examsTimetable.practicals?.length) {
-      toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
-      return;
+      return { success: false, message: "Exam timetable contains no entries." };
     }
-
+  
     setExamsTimetableState(prev => {
-        if (!prev) return null; // Should not happen due to checks above but good practice
-        
-        const distributedData = { ...prev, isDistributed: true };
-        try {
-            localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-        } catch (error) {
-            console.error("Failed to write to localStorage:", error);
-        }
-
-        const allExams = [...(distributedData.exams || []), ...(distributedData.practicals || [])];
-        const studentsWithSchedules = allUsers.filter(u => {
-          if (u.role !== 'student') return false;
-          return allExams.some(exam => exam.level === u.level && u.department && exam.departments?.includes(u.department));
-        });
-
-        studentsWithSchedules.forEach(student => {
-          if (user) {
-            addNotification({
-              recipientId: student.id,
-              actorId: user.id,
-              type: 'exam_timetable',
-              postId: 0,
-              commentId: 0,
-            });
-          }
-        });
-        
-        toast({ 
-          title: "Exams Timetable Distributed", 
-          description: `The exams timetable is now live for ${studentsWithSchedules.length} students and relevant staff.`
-        });
-        
-        return distributedData;
+      if (!prev) return null;
+      const distributedData = { ...prev, isDistributed: true };
+      try {
+        localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
+      } catch (error) {
+        console.error("Failed to write to localStorage:", error);
+      }
+      return distributedData;
     });
-  }, [examsTimetable, allUsers, user, addNotification, toast]);
+  
+    const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
+    const studentsWithSchedules = allUsers.filter(u => {
+      if (u.role !== 'student') return false;
+      return allExams.some(exam => exam.level === u.level && u.department && exam.departments?.includes(u.department));
+    });
+  
+    studentsWithSchedules.forEach(student => {
+      if (user) {
+        addNotification({
+          recipientId: student.id,
+          actorId: user.id,
+          type: 'exam_timetable',
+          postId: 0,
+          commentId: 0,
+        });
+      }
+    });
+  
+    return { 
+      success: true, 
+      message: `The exams timetable is now live for ${studentsWithSchedules.length} students and relevant staff.`,
+      studentCount: studentsWithSchedules.length
+    };
+  }, [examsTimetable, allUsers, user, addNotification]);
 
   const updateStudentResitSelection = useCallback((entryIds: number[]) => {
     if (!user) return;
