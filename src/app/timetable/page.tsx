@@ -2180,7 +2180,7 @@ function TimetableDisplay({
     return days.indexOf(a) - days.indexOf(b);
   });
 
-  const examsTableHeaders = ['Period', 'Course Code', 'Course Name', 'Class', 'Room', 'Lecturer', 'Invigilator'];
+  const examsTableHeaders = ['Period', 'Course Code', 'Course Name', 'Class', 'Room', 'Lecturer', 'Invigilator', 'Practical'];
   const classTableHeaders = ['Time', 'Room', 'Course', 'Lecturer', 'Departments', 'Level'];
 
   if (!parsedData) {
@@ -2295,13 +2295,15 @@ function TimetableDisplay({
                                     </TableCell>
                                     <TableCell>
                                         <div className="font-medium">{entry.courseCode}</div>
-                                        {entry.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">{entry.courseName}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.class}</TableCell>
                                     <TableCell className="font-medium">{entry.room}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.lecturer}</TableCell>
                                     <TableCell className="text-muted-foreground">{entry.invigilator}</TableCell>
+                                    <TableCell>
+                                        {entry.is_practical && <Badge variant="destructive" className="mt-1 font-normal">Practical</Badge>}
+                                    </TableCell>
                                 </TableRow>
                                 ))}
                             </TableBody>
@@ -2453,6 +2455,19 @@ function TimetableDisplay({
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="exam-invigilator" className="text-right">Invigilator</Label>
                         <Input id="exam-invigilator" value={(editedFormData as any)?.invigilator || ''} onChange={(e) => handleEditInputChange('invigilator', e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="is-practical"
+                            checked={(editedFormData as any)?.is_practical || false}
+                            onCheckedChange={(checked) => handleEditInputChange('is_practical', !!checked)}
+                        />
+                        <label
+                            htmlFor="is-practical"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            This is a practical exam
+                        </label>
                     </div>
                 </div>
             ) : (
@@ -2634,6 +2649,11 @@ function AdminTimetableView() {
     const result = distributeExamsTimetable();
     toast.toast(result);
   };
+  
+  const allExamEntries = useMemo(() => {
+    if (!examsTimetable) return null;
+    return [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
+  }, [examsTimetable]);
 
   const activeLoadingState = useMemo(() => {
     switch (activeTab) {
@@ -2664,10 +2684,10 @@ function AdminTimetableView() {
 
   const currentParsedData = useMemo(() => {
     if (activeTab === 'class') return masterSchedule;
-    if (activeTab === 'exams') return examsTimetable;
+    if (activeTab === 'exams') return allExamEntries;
     if (activeTab === 'resit') return specialResitTimetable;
     return null;
-  }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
+  }, [activeTab, masterSchedule, allExamEntries, specialResitTimetable]);
 
   
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2913,13 +2933,21 @@ function AdminTimetableView() {
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
            <TimetableDisplay
-            parsedData={examsTimetable?.exams ?? null}
-            setParsedData={(data) => setExamsTimetable(prev => ({ ...(prev || { exams: [], practicals: [], isDistributed: false }), exams: data || [] }))}
+            parsedData={allExamEntries ?? null}
+            setParsedData={(data) => {
+              if (data) {
+                const exams = data.filter(d => !d.is_practical);
+                const practicals = data.filter(d => d.is_practical);
+                setExamsTimetable(prev => ({ ...(prev || { exams: [], practicals: [], isDistributed: false }), exams, practicals }));
+              } else {
+                setExamsTimetable(null);
+              }
+            }}
             emptySlots={[]}
             searchTerm={examsSearchTerm}
             showInvalid={examsShowInvalid}
             title="Parsed Exams Timetable Preview"
-            description={`A total of ${examsTimetable?.exams.length || 0} exam entries were found.`}
+            description={`A total of ${allExamEntries?.length || 0} exam entries were found.`}
             placeholder="Upload an exams timetable to begin."
             isExamsTimetable={true}
             onViewPracticals={() => setIsPracticalsModalOpen(true)}
@@ -3107,6 +3135,7 @@ const initialExamState = {
     room: '',
     lecturer: '',
     invigilator: '',
+    is_practical: false,
 };
 
 function AddExamDialog({ isOpen, onClose, onAddExam }: { isOpen: boolean; onClose: () => void; onAddExam: (exam: any) => void; }) {
@@ -3208,6 +3237,19 @@ function AddExamDialog({ isOpen, onClose, onAddExam }: { isOpen: boolean; onClos
                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="invigilator" className="text-right">Invigilator</Label>
                         <Input id="invigilator" value={examData.invigilator} onChange={(e) => handleInputChange('invigilator', e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="is-practical-add"
+                            checked={examData.is_practical}
+                            onCheckedChange={(checked) => handleInputChange('is_practical', !!checked)}
+                        />
+                        <label
+                            htmlFor="is-practical-add"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                            This is a practical exam
+                        </label>
                     </div>
                 </div>
                 <DialogFooter>
@@ -3413,5 +3455,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
 
 
