@@ -866,16 +866,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const distributeExamsTimetable = useCallback(() => {
-    setExamsTimetableState(prev => {
-        if (!prev) {
-          toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
-          return null;
-        }
+    if (!examsTimetable) {
+      toast({ title: "Error", description: "No exam timetable available to distribute.", variant: "destructive" });
+      return;
+    }
+    if (!examsTimetable.exams?.length && !examsTimetable.practicals?.length) {
+      toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
+      return;
+    }
 
-        if (!prev.exams?.length && !prev.practicals?.length) {
-          toast({ title: "Error", description: "Exam timetable contains no entries.", variant: "destructive" });
-          return prev;
-        }
+    setExamsTimetableState(prev => {
+        if (!prev) return null; // Should not happen due to checks above but good practice
         
         const distributedData = { ...prev, isDistributed: true };
         try {
@@ -909,7 +910,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         return distributedData;
     });
-  }, [allUsers, user, addNotification, toast]);
+  }, [examsTimetable, allUsers, user, addNotification, toast]);
 
   const updateStudentResitSelection = useCallback((entryIds: number[]) => {
     if (!user) return;
@@ -1139,5 +1140,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
