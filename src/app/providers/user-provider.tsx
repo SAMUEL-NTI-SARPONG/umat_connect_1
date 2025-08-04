@@ -840,16 +840,61 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const distributeSpecialResitTimetable = useCallback(() => {
     setSpecialResitTimetableState(prev => {
         if (!prev) return null;
-        const distributedData = { ...prev, isDistributed: true };
+
+        const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
+        const allEntries = prev.sheets.flatMap(sheet => sheet.entries.flatMap(e => e.courses));
+
+        const distributedMap = new Map<string, SpecialResitEntry[]>();
+        const unassigned: SpecialResitEntry[] = [];
+
+        allEntries.forEach(entry => {
+            if (!entry.examiner) {
+                unassigned.push(entry);
+                return;
+            }
+
+            const matches = matchLecturerNames(entry.examiner, allStaffAsAccounts);
+            const highConfidenceMatch = matches.find(m => m.matchType === 'high_confidence' || m.matchType === 'medium_confidence');
+
+            if (highConfidenceMatch && highConfidenceMatch.matchedAccount) {
+                const staffName = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id)?.name || 'Unknown Staff';
+                if (!distributedMap.has(staffName)) {
+                    distributedMap.set(staffName, []);
+                }
+                distributedMap.get(staffName)!.push(entry);
+            } else {
+                unassigned.push(entry);
+            }
+        });
+
+        const newEntries: DistributedResitSchedule[] = [];
+        distributedMap.forEach((courses, lecturer) => {
+            newEntries.push({ lecturer, courses });
+        });
+
+        if (unassigned.length > 0) {
+            newEntries.push({ lecturer: 'Unassigned', courses: unassigned });
+        }
+
+        const distributedData: SpecialResitTimetable = {
+            ...prev,
+            isDistributed: true,
+            sheets: [{
+                sheetName: 'Distributed',
+                entries: newEntries
+            }]
+        };
+
         try {
             localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
         } catch (error) {
             console.error("Failed to write to localStorage:", error);
         }
+        
         toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
         return distributedData;
     });
-  }, [toast]);
+  }, [allUsers, toast]);
   
   const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
     setExamsTimetableState(data);

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -870,8 +869,9 @@ function StaffResitView() {
             
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
 
+      // Find the schedule belonging to the current staff user.
       const scheduleForStaff = allSchedules.find(lecturerSchedule => 
-        isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
+          isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
       );
       
       return scheduleForStaff ? scheduleForStaff.courses : [];
@@ -2608,7 +2608,7 @@ function AdminTimetableView() {
       examsTimetable, setExamsTimetable,
       isClassTimetableDistributed, distributeClassTimetable,
   } = useUser();
-  const toast = useToast();
+  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('class');
 
@@ -2645,10 +2645,10 @@ function AdminTimetableView() {
   
   const { distributeExamsTimetable } = useUser();
 
-  const handleDistributeExams = () => {
+  const handleDistributeExams = useCallback(() => {
     const result = distributeExamsTimetable();
-    toast.toast(result);
-  };
+    toast(result);
+  }, [distributeExamsTimetable, toast]);
   
   const allExamEntries = useMemo(() => {
     if (!examsTimetable) return null;
@@ -3455,6 +3455,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
 
 
 
