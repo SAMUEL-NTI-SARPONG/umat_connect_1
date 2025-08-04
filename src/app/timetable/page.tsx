@@ -787,7 +787,16 @@ function StaffExamsView() {
         if (hasExam) {
             setSelectedDate(day);
             const formattedDate = format(day, 'dd-MM-yyyy');
-            setDisplayedExams(staffExams.filter(exam => exam.dateStr === formattedDate));
+            const examsForDay = staffExams.filter(exam => exam.dateStr === formattedDate);
+
+            const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
+            const sortedExams = [...examsForDay].sort((a, b) => {
+                const aPeriod = a.period || 'Unknown';
+                const bPeriod = b.period || 'Unknown';
+                return periodOrder[aPeriod] - periodOrder[bPeriod];
+            });
+
+            setDisplayedExams(sortedExams);
             setIsModalOpen(true);
         }
     };
@@ -3404,4 +3413,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     
 
     
+
 
