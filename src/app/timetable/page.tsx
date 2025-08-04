@@ -861,21 +861,92 @@ function StaffExamsView() {
     );
 }
 
+function StaffResitDetails({ resits }: { resits: SpecialResitEntry[] }) {
+    if (resits.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-8">
+          <h1 className="text-lg font-semibold mb-2">No Duties Today</h1>
+          <p className="text-sm text-muted-foreground">You have no resit duties scheduled for the selected day.</p>
+        </div>
+      );
+    }
+  
+    return (
+      <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
+        <div className="space-y-4">
+          {resits.map((resit) => (
+            <div key={resit.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
+              <div className="flex-shrink-0 w-24">
+                <Badge variant="outline">{resit.session}</Badge>
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="font-medium text-sm">{resit.courseCode}</p>
+                <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+                <Separator className="my-2" />
+                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{resit.room}</span></p>
+                <p className="text-xs text-muted-foreground">Students: <span className="font-medium text-foreground">{resit.numberOfStudents}</span></p>
+                <p className="text-xs text-muted-foreground">Department: <span className="font-medium text-foreground">{resit.department}</span></p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    );
+}
+
 function StaffResitView() {
     const { user, allUsers, specialResitTimetable } = useUser();
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [displayedResits, setDisplayedResits] = useState<SpecialResitEntry[]>([]);
   
-    const staffResitSchedule = useMemo(() => {
-      if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) return [];
-            
+    const { staffResits, resitDays, firstResitDate, lastResitDate, numberOfMonths } = useMemo(() => {
+      if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
+        return { staffResits: [], resitDays: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
+      }
+      
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
 
-      // Find the schedule belonging to the current staff user.
       const scheduleForStaff = allSchedules.find(lecturerSchedule => 
-          isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
+        isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
       );
+
+      const filteredStaffResits = scheduleForStaff ? scheduleForStaff.courses : [];
       
-      return scheduleForStaff ? scheduleForStaff.courses : [];
+      if (filteredStaffResits.length === 0) {
+        return { staffResits: [], resitDays: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
+      }
+  
+      const uniqueResitDays = [...new Set(filteredStaffResits.map(resit => resit.date).filter(Boolean) as string[])];
+      const sortedResitDays = uniqueResitDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
+  
+      const firstDay = sortedResitDays[0];
+      const lastDay = sortedResitDays[sortedResitDays.length - 1];
+  
+      const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
+      const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
+  
+      const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
+  
+      return {
+        staffResits: filteredStaffResits,
+        resitDays: sortedResitDays.map(d => new Date(d.split('-').reverse().join('-'))),
+        firstResitDate: firstDate,
+        lastResitDate: lastDate,
+        numberOfMonths: months || 1,
+      };
     }, [user, allUsers, specialResitTimetable]);
+  
+    const handleDayClick = (day: Date) => {
+      const hasResit = resitDays.some(resitDate => format(resitDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+      if (hasResit) {
+        setSelectedDate(day);
+        const formattedDate = format(day, 'dd-MM-yyyy');
+        const resitsForDay = staffResits.filter(resit => resit.date === formattedDate);
+        setDisplayedResits(resitsForDay);
+        setIsModalOpen(true);
+      }
+    };
   
     if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
       return (
@@ -888,7 +959,7 @@ function StaffResitView() {
       );
     }
     
-    if (staffResitSchedule.length === 0) {
+    if (staffResits.length === 0) {
       return (
         <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
           <CardContent className="text-center text-muted-foreground">
@@ -898,55 +969,43 @@ function StaffResitView() {
         </Card>
       );
     }
-
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Original Examiner', 'Session'];
   
     return (
-      <div className="space-y-6">
-        {specialResitTimetable.notice && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>Administrator's Notice</AlertTitle>
-            <AlertDescription className="whitespace-pre-wrap">
-              {specialResitTimetable.notice}
-            </AlertDescription>
-          </Alert>
-        )}
-  
-        <Card>
-          <CardHeader>
-              <CardTitle>Your Resit Supervision Schedule</CardTitle>
-              <CardDescription>
-                  {`You have ${staffResitSchedule.length} supervision(s) scheduled.`}
-              </CardDescription>
-          </CardHeader>
-          <CardContent>
-              <div className="overflow-x-auto">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {staffResitSchedule.map((entry) => (
-                              <TableRow key={entry.id}>
-                                  <TableCell>{entry.date}</TableCell>
-                                  <TableCell>{entry.courseCode}</TableCell>
-                                  <TableCell>{entry.courseName}</TableCell>
-                                  <TableCell>{entry.department}</TableCell>
-                                  <TableCell>{entry.numberOfStudents}</TableCell>
-                                  <TableCell>{entry.room}</TableCell>
-                                  <TableCell>{entry.examiner}</TableCell>
-                                  <TableCell>{entry.session}</TableCell>
-                              </TableRow>
-                          ))}
-                      </TableBody>
-                  </Table>
-              </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+            <CardTitle>Your Resit Supervision Schedule</CardTitle>
+            <CardDescription>
+                {`You have ${staffResits.length} supervision(s) scheduled. Dates are highlighted below.`}
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Calendar
+                mode="single"
+                selected={selectedDate}
+                onDayClick={handleDayClick}
+                className="w-full"
+                numberOfMonths={numberOfMonths}
+                fromMonth={firstResitDate}
+                toMonth={lastResitDate}
+                modifiers={{ examDay: resitDays }}
+                modifiersClassNames={{
+                    examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                    day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                }}
+            />
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Resit Duties for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
+                        <DialogDescription>
+                            Here are your resit supervision duties for this day.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <StaffResitDetails resits={displayedResits} />
+                </DialogContent>
+            </Dialog>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -1759,6 +1818,7 @@ function ResitTimetableDisplay({
     const handleDistribute = () => {
         onDistribute();
         setIsDistributeConfirmOpen(false);
+        toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
     };
 
     const flattenedAndFilteredData = useMemo(() => {
@@ -2081,7 +2141,7 @@ function TimetableDisplay({
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
     if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length, i < roomDaySlots.length; i++) {
+      for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         if (!currentSlot || !currentSlot.includes(' - ')) continue;
 
@@ -2626,8 +2686,8 @@ function AdminTimetableView() {
       isClassTimetableDistributed, distributeClassTimetable,
       distributeExamsTimetable,
       distributeSpecialResitTimetable,
+      toast,
   } = useUser();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('class');
 
@@ -2663,14 +2723,8 @@ function AdminTimetableView() {
   const [resitShowInvalid, setResitShowInvalid] = useState(false);
   
   const handleDistributeExams = useCallback(() => {
-    const result = distributeExamsTimetable();
-    return result;
+    return distributeExamsTimetable();
   }, [distributeExamsTimetable]);
-
-  const handleDistributeResit = useCallback(() => {
-    distributeSpecialResitTimetable();
-    toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
-  }, [distributeSpecialResitTimetable, toast]);
   
   const allExamEntries = useMemo(() => {
     if (!examsTimetable) return null;
@@ -2984,7 +3038,7 @@ function AdminTimetableView() {
             searchTerm={resitSearchTerm}
             setParsedData={setSpecialResitTimetable}
             showInvalid={resitShowInvalid}
-            onDistribute={handleDistributeResit}
+            onDistribute={distributeSpecialResitTimetable}
           />
         </TabsContent>
       </Tabs>
@@ -3470,8 +3524,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 }
     
  
-
-    
 
     
 
