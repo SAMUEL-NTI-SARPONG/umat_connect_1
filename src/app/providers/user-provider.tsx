@@ -842,12 +842,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (!prev) return null;
 
         const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
-        const allEntries = prev.sheets.flatMap(sheet => sheet.entries.flatMap(e => e.courses));
+        
+        const allEntriesFlat = prev.sheets.flatMap(sheet =>
+            sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
+        );
 
         const distributedMap = new Map<string, SpecialResitEntry[]>();
         const unassigned: SpecialResitEntry[] = [];
 
-        allEntries.forEach(entry => {
+        allEntriesFlat.forEach(entry => {
             if (!entry.examiner) {
                 unassigned.push(entry);
                 return;

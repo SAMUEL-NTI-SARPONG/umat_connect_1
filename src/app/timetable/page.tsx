@@ -250,12 +250,23 @@ function StudentResitView() {
         }
     }, [studentResitSelections, user]);
     
-    if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
+    if (!specialResitTimetable) {
         return (
             <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                 <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Special Resit Timetable Not Yet Published</p>
-                    <p className="text-sm">The timetable will appear here once the administrator distributes it. Please check back later.</p>
+                    <p className="font-medium">Special Resit Timetable Not Available</p>
+                    <p className="text-sm">The timetable has not been uploaded by an administrator yet.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+    
+    if (!specialResitTimetable.isDistributed) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Special Resit Timetable Pending</p>
+                    <p className="text-sm">The timetable has been uploaded and will be available after administrator review.</p>
                 </CardContent>
             </Card>
         );
@@ -907,10 +918,7 @@ function StaffResitView() {
       }
       
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
-
-      const scheduleForStaff = allSchedules.find(lecturerSchedule => 
-        isLecturerMatchWithUsers(lecturerSchedule.lecturer, user, allUsers)
-      );
+      const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
 
       const filteredStaffResits = scheduleForStaff ? scheduleForStaff.courses : [];
       
@@ -919,24 +927,30 @@ function StaffResitView() {
       }
   
       const uniqueResitDays = [...new Set(filteredStaffResits.map(resit => resit.date).filter(Boolean) as string[])];
-      const sortedResitDays = uniqueResitDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
+      
+      const parseDate = (dateString: string) => {
+        const [day, month, year] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      };
+
+      const sortedResitDays = uniqueResitDays.sort((a, b) => parseDate(a).getTime() - parseDate(b).getTime());
   
       const firstDay = sortedResitDays[0];
       const lastDay = sortedResitDays[sortedResitDays.length - 1];
   
-      const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
-      const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
+      const firstDate = firstDay ? parseDate(firstDay) : new Date();
+      const lastDate = lastDay ? parseDate(lastDay) : new Date();
   
       const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
   
       return {
         staffResits: filteredStaffResits,
-        resitDays: sortedResitDays.map(d => new Date(d.split('-').reverse().join('-'))),
+        resitDays: sortedResitDays.map(d => parseDate(d)),
         firstResitDate: firstDate,
         lastResitDate: lastDate,
         numberOfMonths: months || 1,
       };
-    }, [user, allUsers, specialResitTimetable]);
+    }, [user, specialResitTimetable]);
   
     const handleDayClick = (day: Date) => {
       const hasResit = resitDays.some(resitDate => format(resitDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
@@ -949,15 +963,26 @@ function StaffResitView() {
       }
     };
   
-    if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
-      return (
-        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-          <CardContent className="text-center text-muted-foreground">
-            <p className="font-medium">Special Resit Timetable Not Yet Published</p>
-            <p className="text-sm">The resit schedule has not been published by the administrator yet.</p>
-          </CardContent>
-        </Card>
-      );
+    if (!specialResitTimetable) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Special Resit Timetable Not Available</p>
+                    <p className="text-sm">The timetable has not been uploaded by an administrator yet.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (!specialResitTimetable.isDistributed) {
+        return (
+            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                    <p className="font-medium">Special Resit Timetable Pending</p>
+                    <p className="text-sm">The timetable has been uploaded and will be available after administrator review.</p>
+                </CardContent>
+            </Card>
+        );
     }
     
     if (staffResits.length === 0) {
@@ -2317,8 +2342,7 @@ function TimetableDisplay({
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                )
-                )}
+                ))}
                 {isExamsTimetable && onAddExam && (
                     <Button variant="outline" onClick={onAddExam}>
                         <PlusCircle className="h-4 w-4 mr-2" />
@@ -3539,3 +3563,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
