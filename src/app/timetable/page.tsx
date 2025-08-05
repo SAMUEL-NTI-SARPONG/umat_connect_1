@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -892,7 +893,7 @@ function StaffResitDetails({ resits }: { resits: SpecialResitEntry[] }) {
         </div>
       </ScrollArea>
     );
-}
+  }
 
 function StaffResitView() {
     const { user, allUsers, specialResitTimetable } = useUser();
@@ -1847,8 +1848,8 @@ function ResitTimetableDisplay({
       }
       return allEntries.sort((a, b) => {
         try {
-            const [dayA, monthA, yearA] = a.date!.split('-').map(Number);
-            const [dayB, monthB, yearB] = b.date!.split('-').map(Number);
+            const [dayA, monthA, yearA] = (a.date || '').split('-').map(Number);
+            const [dayB, monthB, yearB] = (b.date || '').split('-').map(Number);
             
             const dateA = new Date(yearA, monthA - 1, dayA);
             const dateB = new Date(yearB, monthB - 1, dayB);

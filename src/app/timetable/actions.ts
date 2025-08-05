@@ -267,19 +267,17 @@ function extractTimetableData(fileBuffer: Buffer) {
         entries.push(entry);
       }
   
-      // Simple structure without distribution.
-      // The data is just a flat list of courses for the "Distributed" sheet.
-      // The view components will need to handle this.
-      const lecturerEntries = [{
-        lecturer: "All Courses", // Placeholder lecturer
-        courses: entries,
-      }];
+      // Create a structure where each course is under its own examiner for the pre-distribution view
+      const lecturerEntries = entries.map(entry => ({
+        lecturer: entry.examiner || 'Unassigned',
+        courses: [entry],
+      }));
   
       return {
         venue,
         isDistributed: false,
         sheets: [{
-            sheetName: "Distributed",
+            sheetName: "Distributed", // This name is used pre and post distribution
             entries: lecturerEntries,
         }]
       };
