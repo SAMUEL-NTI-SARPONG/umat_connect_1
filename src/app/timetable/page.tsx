@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -873,95 +872,32 @@ function StaffExamsView() {
     );
 }
 
-function StaffResitDetails({ resits }: { resits: SpecialResitEntry[] }) {
-    if (resits.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-center p-8">
-          <h1 className="text-lg font-semibold mb-2">No Duties Today</h1>
-          <p className="text-sm text-muted-foreground">You have no resit duties scheduled for the selected day.</p>
-        </div>
-      );
-    }
-  
-    return (
-      <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
-        <div className="space-y-4">
-          {resits.map((resit) => (
-            <div key={resit.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
-              <div className="flex-shrink-0 w-24">
-                <Badge variant="outline">{resit.session}</Badge>
-              </div>
-              <div className="flex-1 space-y-1">
-                <p className="font-medium text-sm">{resit.courseCode}</p>
-                <p className="text-sm text-muted-foreground">{resit.courseName}</p>
-                <Separator className="my-2" />
-                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{resit.room}</span></p>
-                <p className="text-xs text-muted-foreground">Students: <span className="font-medium text-foreground">{resit.numberOfStudents}</span></p>
-                <p className="text-xs text-muted-foreground">Department: <span className="font-medium text-foreground">{resit.department}</span></p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-    );
-  }
-
 function StaffResitView() {
-    const { user, allUsers, specialResitTimetable } = useUser();
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [displayedResits, setDisplayedResits] = useState<SpecialResitEntry[]>([]);
+    const { user, specialResitTimetable } = useUser();
   
-    const { staffResits, resitDays, firstResitDate, lastResitDate, numberOfMonths } = useMemo(() => {
+    const staffResits = useMemo(() => {
       if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
-        return { staffResits: [], resitDays: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
+        return [];
       }
       
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
       const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
-
+  
       const filteredStaffResits = scheduleForStaff ? scheduleForStaff.courses : [];
       
-      if (filteredStaffResits.length === 0) {
-        return { staffResits: [], resitDays: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
-      }
-  
-      const uniqueResitDays = [...new Set(filteredStaffResits.map(resit => resit.date).filter(Boolean) as string[])];
-      
-      const parseDate = (dateString: string) => {
-        const [day, month, year] = dateString.split('-').map(Number);
-        return new Date(year, month - 1, day);
+      const parseDate = (dateString: string | null) => {
+        if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
+        const parts = dateString.split('-').map(Number);
+        // Assuming DD-MM-YYYY format
+        if (parts.length === 3) {
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+        return new Date('2100-01-01');
       };
 
-      const sortedResitDays = uniqueResitDays.sort((a, b) => parseDate(a).getTime() - parseDate(b).getTime());
-  
-      const firstDay = sortedResitDays[0];
-      const lastDay = sortedResitDays[sortedResitDays.length - 1];
-  
-      const firstDate = firstDay ? parseDate(firstDay) : new Date();
-      const lastDate = lastDay ? parseDate(lastDay) : new Date();
-  
-      const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
-  
-      return {
-        staffResits: filteredStaffResits,
-        resitDays: sortedResitDays.map(d => parseDate(d)),
-        firstResitDate: firstDate,
-        lastResitDate: lastDate,
-        numberOfMonths: months || 1,
-      };
+      return filteredStaffResits.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+
     }, [user, specialResitTimetable]);
-  
-    const handleDayClick = (day: Date) => {
-      const hasResit = resitDays.some(resitDate => format(resitDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
-      if (hasResit) {
-        setSelectedDate(day);
-        const formattedDate = format(day, 'dd-MM-yyyy');
-        const resitsForDay = staffResits.filter(resit => resit.date === formattedDate);
-        setDisplayedResits(resitsForDay);
-        setIsModalOpen(true);
-      }
-    };
   
     if (!specialResitTimetable) {
         return (
@@ -1001,39 +937,43 @@ function StaffResitView() {
         <CardHeader>
             <CardTitle>Your Resit Supervision Schedule</CardTitle>
             <CardDescription>
-                {`You have ${staffResits.length} supervision(s) scheduled. Dates are highlighted below.`}
+                {`You have ${staffResits.length} supervision(s) scheduled.`}
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <Calendar
-                mode="single"
-                selected={selectedDate}
-                onDayClick={handleDayClick}
-                className="w-full"
-                numberOfMonths={numberOfMonths}
-                fromMonth={firstResitDate}
-                toMonth={lastResitDate}
-                modifiers={{ examDay: resitDays }}
-                modifiersClassNames={{
-                    examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                    day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                }}
-            />
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Resit Duties for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
-                        <DialogDescription>
-                            Here are your resit supervision duties for this day.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <StaffResitDetails resits={displayedResits} />
-                </DialogContent>
-            </Dialog>
+            <ScrollArea className="h-[60vh]">
+                <div className="space-y-4 pr-4">
+                    {staffResits.map((resit) => (
+                        <Card key={resit.id} className="p-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-semibold">{resit.courseCode}</p>
+                                    <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+                                </div>
+                                <div className="text-right">
+                                    <Badge variant="outline">{resit.date}</Badge>
+                                    <p className="text-xs text-muted-foreground mt-1">{resit.session}</p>
+                                </div>
+                            </div>
+                            <Separator className="my-3" />
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                                    <span>{resit.room}</span>
+                                </div>
+                                 <div className="flex items-center gap-2">
+                                    <Users2 className="h-4 w-4 text-muted-foreground" />
+                                    <span>{resit.department}</span>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            </ScrollArea>
         </CardContent>
       </Card>
     );
-  }
+}
 
 function StaffTimetableView({
   schedule,
@@ -1442,7 +1382,7 @@ function StaffTimetableView({
               </TabsList>
             </div>
             <div className="py-6">
-              {days.map((day) => (
+              {days.map(day => (
                 <TabsContent key={day} value={day}>
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                     <div className="md:border md:rounded-lg md:overflow-hidden">
@@ -3493,7 +3433,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     return [...(masterSchedule || []), ...staffSchedules];
   }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
 
-  // Derived states are now calculated within the render logic using useMemo
   const staffSchedule = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'staff') return [];
     
@@ -3502,7 +3441,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     );
   }, [combinedSchedule, user, allUsers]);
 
-  const studentSchedule = useMemo(() => {
+  const studentTimetable = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
 
     return combinedSchedule.filter(entry =>
@@ -3514,18 +3453,18 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
   useEffect(() => {
     if (user?.role === 'student' && setStudentSchedule) {
-      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      const todaysStudentSchedule = studentSchedule.filter(entry => entry.day === today);
-      setStudentSchedule(todaysStudentSchedule);
+      setStudentSchedule(studentTimetable);
+    } else if (setStudentSchedule) {
+      setStudentSchedule([]);
     }
-  }, [studentSchedule, user, setStudentSchedule]);
+  }, [user, studentTimetable, setStudentSchedule]);
 
   const renderContent = () => {
     if (!user) return <p>Loading...</p>;
 
     switch (user.role) {
       case 'student':
-        return <StudentTimetableView schedule={studentSchedule} />;
+        return <StudentTimetableView schedule={studentTimetable} />;
       case 'staff':
         return <StaffTimetableView 
                   schedule={staffSchedule} 
@@ -3563,4 +3502,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
