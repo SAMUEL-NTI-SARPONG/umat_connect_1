@@ -473,7 +473,7 @@ interface UserContextType {
   masterSchedule: TimetableEntry[] | null;
   setMasterSchedule: (data: TimetableEntry[] | null) => void;
   isClassTimetableDistributed: boolean;
-  distributeClassTimetable: () => void;
+  distributeClassTimetable: () => { success: boolean; message: string };
   updateScheduleStatus: (entryId: number, status: EventStatus) => void;
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
@@ -613,10 +613,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [toast]);
   
   const distributeClassTimetable = useCallback(() => {
-    if (!masterSchedule) return;
+    if (!masterSchedule) {
+      return { success: false, message: 'No class timetable to distribute.' };
+    }
     setClassTimetableDistributed(true);
-    toast({ title: "Class Timetable Distributed", description: "The class timetable is now live for all users." });
-  }, [masterSchedule, toast]);
+    return { success: true, message: 'The class timetable is now live for all users.' };
+  }, [masterSchedule]);
 
   const updateScheduleStatus = useCallback((entryId: number, status: EventStatus) => {
     const updateSchedule = (schedule: TimetableEntry[] | null) => {
