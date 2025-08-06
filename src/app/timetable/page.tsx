@@ -880,9 +880,12 @@ function StaffResitView() {
             return [];
         }
         
-        const allEntries = specialResitTimetable.sheets.flatMap(sheet => 
-            sheet.entries.flatMap(lecturerSchedule => 
-                lecturerSchedule.courses
+        const allEntries = specialResitTimetable.sheets.flatMap(sheet =>
+            sheet.entries.flatMap(lecturerSchedule =>
+                lecturerSchedule.courses.map(course => ({
+                    ...course,
+                    assignedLecturer: lecturerSchedule.lecturer,
+                }))
             )
         );
 
@@ -947,7 +950,7 @@ function StaffResitView() {
         </CardHeader>
         <CardContent>
             <ScrollArea className="h-[60vh]">
-                <div className="space-y-4 pr-4">
+                <div className="space-y-4 max-w-md mx-auto">
                     {staffResits.map((resit) => (
                         <Card key={resit.id} className="p-4">
                             <div className="flex justify-between items-start">
@@ -1943,7 +1946,7 @@ function ResitTimetableDisplay({
                 </div>
             </CardHeader>
             <CardContent>
-                <Accordion type="multiple" className="w-full space-y-4">
+                <Accordion type="multiple" className="w-full space-y-4" defaultValue={groupKeys}>
                   {groupKeys.length > 0 ? (
                     groupKeys.map(date => (
                       <Card key={date} className="overflow-hidden">
@@ -2195,9 +2198,9 @@ function TimetableDisplay({
   const handleDistribute = () => {
     if (onDistribute) {
         const result = onDistribute();
-        if (result.success) {
+        if (result && result.success) {
             toast({ title: "Timetable Distribution", description: result.message });
-        } else {
+        } else if (result) {
             toast({ title: "Distribution Failed", description: result.message, variant: "destructive" });
         }
     }
@@ -2340,7 +2343,7 @@ function TimetableDisplay({
         </CardHeader>
         <CardContent>
           {isExamsTimetable ? (
-            <Accordion type="multiple" className="w-full space-y-4">
+            <Accordion type="multiple" className="w-full space-y-4" defaultValue={groupKeys}>
               {groupKeys.map(key => {
                 const sortedEntries = [...(groupedByDate[key] as ExamEntry[])].sort((a, b) => {
                     const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
@@ -3076,7 +3079,7 @@ function AdminTimetableView() {
             )}
             {examsTimetable?.practicals && (
               examsTimetable.practicals.length > 0 ? (
-                <Accordion type="multiple" className="w-full space-y-4">
+                <Accordion type="multiple" className="w-full space-y-4" defaultValue={practicalGroupKeys}>
                     {practicalGroupKeys.map(key => (
                         <Card key={key} className="overflow-hidden">
                             <AccordionItem value={key} className="border-b-0">
@@ -3544,6 +3547,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
