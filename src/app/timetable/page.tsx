@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -964,7 +964,7 @@ function StaffResitView() {
                                 </div>
                             </div>
                             <Separator className="my-3" />
-                            <div className="flex flex-col space-y-2 text-sm">
+                             <div className="flex flex-col space-y-2 text-sm">
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.room}</span>
@@ -3563,3 +3563,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
     
 
+
+
+    
