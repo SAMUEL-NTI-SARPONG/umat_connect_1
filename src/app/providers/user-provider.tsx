@@ -845,7 +845,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
         
-        const allEntriesFlat = prev.sheets.flatMap(sheet =>
+        const allEntriesFlat = prev.sheets.flatMap(sheet => 
             sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
         );
 
@@ -862,11 +862,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const highConfidenceMatch = matches.find(m => m.matchType === 'high_confidence' || m.matchType === 'medium_confidence');
 
             if (highConfidenceMatch && highConfidenceMatch.matchedAccount) {
-                const staffName = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id)?.name || 'Unknown Staff';
-                if (!distributedMap.has(staffName)) {
-                    distributedMap.set(staffName, []);
+                const staffUser = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id);
+                if (staffUser) {
+                    const staffName = staffUser.name;
+                    if (!distributedMap.has(staffName)) {
+                        distributedMap.set(staffName, []);
+                    }
+                    distributedMap.get(staffName)!.push(entry);
+                } else {
+                   unassigned.push(entry);
                 }
-                distributedMap.get(staffName)!.push(entry);
             } else {
                 unassigned.push(entry);
             }
