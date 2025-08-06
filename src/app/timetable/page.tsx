@@ -881,7 +881,9 @@ function StaffResitView() {
         }
         
         const allEntries = specialResitTimetable.sheets.flatMap(sheet => 
-            sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
+            sheet.entries.flatMap(lecturerSchedule => 
+                lecturerSchedule.courses
+            )
         );
 
         const filteredStaffResits = allEntries.filter(entry => 
@@ -964,9 +966,13 @@ function StaffResitView() {
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.room}</span>
                                 </div>
-                                 <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.department}</span>
+                                </div>
+                                <div className="flex items-center gap-2 col-span-2">
+                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span>Examiner: {resit.examiner}</span>
                                 </div>
                             </div>
                         </Card>
@@ -3538,6 +3544,8 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
+
 
 
 
