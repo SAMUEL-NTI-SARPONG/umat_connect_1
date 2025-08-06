@@ -846,14 +846,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
         
         let allEntriesFlat: SpecialResitEntry[];
+
+        // CORRECTLY handle both pre-distribution and post-distribution data structures.
         if (prev.isDistributed) {
-            // If already distributed, flatten the distributed structure
+            // If already distributed, flatten the DistributedResitSchedule structure
             allEntriesFlat = prev.sheets.flatMap(sheet => 
                 sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
             );
         } else {
-            // If not distributed, it's the raw upload structure
-             allEntriesFlat = prev.sheets.flatMap(sheet =>
+            // If not distributed, it's the raw upload structure from actions.ts
+            // which is { lecturer: '...', courses: [entry] } for each row
+            allEntriesFlat = prev.sheets.flatMap(sheet =>
                 sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
             );
         }
