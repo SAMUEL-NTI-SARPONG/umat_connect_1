@@ -845,35 +845,44 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
         const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
         
-        const allEntriesFlat = prev.sheets.flatMap(sheet => 
-            sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
-        );
+        let allEntriesFlat: SpecialResitEntry[];
+        if (prev.isDistributed) {
+            // If already distributed, flatten the distributed structure
+            allEntriesFlat = prev.sheets.flatMap(sheet => 
+                sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
+            );
+        } else {
+            // If not distributed, it's the raw upload structure
+             allEntriesFlat = prev.sheets.flatMap(sheet =>
+                sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
+            );
+        }
 
         const distributedMap = new Map<string, SpecialResitEntry[]>();
-        const unassigned: SpecialResitEntry[] = [];
 
         allEntriesFlat.forEach(entry => {
-            if (!entry.examiner) {
-                unassigned.push(entry);
-                return;
-            }
+            let assigned = false;
+            if (entry.examiner) {
+                const matches = matchLecturerNames(entry.examiner, allStaffAsAccounts);
+                const highConfidenceMatch = matches.find(m => m.matchType === 'high_confidence' || m.matchType === 'medium_confidence');
 
-            const matches = matchLecturerNames(entry.examiner, allStaffAsAccounts);
-            const highConfidenceMatch = matches.find(m => m.matchType === 'high_confidence' || m.matchType === 'medium_confidence');
-
-            if (highConfidenceMatch && highConfidenceMatch.matchedAccount) {
-                const staffUser = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id);
-                if (staffUser) {
-                    const staffName = staffUser.name;
-                    if (!distributedMap.has(staffName)) {
-                        distributedMap.set(staffName, []);
+                if (highConfidenceMatch && highConfidenceMatch.matchedAccount) {
+                    const staffUser = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id);
+                    if (staffUser) {
+                        const staffName = staffUser.name;
+                        if (!distributedMap.has(staffName)) {
+                            distributedMap.set(staffName, []);
+                        }
+                        distributedMap.get(staffName)!.push(entry);
+                        assigned = true;
                     }
-                    distributedMap.get(staffName)!.push(entry);
-                } else {
-                   unassigned.push(entry);
                 }
-            } else {
-                unassigned.push(entry);
+            }
+            if (!assigned) {
+                if (!distributedMap.has('Unassigned')) {
+                    distributedMap.set('Unassigned', []);
+                }
+                distributedMap.get('Unassigned')!.push(entry);
             }
         });
 
@@ -881,17 +890,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         distributedMap.forEach((courses, lecturer) => {
             newEntries.push({ lecturer, courses });
         });
-
-        if (unassigned.length > 0) {
-            newEntries.push({ lecturer: 'Unassigned', courses: unassigned });
-        }
+        
+        // Filter out the empty "Unassigned" group if it exists but has no courses
+        const finalEntries = newEntries.filter(e => !(e.lecturer === 'Unassigned' && e.courses.length === 0));
 
         const distributedData: SpecialResitTimetable = {
             ...prev,
             isDistributed: true,
             sheets: [{
                 sheetName: 'Distributed',
-                entries: newEntries
+                entries: finalEntries
             }]
         };
 
