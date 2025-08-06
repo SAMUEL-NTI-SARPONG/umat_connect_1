@@ -958,7 +958,7 @@ function StaffResitView() {
                                     <p className="font-semibold">{resit.courseCode}</p>
                                     <p className="text-sm text-muted-foreground">{resit.courseName}</p>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right flex flex-col items-end">
                                     <Badge variant="outline">{resit.date}</Badge>
                                     <p className="text-xs text-muted-foreground mt-1">{resit.session}</p>
                                 </div>
@@ -971,6 +971,10 @@ function StaffResitView() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
+                                    <span>{resit.numberOfStudents} student(s)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <BookUser className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.department}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -1305,20 +1309,22 @@ function StaffTimetableView({
 
   return (
     <Tabs defaultValue="class" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">
+       <ScrollArea className="w-full whitespace-nowrap">
+        <TabsList>
+          <TabsTrigger value="class">
             <span className="sm:hidden">Class</span>
             <span className="hidden sm:inline">Class Timetable</span>
-        </TabsTrigger>
-        <TabsTrigger value="exams">
+          </TabsTrigger>
+          <TabsTrigger value="exams">
             <span className="sm:hidden">Exams</span>
             <span className="hidden sm:inline">Exams Timetable</span>
-        </TabsTrigger>
-        <TabsTrigger value="resit">
+          </TabsTrigger>
+          <TabsTrigger value="resit">
             <span className="sm:hidden">Resit</span>
             <span className="hidden sm:inline">Special Resit</span>
-        </TabsTrigger>
-      </TabsList>
+          </TabsTrigger>
+        </TabsList>
+      </ScrollArea>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
             <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -3556,3 +3562,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
