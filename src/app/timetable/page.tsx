@@ -876,32 +876,32 @@ function StaffResitView() {
     const { user, specialResitTimetable } = useUser();
   
     const staffResits = useMemo(() => {
-      if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
-        return [];
-      }
-      
-      const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
-      const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
-  
-      if (!scheduleForStaff) {
-          return [];
-      }
-
-      const filteredStaffResits = scheduleForStaff.courses;
-      
-      const parseDate = (dateString: string | null) => {
-        if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
-        const parts = dateString.split('-').map(Number);
-        // Assuming DD-MM-YYYY format
-        if (parts.length === 3) {
-            return new Date(parts[2], parts[1] - 1, parts[0]);
+        if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
+            return [];
         }
-        return new Date('2100-01-01');
-      };
-
-      return filteredStaffResits.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
-
-    }, [user, specialResitTimetable]);
+        
+        const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
+        const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
+    
+        if (!scheduleForStaff) {
+            return [];
+        }
+  
+        const filteredStaffResits = scheduleForStaff.courses;
+        
+        const parseDate = (dateString: string | null) => {
+          if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
+          const parts = dateString.split('-').map(Number);
+          // Assuming DD-MM-YYYY format
+          if (parts.length === 3) {
+              return new Date(parts[2], parts[1] - 1, parts[0]);
+          }
+          return new Date('2100-01-01');
+        };
+  
+        return filteredStaffResits.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
+  
+      }, [user, specialResitTimetable]);
   
     if (!specialResitTimetable) {
         return (
@@ -1791,8 +1791,8 @@ function ResitTimetableDisplay({
         toast({ title: "Timetable Distributed", description: "The special resit timetable is now live for students and staff." });
     };
 
-    const flattenedAndFilteredData = useMemo(() => {
-        if (!parsedData) return [];
+    const groupedAndFilteredData = useMemo(() => {
+        if (!parsedData) return {};
     
         const allEntriesWithLecturer = parsedData.sheets.flatMap(sheet =>
             sheet.entries.flatMap(lecturerSchedule =>
@@ -1817,22 +1817,37 @@ function ResitTimetableDisplay({
                 )
             );
         }
-    
-        return filteredEntries.sort((a, b) => {
-            try {
-                const [dayA, monthA, yearA] = (a.date || '').split('-').map(Number);
-                const [dayB, monthB, yearB] = (b.date || '').split('-').map(Number);
-                
-                const dateA = new Date(yearA, monthA - 1, dayA);
-                const dateB = new Date(yearB, monthB - 1, dayB);
-    
-                if (dateA.getTime() > dateB.getTime()) return 1;
-                if (dateA.getTime() < dateB.getTime()) return -1;
-                return 0;
-            } catch (e) {
-                return 0;
+        
+        // Group by date
+        const groupedByDate = filteredEntries.reduce((acc, entry) => {
+            const date = entry.date || 'Unscheduled';
+            if (!acc[date]) {
+                acc[date] = [];
             }
-        });
+            acc[date].push(entry);
+            return acc;
+        }, {} as Record<string, typeof filteredEntries>);
+        
+        // Sort groups by date
+        return Object.keys(groupedByDate)
+            .sort((a, b) => {
+                if (a === 'Unscheduled') return 1;
+                if (b === 'Unscheduled') return -1;
+                try {
+                    const [dayA, monthA, yearA] = a.split('-').map(Number);
+                    const [dayB, monthB, yearB] = b.split('-').map(Number);
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
+                    return dateA.getTime() - dateB.getTime();
+                } catch (e) {
+                    return 0;
+                }
+            })
+            .reduce((acc, key) => {
+                acc[key] = groupedByDate[key];
+                return acc;
+            }, {} as typeof groupedByDate);
+
     }, [parsedData, searchTerm, showInvalid]);
   
     if (!parsedData) {
@@ -1844,7 +1859,8 @@ function ResitTimetableDisplay({
     }
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Assigned Lecturer', 'Session'];
+    const headers = ['Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Assigned Lecturer', 'Session'];
+    const groupKeys = Object.keys(groupedAndFilteredData);
 
     return (
       <div className="space-y-6">
@@ -1922,40 +1938,52 @@ function ResitTimetableDisplay({
                 </div>
             </CardHeader>
             <CardContent>
-                <Accordion type="multiple" className="w-full">
-                    <div className="overflow-x-auto border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
+                <Accordion type="multiple" className="w-full space-y-4">
+                  {groupKeys.length > 0 ? (
+                    groupKeys.map(date => (
+                      <Card key={date} className="overflow-hidden">
+                        <AccordionItem value={date} className="border-b-0">
+                          <AccordionTrigger className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors [&[data-state=open]>svg]:rotate-180">
+                            <div className="flex items-center gap-4">
+                              <span className="font-semibold text-base">{date}</span>
+                              <Badge variant="secondary">{groupedAndFilteredData[date]?.length || 0} resits</Badge>
+                            </div>
+                            <ChevronDown className="h-5 w-5 shrink-0 transition-transform duration-200" />
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
                                     {headers.map((header) => (
-                                        <TableHead key={header}>{header}</TableHead>
+                                      <TableHead key={header}>{header}</TableHead>
                                     ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {flattenedAndFilteredData.length > 0 ? (
-                                    flattenedAndFilteredData.map((row) => (
-                                        <TableRow key={`${row.id}-${(row as any).assignedLecturer}`} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
-                                            <TableCell>{row.date}</TableCell>
-                                            <TableCell>{row.courseCode}</TableCell>
-                                            <TableCell>{row.courseName}</TableCell>
-                                            <TableCell>{row.department}</TableCell>
-                                            <TableCell>{row.numberOfStudents}</TableCell>
-                                            <TableCell>{row.room}</TableCell>
-                                            <TableCell>{(row as any).assignedLecturer}</TableCell>
-                                            <TableCell>{row.session}</TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={headers.length} className="h-24 text-center">
-                                            No results found for your filter.
-                                        </TableCell>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {groupedAndFilteredData[date].map((row: any) => (
+                                    <TableRow key={`${row.id}-${row.assignedLecturer}`} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                      <TableCell>{row.courseCode}</TableCell>
+                                      <TableCell>{row.courseName}</TableCell>
+                                      <TableCell>{row.department}</TableCell>
+                                      <TableCell>{row.numberOfStudents}</TableCell>
+                                      <TableCell>{row.room}</TableCell>
+                                      <TableCell>{row.assignedLecturer}</TableCell>
+                                      <TableCell>{row.session}</TableCell>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-12">
+                      <p>No results found for your filter criteria.</p>
                     </div>
+                  )}
                 </Accordion>
             </CardContent>
         </Card>
@@ -3511,6 +3539,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
