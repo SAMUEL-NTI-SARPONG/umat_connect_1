@@ -883,7 +883,11 @@ function StaffResitView() {
       const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
       const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
   
-      const filteredStaffResits = scheduleForStaff ? scheduleForStaff.courses : [];
+      if (!scheduleForStaff) {
+          return [];
+      }
+
+      const filteredStaffResits = scheduleForStaff.courses;
       
       const parseDate = (dateString: string | null) => {
         if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
@@ -3459,9 +3463,11 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     }
   }, [user, studentTimetable, setStudentSchedule]);
 
-  const renderContent = () => {
-    if (!user) return <p>Loading...</p>;
+  if (!user) {
+    return <p>Loading...</p>;
+  }
 
+  const renderContent = () => {
     switch (user.role) {
       case 'student':
         return <StudentTimetableView schedule={studentTimetable} />;
@@ -3502,5 +3508,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
