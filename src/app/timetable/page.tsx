@@ -964,7 +964,7 @@ function StaffResitView() {
                                 </div>
                             </div>
                             <Separator className="my-3" />
-                            <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex flex-col space-y-2 text-sm">
                                 <div className="flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.room}</span>
@@ -973,7 +973,7 @@ function StaffResitView() {
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.department}</span>
                                 </div>
-                                <div className="flex items-center gap-2 col-span-2">
+                                <div className="flex items-center gap-2">
                                     <UserIcon className="h-4 w-4 text-muted-foreground" />
                                     <span>Examiner: {resit.examiner}</span>
                                 </div>
@@ -3547,6 +3547,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
