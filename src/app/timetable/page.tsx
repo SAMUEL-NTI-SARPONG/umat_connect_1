@@ -873,21 +873,20 @@ function StaffExamsView() {
 }
 
 function StaffResitView() {
-    const { user, specialResitTimetable } = useUser();
+    const { user, allUsers, specialResitTimetable } = useUser();
   
     const staffResits = useMemo(() => {
         if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
             return [];
         }
         
-        const allSchedules = specialResitTimetable.sheets.flatMap(s => s.entries);
-        const scheduleForStaff = allSchedules.find(lecturerSchedule => lecturerSchedule.lecturer === user.name);
-    
-        if (!scheduleForStaff) {
-            return [];
-        }
-  
-        const filteredStaffResits = scheduleForStaff.courses;
+        const allEntries = specialResitTimetable.sheets.flatMap(sheet => 
+            sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
+        );
+
+        const filteredStaffResits = allEntries.filter(entry => 
+            entry.examiner && isLecturerMatchWithUsers(entry.examiner, user, allUsers)
+        );
         
         const parseDate = (dateString: string | null) => {
           if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
@@ -901,7 +900,7 @@ function StaffResitView() {
   
         return filteredStaffResits.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
   
-      }, [user, specialResitTimetable]);
+      }, [user, allUsers, specialResitTimetable]);
   
     if (!specialResitTimetable) {
         return (
@@ -3539,5 +3538,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
