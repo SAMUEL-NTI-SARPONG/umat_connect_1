@@ -3418,7 +3418,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void }) {
+export default function TimetablePage() {
   const { 
     user, 
     allUsers,
@@ -3454,14 +3454,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
         (entry.departments || []).includes(user.department)
       );
   }, [combinedSchedule, user]);
-
-  useEffect(() => {
-    if (user?.role === 'student' && setStudentSchedule) {
-      setStudentSchedule(studentTimetable);
-    } else if (setStudentSchedule) {
-      setStudentSchedule([]);
-    }
-  }, [user, studentTimetable, setStudentSchedule]);
 
   if (!user) {
     return <p>Loading...</p>;
@@ -3508,6 +3500,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
