@@ -512,7 +512,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
       let currentRangeStart = slots[0].start;
       let currentRangeEnd = slots[0].end;
 
-      for (let i = 1; i < slots.length; i++) {
+      for (let i = 1; < slots.length; i++) {
         if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
           currentRangeEnd = slots[i].end;
         } else {
@@ -1102,7 +1102,7 @@ function StaffTimetableView({
       let currentRangeStart = slots[0].start;
       let currentRangeEnd = slots[0].end;
 
-      for (let i = 1; i < slots.length; i++) {
+      for (let i = 1; < slots.length; i++) {
         if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
           currentRangeEnd = slots[i].end;
         } else {
@@ -1254,7 +1254,7 @@ function StaffTimetableView({
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
     if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
+      for (let i = startIndex; < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         if (!currentSlot || !currentSlot.includes(' - ')) continue;
 
@@ -1278,7 +1278,7 @@ function StaffTimetableView({
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(createStartTime));
     if (createStartTime && startIndex !== -1) {
-        for (let i = startIndex; i < roomDaySlots.length; i++) {
+        for (let i = startIndex; < roomDaySlots.length; i++) {
             const currentSlot = roomDaySlots[i];
             if (!currentSlot || !currentSlot.includes(' - ')) continue;
 
@@ -2142,7 +2142,7 @@ function TimetableDisplay({
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
     if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
+      for (let i = startIndex; < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
         if (!currentSlot || !currentSlot.includes(' - ')) continue;
 
@@ -3539,9 +3539,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
-
-
-
-
-
 
