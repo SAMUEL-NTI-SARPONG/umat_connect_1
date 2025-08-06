@@ -1792,44 +1792,47 @@ function ResitTimetableDisplay({
     };
 
     const flattenedAndFilteredData = useMemo(() => {
-      if (!parsedData) return [];
-  
-      let allEntries = parsedData.sheets.flatMap(sheet =>
-        sheet.entries.flatMap(lecturerSchedule =>
-          lecturerSchedule.courses.map(course => ({
-            ...course,
-            assignedLecturer: lecturerSchedule.lecturer,
-          }))
-        )
-      );
-
-      if (showInvalid) {
-        allEntries = allEntries.filter(entry => String(entry.assignedLecturer).toLowerCase().includes('unassigned'));
-      }
-
-      if (searchTerm) {
-        const lowercasedFilter = searchTerm.toLowerCase();
-        allEntries = allEntries.filter(entry =>
-            Object.values(entry).some(value =>
-              String(value).toLowerCase().includes(lowercasedFilter)
+        if (!parsedData) return [];
+    
+        const allEntriesWithLecturer = parsedData.sheets.flatMap(sheet =>
+            sheet.entries.flatMap(lecturerSchedule =>
+                lecturerSchedule.courses.map(course => ({
+                    ...course,
+                    assignedLecturer: lecturerSchedule.lecturer,
+                }))
             )
         );
-      }
-      return allEntries.sort((a, b) => {
-        try {
-            const [dayA, monthA, yearA] = (a.date || '').split('-').map(Number);
-            const [dayB, monthB, yearB] = (b.date || '').split('-').map(Number);
-            
-            const dateA = new Date(yearA, monthA - 1, dayA);
-            const dateB = new Date(yearB, monthB - 1, dayB);
-
-            if (dateA.getTime() > dateB.getTime()) return 1;
-            if (dateA.getTime() < dateB.getTime()) return -1;
-            return 0;
-        } catch (e) {
-            return 0;
+    
+        let filteredEntries = allEntriesWithLecturer;
+    
+        if (showInvalid) {
+            filteredEntries = filteredEntries.filter(entry => String(entry.assignedLecturer).toLowerCase().includes('unassigned'));
         }
-      });
+    
+        if (searchTerm) {
+            const lowercasedFilter = searchTerm.toLowerCase();
+            filteredEntries = filteredEntries.filter(entry =>
+                Object.values(entry).some(value =>
+                    String(value).toLowerCase().includes(lowercasedFilter)
+                )
+            );
+        }
+    
+        return filteredEntries.sort((a, b) => {
+            try {
+                const [dayA, monthA, yearA] = (a.date || '').split('-').map(Number);
+                const [dayB, monthB, yearB] = (b.date || '').split('-').map(Number);
+                
+                const dateA = new Date(yearA, monthA - 1, dayA);
+                const dateB = new Date(yearB, monthB - 1, dayB);
+    
+                if (dateA.getTime() > dateB.getTime()) return 1;
+                if (dateA.getTime() < dateB.getTime()) return -1;
+                return 0;
+            } catch (e) {
+                return 0;
+            }
+        });
     }, [parsedData, searchTerm, showInvalid]);
   
     if (!parsedData) {
@@ -3418,7 +3421,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage() {
+export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void }) {
   const { 
     user, 
     allUsers,
@@ -3454,6 +3457,14 @@ export default function TimetablePage() {
         (entry.departments || []).includes(user.department)
       );
   }, [combinedSchedule, user]);
+  
+  useEffect(() => {
+      if (user?.role === 'student' && setStudentSchedule) {
+        setStudentSchedule(studentTimetable);
+      } else if(setStudentSchedule) {
+        setStudentSchedule([]);
+      }
+  }, [user, studentTimetable, setStudentSchedule]);
 
   if (!user) {
     return <p>Loading...</p>;
@@ -3500,6 +3511,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
