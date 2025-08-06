@@ -1306,9 +1306,18 @@ function StaffTimetableView({
   return (
     <Tabs defaultValue="class" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">Class Timetable</TabsTrigger>
-        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+        <TabsTrigger value="class">
+            <span className="sm:hidden">Class</span>
+            <span className="hidden sm:inline">Class Timetable</span>
+        </TabsTrigger>
+        <TabsTrigger value="exams">
+            <span className="sm:hidden">Exams</span>
+            <span className="hidden sm:inline">Exams Timetable</span>
+        </TabsTrigger>
+        <TabsTrigger value="resit">
+            <span className="sm:hidden">Resit</span>
+            <span className="hidden sm:inline">Special Resit</span>
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
@@ -3547,10 +3556,3 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
-
-
-
-
-
-
-
