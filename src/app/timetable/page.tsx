@@ -786,6 +786,18 @@ function StaffExamsView() {
         });
     };
 
+    const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
+      const seen = new Set<string>();
+      return exams.filter((exam) => {
+        const key = `${exam.dateStr}-${exam.period}-${exam.courseCode}-${exam.class}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    };
+
     const { staffExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
         if (!examsTimetable || !examsTimetable.isDistributed || selectedNames.length === 0) {
             return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
@@ -808,11 +820,13 @@ function StaffExamsView() {
             })
             .filter(exam => exam.role);
 
-        if (filteredStaffExams.length === 0) {
+        const dedupedExams = deduplicateStaffExams(filteredStaffExams);
+        
+        if (dedupedExams.length === 0) {
             return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
         }
 
-        const uniqueExamDays = [...new Set(filteredStaffExams.map(exam => exam.dateStr))].filter(Boolean);
+        const uniqueExamDays = [...new Set(dedupedExams.map(exam => exam.dateStr))].filter(Boolean);
         const sortedExamDays = uniqueExamDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
 
         const firstDay = sortedExamDays[0];
@@ -824,7 +838,7 @@ function StaffExamsView() {
         const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
 
         return {
-            staffExams: filteredStaffExams,
+            staffExams: dedupedExams,
             examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
             firstExamDate: firstDate,
             lastExamDate: lastDate,
