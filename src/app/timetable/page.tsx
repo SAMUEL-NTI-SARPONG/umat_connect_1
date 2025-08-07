@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2 } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -2148,6 +2148,7 @@ function TimetableDisplay({
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isDistributeConfirmOpen, setIsDistributeConfirmOpen] = useState(false);
   const { allDepartments } = useUser();
+  const [fixedPreviewData, setFixedPreviewData] = useState<any[] | null>(null);
 
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
@@ -2190,6 +2191,12 @@ function TimetableDisplay({
       }
     }
   }, [selectedEntry, isEditModalOpen, isExamsTimetable]);
+  
+  // When filter settings change, clear the preview data
+  useEffect(() => {
+    setFixedPreviewData(null);
+  }, [searchTerm, showInvalid]);
+
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
     if (isDistributed && !isExamsTimetable) return;
@@ -2247,7 +2254,7 @@ function TimetableDisplay({
     let data = [...parsedData];
 
     if (showInvalid) {
-        data = data.filter(entry => (entry as any).lecturer?.toLowerCase() === 'tba' || (entry as any).lecturer?.toLowerCase() === 'unknown' || (entry as any).invigilator?.toLowerCase() === 'tba' || (entry as any).invigilator?.toLowerCase() === 'unknown');
+        data = data.filter(entry => (entry as any).lecturer?.toLowerCase() === 'tba' || (entry as any).lecturer?.toLowerCase() === 'unknown' || (entry as any).invigilator?.toLowerCase() === 'tba' || (entry as any).invigilator?.toLowerCase() === 'unknown' || !(entry as any).lecturer );
     }
     
     if (!searchTerm) return data;
@@ -2263,42 +2270,58 @@ function TimetableDisplay({
   const handleFixEntries = () => {
     if (!filteredData) return;
 
-    const updatedData = (parsedData as TimetableEntry[]).map(entry => {
-      // Find if this entry is in the filtered (visible) list of invalid entries
-      const invalidEntry = filteredData.find(fe => fe.id === entry.id);
-      if (invalidEntry && (invalidEntry.lecturer.toLowerCase() === 'tba' || invalidEntry.lecturer === '')) {
-        const text = invalidEntry.courseCode;
-        let splitIndex = -1;
+    const fixedEntries = filteredData.map(entry => {
+      const text = entry.courseCode;
+      if (!text || typeof text !== 'string') return entry;
 
-        // Find the last occurrence of a digit or a closing parenthesis
-        for (let i = text.length - 1; i >= 0; i--) {
-          if (/\d/.test(text[i]) || text[i] === ')') {
-            splitIndex = i + 1;
-            break;
-          }
-        }
-        
-        if (splitIndex !== -1 && splitIndex < text.length) {
-          const courseCode = text.substring(0, splitIndex).trim();
-          const lecturer = text.substring(splitIndex).trim();
-          // Only update if a potential lecturer name is found
-          if (lecturer) {
-             return { ...entry, courseCode, lecturer };
-          }
+      let splitIndex = -1;
+      for (let i = text.length - 1; i >= 0; i--) {
+        if (/\d/.test(text[i]) || text[i] === ')') {
+          splitIndex = i;
+          break;
         }
       }
-      return entry; // Return original entry if not fixed
+
+      if (splitIndex !== -1) {
+        const courseCode = text.substring(0, splitIndex + 1).trim();
+        const lecturer = text.substring(splitIndex + 1).trim();
+        if (lecturer) {
+          return { ...entry, courseCode, lecturer };
+        }
+      }
+      return entry;
     });
-    
+
+    setFixedPreviewData(fixedEntries);
+    toast({ title: "Previewing Fixes", description: "The corrected entries are now displayed. Review the changes and click 'Save Fixes' to apply them." });
+  };
+  
+  const handleSaveFixes = () => {
+    if (!fixedPreviewData || !parsedData) return;
+
+    const updatedData = [...parsedData];
+    fixedPreviewData.forEach(fixedEntry => {
+        const index = updatedData.findIndex(d => d.id === fixedEntry.id);
+        if (index !== -1) {
+            updatedData[index] = fixedEntry;
+        }
+    });
+
     setParsedData(updatedData);
-    toast({ title: "Entries Corrected", description: "The parsing logic has been applied to the filtered entries." });
+    setFixedPreviewData(null);
+    toast({ title: "Entries Corrected", description: "The fixes have been saved successfully." });
+  };
+  
+  const handleCancelFixes = () => {
+    setFixedPreviewData(null);
   };
 
+  const dataToDisplay = fixedPreviewData || filteredData;
 
   const groupedByDate = useMemo(() => {
-    if (!filteredData) return {};
+    if (!dataToDisplay) return {};
     
-    return filteredData.reduce((acc, entry) => {
+    return dataToDisplay.reduce((acc, entry) => {
       const key = isExamsTimetable ? (entry as any).dateStr : (entry as any).day;
       if (!acc[key]) {
         acc[key] = [];
@@ -2306,7 +2329,7 @@ function TimetableDisplay({
       acc[key].push(entry);
       return acc;
     }, {} as Record<string, (TimetableEntry | ExamEntry)[]>);
-  }, [filteredData, isExamsTimetable]);
+  }, [dataToDisplay, isExamsTimetable]);
   
   const groupKeys = Object.keys(groupedByDate).sort((a, b) => {
     if (isExamsTimetable) {
@@ -2339,20 +2362,34 @@ function TimetableDisplay({
               <CardTitle>{title}</CardTitle>
               <CardDescription>
                 {
-                  showInvalid 
-                    ? `Found ${filteredData?.length || 0} entries for review.`
-                    : searchTerm 
-                      ? `Found ${filteredData?.length || 0} matching entries.`
-                      : description
+                   fixedPreviewData
+                    ? `Previewing fixes for ${fixedPreviewData.length} entries.`
+                    : showInvalid 
+                      ? `Found ${dataToDisplay?.length || 0} entries for review.`
+                      : searchTerm 
+                        ? `Found ${dataToDisplay?.length || 0} matching entries.`
+                        : description
                 }
               </CardDescription>
             </div>
             <div className='flex gap-2'>
-                 {showInvalid && !isExamsTimetable && (
+                {showInvalid && !isExamsTimetable && !fixedPreviewData && (
                   <Button variant="outline" onClick={handleFixEntries} size="sm">
                     <Wand2 className="h-4 w-4 mr-2" />
                     Fix Invalid Entries
                   </Button>
+                )}
+                {fixedPreviewData && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleCancelFixes} size="sm">
+                      <Undo2 className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveFixes} size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Fixes
+                    </Button>
+                  </div>
                 )}
                 {onDistribute && (
                     isDistributed ? (
@@ -3607,5 +3644,3 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
-
-
