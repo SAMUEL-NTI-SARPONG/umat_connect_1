@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, Checkbox as CheckboxIcon } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -1021,10 +1021,32 @@ function StaffTimetableView({
   const [createStartTime, setCreateStartTime] = useState('');
   const [createEndTime, setCreateEndTime] = useState('');
 
-  // New state for lecturer selection
+  // New state for multi-lecturer selection
   const [isLecturerModalOpen, setIsLecturerModalOpen] = useState(false);
   const [lecturerSearch, setLecturerSearch] = useState('');
-  const [selectedLecturer, setSelectedLecturer] = useState<string | null>(null);
+  const [selectedLecturers, setSelectedLecturers] = useState<string[]>([]);
+  const [localSelectedNames, setLocalSelectedNames] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setLocalSelectedNames(new Set(selectedLecturers));
+  }, [isLecturerModalOpen, selectedLecturers]);
+  
+  const handleConfirmLecturerSelection = () => {
+    setSelectedLecturers(Array.from(localSelectedNames));
+    setIsLecturerModalOpen(false);
+  };
+  
+  const handleLocalNameSelectionChange = (name: string, checked: boolean) => {
+    setLocalSelectedNames(prev => {
+        const newSet = new Set(prev);
+        if (checked) {
+            newSet.add(name);
+        } else {
+            newSet.delete(name);
+        }
+        return newSet;
+    });
+  };
 
   const allLecturerNames = useMemo(() => {
     if (!masterSchedule) return [];
@@ -1042,9 +1064,9 @@ function StaffTimetableView({
   }, [allLecturerNames, lecturerSearch]);
 
   const staffSchedule = useMemo(() => {
-    if (!masterSchedule || !selectedLecturer) return [];
-    return masterSchedule.filter(entry => entry.lecturer === selectedLecturer);
-  }, [masterSchedule, selectedLecturer]);
+    if (!masterSchedule || selectedLecturers.length === 0) return [];
+    return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
+  }, [masterSchedule, selectedLecturers]);
 
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -1287,7 +1309,7 @@ function StaffTimetableView({
             <div className="flex justify-end sm:justify-start gap-2">
                 <Button variant="outline" size="sm" onClick={() => setIsLecturerModalOpen(true)}>
                     <UserSearch className="w-4 h-4 mr-2" />
-                    Select My Name
+                    Select My Name(s)
                 </Button>
                  <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
                     <DialogTrigger asChild>
@@ -1409,10 +1431,10 @@ function StaffTimetableView({
                   ) : (
                     <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                         <CardContent className="text-center text-muted-foreground">
-                          {selectedLecturer ? (
+                          {selectedLecturers.length > 0 ? (
                              <p className="font-medium">No classes scheduled for {day}.</p>
                           ) : (
-                            <p className="font-medium">Select your name to view your schedule.</p>
+                            <p className="font-medium">Select your name(s) to view your schedule.</p>
                           )}
                         </CardContent>
                     </Card>
@@ -1426,9 +1448,9 @@ function StaffTimetableView({
             <Dialog open={isLecturerModalOpen} onOpenChange={setIsLecturerModalOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Select Your Name</DialogTitle>
+                        <DialogTitle>Select Your Name(s)</DialogTitle>
                         <DialogDescription>
-                            Find your name in the list to view your personal timetable.
+                            Select all names that refer to you to see your complete timetable.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="relative my-2">
@@ -1441,20 +1463,19 @@ function StaffTimetableView({
                         />
                     </div>
                     <ScrollArea className="h-64 border rounded-md">
-                        <div className="p-2">
+                        <div className="p-2 space-y-1">
                             {filteredLecturers.length > 0 ? (
                                 filteredLecturers.map(name => (
-                                    <Button
-                                        key={name}
-                                        variant={selectedLecturer === name ? "secondary" : "ghost"}
-                                        className="w-full justify-start"
-                                        onClick={() => {
-                                            setSelectedLecturer(name);
-                                            setIsLecturerModalOpen(false);
-                                        }}
-                                    >
-                                        {name}
-                                    </Button>
+                                    <div key={name} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                        <Checkbox
+                                            id={`lecturer-${name}`}
+                                            checked={localSelectedNames.has(name)}
+                                            onCheckedChange={(checked) => handleLocalNameSelectionChange(name, !!checked)}
+                                        />
+                                        <Label htmlFor={`lecturer-${name}`} className="font-normal cursor-pointer flex-1">
+                                            {name}
+                                        </Label>
+                                    </div>
                                 ))
                             ) : (
                                 <p className="text-center text-sm text-muted-foreground py-4">
@@ -1463,6 +1484,13 @@ function StaffTimetableView({
                             )}
                         </div>
                     </ScrollArea>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsLecturerModalOpen(false)}>Cancel</Button>
+                        <Button onClick={handleConfirmLecturerSelection}>
+                            <CheckboxIcon className="mr-2 h-4 w-4" />
+                            Confirm Selection ({localSelectedNames.size})
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
           
@@ -3498,4 +3526,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
