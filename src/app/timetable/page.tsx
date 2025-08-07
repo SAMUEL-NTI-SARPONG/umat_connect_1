@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -958,9 +958,9 @@ function StaffResitView() {
                                     <p className="font-semibold">{resit.courseCode}</p>
                                     <p className="text-sm text-muted-foreground">{resit.courseName}</p>
                                 </div>
-                                <div className="text-right flex flex-col items-end">
+                                <div className="text-right flex flex-col items-end gap-1">
                                     <Badge variant="outline">{resit.date}</Badge>
-                                    <p className="text-xs text-muted-foreground mt-1">{resit.session}</p>
+                                    <Badge variant="secondary" className="font-normal">{resit.session}</Badge>
                                 </div>
                             </div>
                             <Separator className="my-3" />
@@ -969,7 +969,7 @@ function StaffResitView() {
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.room}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                 <div className="flex items-center gap-2">
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
                                     <span>{resit.numberOfStudents} student(s)</span>
                                 </div>
@@ -1882,7 +1882,7 @@ function ResitTimetableDisplay({
     }
     
     const totalEntries = parsedData.sheets.flatMap(s => s.entries).reduce((acc, ls) => acc + ls.courses.length, 0);
-    const headers = ['Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Assigned Lecturer', 'Session'];
+    const headers = ['Course Code', 'Course Name', 'Department', 'Students', 'Room', 'Examiner', 'Assigned Lecturer', 'Session'];
     const groupKeys = Object.keys(groupedAndFilteredData);
 
     return (
@@ -1991,6 +1991,7 @@ function ResitTimetableDisplay({
                                       <TableCell>{row.department}</TableCell>
                                       <TableCell>{row.numberOfStudents}</TableCell>
                                       <TableCell>{row.room}</TableCell>
+                                      <TableCell>{row.examiner}</TableCell>
                                       <TableCell>{row.assignedLecturer}</TableCell>
                                       <TableCell>{row.session}</TableCell>
                                     </TableRow>
