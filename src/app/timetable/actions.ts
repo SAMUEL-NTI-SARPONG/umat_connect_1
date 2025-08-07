@@ -6,8 +6,6 @@ import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { initialDepartmentMap } from '@/lib/data';
 
-// This is a new, robust parser based entirely on the user-provided implementation.
-// It correctly handles merged cells, multiple courses within a single cell, and complex formats.
 function parseUniversitySchedule(fileBuffer: Buffer) {
   const finalSchedule: any[] = [];
   const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -63,12 +61,39 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
                 }
             }
 
-            const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
-            if (courseEntries.length === 0) continue;
+            const lines = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
+            if (lines.length === 0) continue;
 
-            const lecturer = courseEntries.length > 1 ? courseEntries.pop()! : 'TBA';
-            const courseCode = courseEntries.join(' ');
+            const courseCodeLines: string[] = [];
+            let lecturer = 'TBA';
             
+            // A regex to better identify course codes, e.g., "CE 272" or "GL 2A 254"
+            // It looks for department initials, followed by numbers/letters.
+            const courseRegex = /\b([A-Z]{2,})\s+([\d\w\s]+)\b/g;
+            const potentialLecturerLines: string[] = [];
+            
+            lines.forEach(line => {
+                // If a line contains department initials followed by numbers, it's likely a course.
+                if (/\b[A-Z]{2,}\s+[\d]/.test(line)) {
+                    courseCodeLines.push(line);
+                } else {
+                    potentialLecturerLines.push(line);
+                }
+            });
+            
+            if (potentialLecturerLines.length > 0) {
+                // If there are lines that don't look like course codes, the last one is the lecturer.
+                lecturer = potentialLecturerLines[potentialLecturerLines.length - 1];
+                // Any other "potential lecturer" lines are probably part of the course code.
+                courseCodeLines.push(...potentialLecturerLines.slice(0, -1));
+            } else if (courseCodeLines.length > 0 && lines.length === courseCodeLines.length) {
+                // If all lines look like course codes, there's no lecturer listed.
+                lecturer = 'TBA';
+            }
+
+
+            const courseCode = courseCodeLines.join(', ');
+
             // Adjust for 1-based indexing and break column when calculating time
             const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
             const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan -1;
@@ -94,33 +119,18 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const courseNumMatch = entry.courseCode.match(/\d+/);
     const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
     
-    const courseParts = entry.courseCode.trim().split(/\s+/);
-    const courseNumParts: string[] = [];
-    const deptInitialParts: string[] = [];
-
-    courseParts.forEach(part => {
-      if (/^\d/.test(part)) {
-        courseNumParts.push(part);
-      } else if (/[a-zA-Z]/.test(part)) {
-        deptInitialParts.push(part.replace(/[.-]/g, ''));
-      }
-    });
-
-    const uniqueDeptInitials = [...new Set(deptInitialParts)];
-
-    const deptStr = uniqueDeptInitials.join(' ');
-    const courseNumStr = courseNumParts.join(' ');
-
-    const departments = uniqueDeptInitials
-      .join(' ')
-      .split(/[/ ]+/)
-      .map(d => d.trim())
-      .filter(Boolean)
-      .map(initial => initialDepartmentMap.get(initial) || initial);
+    // A better way to find all department initials in a potentially complex course code string
+    const deptInitialsRegex = /\b([A-Z]{2,})\b/g;
+    const allInitials = entry.courseCode.match(deptInitialsRegex) || [];
     
-    const finalCourseCode = `${deptStr} ${courseNumStr}`.trim();
+    // Filter these initials to only include actual known departments
+    const departments = allInitials
+        .map(initial => initialDepartmentMap.get(initial) || null)
+        .filter(Boolean) as string[];
 
-    return { ...entry, level, departments, courseCode: finalCourseCode };
+    const uniqueDepartments = [...new Set(departments)];
+
+    return { ...entry, level, departments: uniqueDepartments, courseCode: entry.courseCode || 'TBA' };
   });
 }
 
@@ -546,3 +556,4 @@ export async function handlePracticalsUpload(fileData: string) {
 }
 
     
+
