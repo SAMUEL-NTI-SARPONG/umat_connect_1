@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -1008,7 +1008,6 @@ function StaffTimetableView({
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeDay, setActiveDay] = useState("Monday");
@@ -1022,58 +1021,30 @@ function StaffTimetableView({
   const [createStartTime, setCreateStartTime] = useState('');
   const [createEndTime, setCreateEndTime] = useState('');
 
-  const normalizeCourse = (entry: TimetableEntry): { normalizedId: string; displayCode: string, originalId: number } => {
-    const courseCode = entry.courseCode || '';
-    const deptParts = (courseCode.match(/[a-zA-Z]+/g) || []).filter(p => !/^[ivxlcdm]+$/i.test(p));
-    const numParts = courseCode.match(/\d+/g) || [];
-    const numPart = numParts.pop();
+  // New state for lecturer selection
+  const [isLecturerModalOpen, setIsLecturerModalOpen] = useState(false);
+  const [lecturerSearch, setLecturerSearch] = useState('');
+  const [selectedLecturer, setSelectedLecturer] = useState<string | null>(null);
 
-    if (deptParts.length > 0 && numPart) {
-      const displayCode = `${deptParts.join(' ')} ${numPart}`;
-      const normalizedId = `${deptParts.join('')}-${numPart}`;
-      return { normalizedId, displayCode, originalId: entry.id };
-    }
-    
-    const fallbackId = courseCode.replace(/\s+/g, '-');
-    return { normalizedId: fallbackId, displayCode: courseCode, originalId: entry.id };
-  };
-
-  const staffCourses = useMemo(() => {
-    if (!masterSchedule || !user) return [];
-    
-    const allEntriesForStaff = masterSchedule.filter(entry => isLecturerMatchWithUsers(entry.lecturer, user, allUsers));
-
-    const groupedByNormalizedId = allEntriesForStaff.reduce((acc, entry) => {
-        const { normalizedId, displayCode } = normalizeCourse(entry);
-        if (!acc[normalizedId]) {
-            acc[normalizedId] = {
-                ...entry,
-                courseCode: displayCode, 
-                originalIds: new Set([entry.id]),
-            };
-        } else {
-            acc[normalizedId].originalIds.add(entry.id);
+  const allLecturerNames = useMemo(() => {
+    if (!masterSchedule) return [];
+    const names = new Set<string>();
+    masterSchedule.forEach(entry => {
+        if (entry.lecturer && entry.lecturer !== 'TBA') {
+            names.add(entry.lecturer);
         }
-        return acc;
-    }, {} as Record<string, TimetableEntry & { originalIds: Set<number> }>);
-
-    return Object.values(groupedByNormalizedId);
-  }, [masterSchedule, user, allUsers]);
-
-  const allRejectedIds = useMemo(() => {
-    if (!user || !rejectedEntries[user.id]) return new Set<number>();
-    
-    const rejectedCourseGroups = staffCourses.filter(course =>
-      (rejectedEntries[user.id] || []).includes(course.id)
-    );
-    
-    const rejectedIds = new Set<number>();
-    rejectedCourseGroups.forEach(group => {
-      group.originalIds.forEach(id => rejectedIds.add(id));
     });
-    
-    return rejectedIds;
-  }, [user, rejectedEntries, staffCourses]);
+    return Array.from(names).sort();
+  }, [masterSchedule]);
+
+  const filteredLecturers = useMemo(() => {
+    return allLecturerNames.filter(name => name.toLowerCase().includes(lecturerSearch.toLowerCase()));
+  }, [allLecturerNames, lecturerSearch]);
+
+  const staffSchedule = useMemo(() => {
+    if (!masterSchedule || !selectedLecturer) return [];
+    return masterSchedule.filter(entry => entry.lecturer === selectedLecturer);
+  }, [masterSchedule, selectedLecturer]);
 
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -1131,27 +1102,7 @@ function StaffTimetableView({
   }, [emptySlots, activeDay]);
 
 
-  const handleReviewToggle = (courseGroupId: number, shouldReject: boolean) => {
-      if (!user) return;
-      const courseGroup = staffCourses.find(c => c.id === courseGroupId);
-      if (!courseGroup) return;
-
-      if (shouldReject) {
-        rejectScheduleEntry(user.id, courseGroupId);
-      } else {
-        unrejectScheduleEntry(user.id, courseGroupId);
-      }
-  };
-  
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
-  
-  useEffect(() => {
-    if (user && masterSchedule && masterSchedule.length > 0 && !hasReviewed) {
-      if (staffCourses.length > 0) {
-        setIsReviewModalOpen(true);
-      }
-    }
-  }, [masterSchedule, user, hasReviewed, staffCourses.length]);
   
   const handleRowClick = (entry: TimetableEntry) => {
     setSelectedEntry(entry);
@@ -1219,22 +1170,9 @@ function StaffTimetableView({
     });
   };
 
-  const handleCourseSelection = (courseCode: string) => {
-    const selectedCourse = staffCourses.find(c => c.courseCode === courseCode);
-    if (selectedCourse) {
-      setCreateFormData((prev: any) => ({
-        ...prev,
-        courseCode: selectedCourse.courseCode,
-        level: selectedCourse.level,
-        departments: selectedCourse.departments,
-      }));
-    }
-  };
-
   const closeAllModals = () => {
     setIsEditModalOpen(false);
     setIsCreateModalOpen(false);
-    setIsManageModalOpen(false);
     setIsActionModalOpen(false);
     setSelectedEntry(null);
     setEditedFormData(null);
@@ -1246,7 +1184,7 @@ function StaffTimetableView({
   };
 
   const dailySchedule = useMemo(() => {
-    const visibleSchedule = schedule.filter(event => !allRejectedIds.has(event.id));
+    const visibleSchedule = staffSchedule; // Use the new manually filtered schedule
     
     return visibleSchedule.reduce((acc, event) => {
       const day = event.day || "Monday";
@@ -1254,7 +1192,7 @@ function StaffTimetableView({
       acc[day].push(event);
       return acc;
     }, {} as Record<string, TimetableEntry[]>);
-  }, [schedule, allRejectedIds]);
+  }, [staffSchedule]);
 
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
@@ -1343,17 +1281,13 @@ function StaffTimetableView({
                 }
                 setIsReviewModalOpen(false);
             }}
-            courses={staffCourses}
+            courses={[]}
           />
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
             <div className="flex justify-end sm:justify-start gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsManageModalOpen(true)}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Manage Courses
-                </Button>
-                <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    Create Schedule
+                <Button variant="outline" size="sm" onClick={() => setIsLecturerModalOpen(true)}>
+                    <UserSearch className="w-4 h-4 mr-2" />
+                    Select My Name
                 </Button>
                  <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
                     <DialogTrigger asChild>
@@ -1475,8 +1409,11 @@ function StaffTimetableView({
                   ) : (
                     <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                         <CardContent className="text-center text-muted-foreground">
-                          <p className="font-medium">No classes scheduled for {day}.</p>
-                          <p className="text-sm">Enjoy your day off!</p>
+                          {selectedLecturer ? (
+                             <p className="font-medium">No classes scheduled for {day}.</p>
+                          ) : (
+                            <p className="font-medium">Select your name to view your schedule.</p>
+                          )}
                         </CardContent>
                     </Card>
                   )}
@@ -1484,6 +1421,50 @@ function StaffTimetableView({
               ))}
             </div>
           </Tabs>
+
+          {/* Lecturer Selection Modal */}
+            <Dialog open={isLecturerModalOpen} onOpenChange={setIsLecturerModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Select Your Name</DialogTitle>
+                        <DialogDescription>
+                            Find your name in the list to view your personal timetable.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="relative my-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search for your name..."
+                            className="pl-10"
+                            value={lecturerSearch}
+                            onChange={(e) => setLecturerSearch(e.target.value)}
+                        />
+                    </div>
+                    <ScrollArea className="h-64 border rounded-md">
+                        <div className="p-2">
+                            {filteredLecturers.length > 0 ? (
+                                filteredLecturers.map(name => (
+                                    <Button
+                                        key={name}
+                                        variant={selectedLecturer === name ? "secondary" : "ghost"}
+                                        className="w-full justify-start"
+                                        onClick={() => {
+                                            setSelectedLecturer(name);
+                                            setIsLecturerModalOpen(false);
+                                        }}
+                                    >
+                                        {name}
+                                    </Button>
+                                ))
+                            ) : (
+                                <p className="text-center text-sm text-muted-foreground py-4">
+                                    No matching names found.
+                                </p>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
           
           {/* Action Modal */}
           <Dialog open={isActionModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
@@ -1570,126 +1551,6 @@ function StaffTimetableView({
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
                 <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          {/* Create Modal */}
-          <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create New Schedule</DialogTitle>
-                <DialogDescription>
-                  Add a new class. Select a day, room and time from available slots.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="courseCode-create" className="text-right">Course</Label>
-                  <Select onValueChange={handleCourseSelection}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staffCourses.map(course => (
-                        <SelectItem key={course.id} value={course.courseCode}>{course.courseCode}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="level-create" className="text-right">Level</Label>
-                  <Input id="level-create" value={createFormData.level || ''} className="col-span-3" readOnly disabled />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="departments-create" className="text-right">Department</Label>
-                  <Input id="departments-create" value={createFormData.departments.join(', ') || ''} className="col-span-3" readOnly disabled />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="day-create" className="text-right">Day</Label>
-                  <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
-                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="room-create" className="text-right">Room</Label>
-                  <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)} disabled={!createFormData.day}>
-                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select a room" /></SelectTrigger>
-                    <SelectContent>
-                      {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Time</Label>
-                  <div className="col-span-3 grid grid-cols-2 gap-2">
-                    <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
-                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
-                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-                <Button type="submit" onClick={handleSaveCreate}>Add Class</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Manage Courses Modal */}
-          <Dialog open={isManageModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Manage My Assigned Courses</DialogTitle>
-                <DialogDescription>
-                  Here are all courses officially assigned to you. You can hide or show them in your personal timetable.
-                </DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                <div className="space-y-2 py-4">
-                  {staffCourses.map((course) => {
-                    const isRejected = userRejectedEntryIds.includes(course.id);
-                    return (
-                      <div key={course.id} className="flex items-center justify-between p-3 rounded-md border">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold break-words">{course.courseCode}</p>
-                          <div className="flex flex-wrap items-center text-sm text-muted-foreground">
-                            <span className="break-all">{(course.departments || []).join(', ')}</span>
-                            <span className="mx-1.5">&middot;</span>
-                            <span>Level {course.level}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 pl-4">
-                          <Label htmlFor={`switch-${course.id}`} className="text-sm shrink-0">
-                            {isRejected ? 'Hidden' : 'Visible'}
-                          </Label>
-                          <Switch
-                            id={`switch-${course.id}`}
-                            checked={!isRejected}
-                            onCheckedChange={(checked) => handleReviewToggle(course.id, !checked)}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">Close</Button>
-                </DialogClose>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -3570,14 +3431,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
     return [...(masterSchedule || []), ...staffSchedules];
   }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
 
-  const staffSchedule = useMemo(() => {
-    if (!combinedSchedule || !user || user.role !== 'staff') return [];
-    
-    return combinedSchedule.filter(entry => 
-      isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
-    );
-  }, [combinedSchedule, user, allUsers]);
-
   const studentTimetable = useMemo(() => {
     if (!combinedSchedule || !user || user.role !== 'student') return [];
 
@@ -3606,7 +3459,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
         return <StudentTimetableView schedule={studentTimetable} />;
       case 'staff':
         return <StaffTimetableView 
-                  schedule={staffSchedule} 
+                  schedule={[]} // Pass empty array initially, will be populated by manual selection
                   masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
@@ -3645,3 +3498,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+

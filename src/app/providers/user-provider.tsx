@@ -450,6 +450,11 @@ const userToStaffAccount = (user: User): StaffAccount => {
 
 export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: User, allUsers: User[]): boolean => {
     if (!entryLecturerName || typeof entryLecturerName !== 'string' || !staffUser) return false;
+    
+    // Simple direct match for the new manual selection logic
+    if (entryLecturerName === staffUser.name) {
+        return true;
+    }
 
     const staffAccount = userToStaffAccount(staffUser);
     const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
