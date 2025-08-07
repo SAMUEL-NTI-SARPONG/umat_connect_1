@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, Checkbox as CheckboxIcon } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, CheckSquare as CheckboxIcon } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -3526,5 +3526,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
