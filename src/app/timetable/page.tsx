@@ -2199,7 +2199,8 @@ function TimetableDisplay({
 
 
   const handleRowClick = (entry: TimetableEntry | ExamEntry) => {
-    if (isDistributed && !isExamsTimetable) return;
+    // Make class timetable editable even after distribution
+    if (isDistributed && isExamsTimetable) return;
     setSelectedEntry(entry);
     setIsActionModalOpen(true);
   };
