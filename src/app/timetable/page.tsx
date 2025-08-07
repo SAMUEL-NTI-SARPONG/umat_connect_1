@@ -743,22 +743,62 @@ function StaffExamDetails({ exams }: { exams: (ExamEntry & { role: string })[] }
   }
 
 function StaffExamsView() {
-    const { user, allUsers, examsTimetable } = useUser();
+    const { examsTimetable } = useUser();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [displayedExams, setDisplayedExams] = useState<(ExamEntry & { role: string })[]>([]);
 
+    const [isLecturerModalOpen, setIsLecturerModalOpen] = useState(false);
+    const [lecturerSearch, setLecturerSearch] = useState('');
+    const [selectedNames, setSelectedNames] = useState<string[]>([]);
+    const [localSelectedNames, setLocalSelectedNames] = useState<Set<string>>(new Set());
+    
+    useEffect(() => {
+        setLocalSelectedNames(new Set(selectedNames));
+    }, [isLecturerModalOpen, selectedNames]);
+
+    const allExamStaffNames = useMemo(() => {
+        if (!examsTimetable || !examsTimetable.isDistributed) return [];
+        const names = new Set<string>();
+        const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
+        allExams.forEach(exam => {
+            if (exam.lecturer) names.add(exam.lecturer);
+            if (exam.invigilator) names.add(exam.invigilator);
+        });
+        return Array.from(names).sort();
+    }, [examsTimetable]);
+
+    const filteredLecturers = useMemo(() => {
+        return allExamStaffNames.filter(name => name.toLowerCase().includes(lecturerSearch.toLowerCase()));
+    }, [allExamStaffNames, lecturerSearch]);
+
+    const handleConfirmLecturerSelection = () => {
+        setSelectedNames(Array.from(localSelectedNames));
+        setIsLecturerModalOpen(false);
+    };
+
+    const handleLocalNameSelectionChange = (name: string, checked: boolean) => {
+        setLocalSelectedNames(prev => {
+            const newSet = new Set(prev);
+            if (checked) newSet.add(name);
+            else newSet.delete(name);
+            return newSet;
+        });
+    };
+
     const { staffExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
-        if (!user || !examsTimetable || !examsTimetable.isDistributed) {
+        if (!examsTimetable || !examsTimetable.isDistributed || selectedNames.length === 0) {
             return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
         }
 
         const allExams = [...(examsTimetable.exams || []), ...(examsTimetable.practicals || [])];
+        
+        const selectedNamesSet = new Set(selectedNames);
 
         const filteredStaffExams = allExams
             .map(exam => {
-                const isLecturer = exam.lecturer && isLecturerMatchWithUsers(exam.lecturer, user, allUsers);
-                const isInvigilator = exam.invigilator && isLecturerMatchWithUsers(exam.invigilator, user, allUsers);
+                const isLecturer = exam.lecturer && selectedNamesSet.has(exam.lecturer);
+                const isInvigilator = exam.invigilator && selectedNamesSet.has(exam.invigilator);
                 let role = '';
                 if (isLecturer && isInvigilator) role = 'Lecturer & Invigilator';
                 else if (isLecturer) role = 'Lecturer';
@@ -790,7 +830,7 @@ function StaffExamsView() {
             lastExamDate: lastDate,
             numberOfMonths: months || 1,
         };
-    }, [user, allUsers, examsTimetable]);
+    }, [selectedNames, examsTimetable]);
 
     const handleDayClick = (day: Date) => {
         const hasExam = examDays.some(examDate => format(examDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
@@ -821,41 +861,105 @@ function StaffExamsView() {
             </Card>
         );
     }
-
-    if (staffExams.length === 0) {
-        return (
-            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">No Exam Duties Found</p>
-                    <p className="text-sm">No exam duties were found for you in the timetable.</p>
-                </CardContent>
-            </Card>
-        );
-    }
-
+    
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Your Exam Duties Schedule</CardTitle>
-                <CardDescription>
-                    {`You have ${staffExams.length} scheduled exam duties. Dates with duties are highlighted.`}
-                </CardDescription>
+              <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Your Exam Duties Schedule</CardTitle>
+                    <CardDescription>
+                        {selectedNames.length > 0 
+                            ? `You have ${staffExams.length} scheduled duties. Dates are highlighted below.`
+                            : "Select your name(s) to view your exam duties."
+                        }
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setIsLecturerModalOpen(true)}>
+                      <UserSearch className="w-4 h-4 mr-2" />
+                      Select My Name(s)
+                  </Button>
+              </div>
             </CardHeader>
             <CardContent>
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onDayClick={handleDayClick}
-                    className="w-full"
-                    numberOfMonths={numberOfMonths}
-                    fromMonth={firstExamDate}
-                    toMonth={lastExamDate}
-                    modifiers={{ examDay: examDays }}
-                    modifiersClassNames={{
-                        examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                        day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                    }}
-                />
+              {selectedNames.length > 0 ? (
+                staffExams.length > 0 ? (
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onDayClick={handleDayClick}
+                        className="w-full"
+                        numberOfMonths={numberOfMonths}
+                        fromMonth={firstExamDate}
+                        toMonth={lastExamDate}
+                        modifiers={{ examDay: examDays }}
+                        modifiersClassNames={{
+                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
+                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
+                        }}
+                    />
+                ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                    <p className="font-medium">No Exam Duties Found</p>
+                    <p className="text-sm">No exam duties were found for the selected name(s).</p>
+                  </div>
+                )
+              ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                    <p className="font-medium">Please Select Your Name</p>
+                    <p className="text-sm">Click the "Select My Name(s)" button to view your duties.</p>
+                  </div>
+              )}
+                
+                <Dialog open={isLecturerModalOpen} onOpenChange={setIsLecturerModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Select Your Name(s)</DialogTitle>
+                            <DialogDescription>
+                                Select all names that refer to you to see your complete exam schedule.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="relative my-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search for your name..."
+                                className="pl-10"
+                                value={lecturerSearch}
+                                onChange={(e) => setLecturerSearch(e.target.value)}
+                            />
+                        </div>
+                        <ScrollArea className="h-64 border rounded-md">
+                            <div className="p-2 space-y-1">
+                                {filteredLecturers.length > 0 ? (
+                                    filteredLecturers.map(name => (
+                                        <div key={name} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                            <Checkbox
+                                                id={`lecturer-${name}`}
+                                                checked={localSelectedNames.has(name)}
+                                                onCheckedChange={(checked) => handleLocalNameSelectionChange(name, !!checked)}
+                                            />
+                                            <Label htmlFor={`lecturer-${name}`} className="font-normal cursor-pointer flex-1">
+                                                {name}
+                                            </Label>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-center text-sm text-muted-foreground py-4">
+                                        No matching names found.
+                                    </p>
+                                )}
+                            </div>
+                        </ScrollArea>
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setIsLecturerModalOpen(false)}>Cancel</Button>
+                            <Button onClick={handleConfirmLecturerSelection}>
+                                <CheckboxIcon className="mr-2 h-4 w-4" />
+                                Confirm Selection ({localSelectedNames.size})
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                     <DialogContent>
                         <DialogHeader>
@@ -873,13 +977,55 @@ function StaffExamsView() {
 }
 
 function StaffResitView() {
-    const { user, allUsers, specialResitTimetable } = useUser();
+    const { specialResitTimetable } = useUser();
+    
+    const [isLecturerModalOpen, setIsLecturerModalOpen] = useState(false);
+    const [lecturerSearch, setLecturerSearch] = useState('');
+    const [selectedNames, setSelectedNames] = useState<string[]>([]);
+    const [localSelectedNames, setLocalSelectedNames] = useState<Set<string>>(new Set());
+
+    useEffect(() => {
+        setLocalSelectedNames(new Set(selectedNames));
+    }, [isLecturerModalOpen, selectedNames]);
+
+    const allResitExaminerNames = useMemo(() => {
+        if (!specialResitTimetable || !specialResitTimetable.isDistributed) return [];
+        const names = new Set<string>();
+        specialResitTimetable.sheets.flatMap(sheet => 
+            sheet.entries.flatMap(lecturerSchedule => 
+                lecturerSchedule.courses.forEach(course => {
+                    if (course.examiner) names.add(course.examiner);
+                })
+            )
+        );
+        return Array.from(names).sort();
+    }, [specialResitTimetable]);
+
+    const filteredExaminers = useMemo(() => {
+        return allResitExaminerNames.filter(name => name.toLowerCase().includes(lecturerSearch.toLowerCase()));
+    }, [allResitExaminerNames, lecturerSearch]);
+
+    const handleConfirmLecturerSelection = () => {
+        setSelectedNames(Array.from(localSelectedNames));
+        setIsLecturerModalOpen(false);
+    };
+
+    const handleLocalNameSelectionChange = (name: string, checked: boolean) => {
+        setLocalSelectedNames(prev => {
+            const newSet = new Set(prev);
+            if (checked) newSet.add(name);
+            else newSet.delete(name);
+            return newSet;
+        });
+    };
   
     const staffResits = useMemo(() => {
-        if (!user || !specialResitTimetable || !specialResitTimetable.isDistributed) {
+        if (!specialResitTimetable || !specialResitTimetable.isDistributed || selectedNames.length === 0) {
             return [];
         }
         
+        const selectedNamesSet = new Set(selectedNames);
+
         const allEntries = specialResitTimetable.sheets.flatMap(sheet =>
             sheet.entries.flatMap(lecturerSchedule =>
                 lecturerSchedule.courses.map(course => ({
@@ -890,13 +1036,12 @@ function StaffResitView() {
         );
 
         const filteredStaffResits = allEntries.filter(entry => 
-            entry.examiner && isLecturerMatchWithUsers(entry.examiner, user, allUsers)
+            entry.examiner && selectedNamesSet.has(entry.examiner)
         );
         
         const parseDate = (dateString: string | null) => {
-          if (!dateString) return new Date('2100-01-01'); // Put entries without dates last
+          if (!dateString) return new Date('2100-01-01');
           const parts = dateString.split('-').map(Number);
-          // Assuming DD-MM-YYYY format
           if (parts.length === 3) {
               return new Date(parts[2], parts[1] - 1, parts[0]);
           }
@@ -905,88 +1050,139 @@ function StaffResitView() {
   
         return filteredStaffResits.sort((a, b) => parseDate(a.date).getTime() - parseDate(b.date).getTime());
   
-      }, [user, allUsers, specialResitTimetable]);
+      }, [selectedNames, specialResitTimetable]);
   
-    if (!specialResitTimetable) {
+    if (!specialResitTimetable || !specialResitTimetable.isDistributed) {
         return (
             <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
                 <CardContent className="text-center text-muted-foreground">
                     <p className="font-medium">Special Resit Timetable Not Available</p>
-                    <p className="text-sm">The timetable has not been uploaded by an administrator yet.</p>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    if (!specialResitTimetable.isDistributed) {
-        return (
-            <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Special Resit Timetable Pending</p>
-                    <p className="text-sm">The timetable has been uploaded and will be available after administrator review.</p>
+                    <p className="text-sm">The timetable has not been uploaded or distributed by an administrator yet.</p>
                 </CardContent>
             </Card>
         );
     }
     
-    if (staffResits.length === 0) {
-      return (
-        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-          <CardContent className="text-center text-muted-foreground">
-            <p className="font-medium">No Resit Duties Found</p>
-            <p className="text-sm">No resit supervision duties were found for you.</p>
-          </CardContent>
-        </Card>
-      );
-    }
-  
     return (
       <Card>
         <CardHeader>
-            <CardTitle>Your Resit Supervision Schedule</CardTitle>
-            <CardDescription>
-                {`You have ${staffResits.length} supervision(s) scheduled.`}
-            </CardDescription>
+           <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Your Resit Supervision Schedule</CardTitle>
+                <CardDescription>
+                    {selectedNames.length > 0 
+                        ? `You have ${staffResits.length} supervision(s) scheduled.`
+                        : "Select your name to view your duties."
+                    }
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setIsLecturerModalOpen(true)}>
+                  <UserSearch className="w-4 h-4 mr-2" />
+                  Select My Name(s)
+              </Button>
+            </div>
         </CardHeader>
         <CardContent>
-            <ScrollArea className="h-[60vh]">
-                <div className="space-y-4 max-w-md mx-auto">
-                    {staffResits.map((resit) => (
-                        <Card key={resit.id} className="p-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="font-semibold">{resit.courseCode}</p>
-                                    <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+          {selectedNames.length > 0 ? (
+              staffResits.length > 0 ? (
+                <ScrollArea className="h-[60vh]">
+                    <div className="space-y-4 max-w-md mx-auto">
+                        {staffResits.map((resit) => (
+                            <Card key={resit.id} className="p-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-semibold">{resit.courseCode}</p>
+                                        <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+                                    </div>
+                                    <div className="text-right flex flex-col items-end gap-1">
+                                        <Badge variant="outline">{resit.date}</Badge>
+                                        <Badge variant="secondary" className="font-normal">{resit.session}</Badge>
+                                    </div>
                                 </div>
-                                <div className="text-right flex flex-col items-end gap-1">
-                                    <Badge variant="outline">{resit.date}</Badge>
-                                    <Badge variant="secondary" className="font-normal">{resit.session}</Badge>
+                                <Separator className="my-3" />
+                                 <div className="flex flex-col space-y-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                                        <span>{resit.room}</span>
+                                    </div>
+                                     <div className="flex items-center gap-2">
+                                        <Users2 className="h-4 w-4 text-muted-foreground" />
+                                        <span>{resit.numberOfStudents} student(s)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <BookUser className="h-4 w-4 text-muted-foreground" />
+                                        <span>{resit.department}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                        <span>Examiner: {resit.examiner}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <Separator className="my-3" />
-                             <div className="flex flex-col space-y-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    <span>{resit.room}</span>
-                                </div>
-                                 <div className="flex items-center gap-2">
-                                    <Users2 className="h-4 w-4 text-muted-foreground" />
-                                    <span>{resit.numberOfStudents} student(s)</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <BookUser className="h-4 w-4 text-muted-foreground" />
-                                    <span>{resit.department}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                    <span>Examiner: {resit.examiner}</span>
-                                </div>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        ))}
+                    </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center text-muted-foreground py-12">
+                  <p className="font-medium">No Resit Duties Found</p>
+                  <p className="text-sm">No resit supervision duties were found for the selected name(s).</p>
                 </div>
-            </ScrollArea>
+              )
+          ) : (
+             <div className="text-center text-muted-foreground py-12">
+                <p className="font-medium">Please Select Your Name</p>
+                <p className="text-sm">Click the "Select My Name(s)" button to view your duties.</p>
+             </div>
+          )}
         </CardContent>
+         <Dialog open={isLecturerModalOpen} onOpenChange={setIsLecturerModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Select Your Name(s)</DialogTitle>
+                    <DialogDescription>
+                        Select all names that refer to you to see your complete resit schedule.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="relative my-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search for your name..."
+                        className="pl-10"
+                        value={lecturerSearch}
+                        onChange={(e) => setLecturerSearch(e.target.value)}
+                    />
+                </div>
+                <ScrollArea className="h-64 border rounded-md">
+                    <div className="p-2 space-y-1">
+                        {filteredExaminers.length > 0 ? (
+                            filteredExaminers.map(name => (
+                                <div key={name} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                    <Checkbox
+                                        id={`examiner-${name}`}
+                                        checked={localSelectedNames.has(name)}
+                                        onCheckedChange={(checked) => handleLocalNameSelectionChange(name, !!checked)}
+                                    />
+                                    <Label htmlFor={`examiner-${name}`} className="font-normal cursor-pointer flex-1">
+                                        {name}
+                                    </Label>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-sm text-muted-foreground py-4">
+                                No matching names found.
+                            </p>
+                        )}
+                    </div>
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setIsLecturerModalOpen(false)}>Cancel</Button>
+                    <Button onClick={handleConfirmLecturerSelection}>
+                        <CheckboxIcon className="mr-2 h-4 w-4" />
+                        Confirm Selection ({localSelectedNames.size})
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </Card>
     );
 }
@@ -1653,6 +1849,7 @@ function ResitTimetableDisplay({
     };
 
     const handleRowClick = (entry: SpecialResitEntry) => {
+        if (parsedData?.isDistributed) return;
         setSelectedEntry(entry);
         setIsActionModalOpen(true);
     };
@@ -1873,7 +2070,7 @@ function ResitTimetableDisplay({
                                 </TableHeader>
                                 <TableBody>
                                   {groupedAndFilteredData[date].map((row: any) => (
-                                    <TableRow key={`${row.id}-${row.assignedLecturer}`} onClick={() => handleRowClick(row)} className="cursor-pointer">
+                                    <TableRow key={`${row.id}-${row.assignedLecturer}`} onClick={() => handleRowClick(row)} className={cn(!parsedData?.isDistributed && "cursor-pointer")}>
                                       <TableCell>{row.courseCode}</TableCell>
                                       <TableCell>{row.courseName}</TableCell>
                                       <TableCell>{row.department}</TableCell>
@@ -2992,7 +3189,7 @@ function AdminTimetableView() {
             searchTerm={classSearchTerm}
             showInvalid={classShowInvalid}
             title="Parsed Class Timetable Preview"
-            description={`A total of ${masterSchedule?.length || 0} entries were found. Click a row to edit or delete.`}
+            description={`A total of ${masterSchedule?.length || 0} entries were found.`}
             placeholder="Upload a class timetable to begin."
             isDistributed={isClassTimetableDistributed}
             onDistribute={distributeClassTimetable as any}
@@ -3529,3 +3726,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
 
+
+
+    
