@@ -1764,7 +1764,6 @@ function ResitTimetableDisplay({
     };
 
     const handleRowClick = (entry: SpecialResitEntry) => {
-        if (parsedData?.isDistributed) return;
         setSelectedEntry(entry);
         setIsActionModalOpen(true);
     };
@@ -1927,14 +1926,14 @@ function ResitTimetableDisplay({
                 <div className="space-y-2 pt-4">
                     <Label htmlFor="notice-textarea" className="font-semibold flex items-center justify-between">
                         <span>Administrator's Notice</span>
-                        {!isEditingNotice && !parsedData.isDistributed && (
+                        {!isEditingNotice && (
                             <Button variant="outline" size="sm" onClick={() => setIsEditingNotice(true)}>
                                 <PenSquare className="h-4 w-4 mr-2" />
                                 Edit Notice
                             </Button>
                         )}
                     </Label>
-                    {isEditingNotice && !parsedData.isDistributed ? (
+                    {isEditingNotice ? (
                         <div className="flex items-start gap-2">
                             <Textarea
                                 id="notice-textarea"
@@ -1985,7 +1984,7 @@ function ResitTimetableDisplay({
                                 </TableHeader>
                                 <TableBody>
                                   {groupedAndFilteredData[date].map((row: any) => (
-                                    <TableRow key={`${row.id}-${row.assignedLecturer}`} onClick={() => handleRowClick(row)} className={cn(!parsedData.isDistributed && "cursor-pointer")}>
+                                    <TableRow key={`${row.id}-${row.assignedLecturer}`} onClick={() => handleRowClick(row)} className="cursor-pointer">
                                       <TableCell>{row.courseCode}</TableCell>
                                       <TableCell>{row.courseName}</TableCell>
                                       <TableCell>{row.department}</TableCell>
@@ -3567,3 +3566,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
