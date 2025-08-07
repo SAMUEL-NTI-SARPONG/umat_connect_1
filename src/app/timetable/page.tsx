@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2 } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -2259,6 +2259,41 @@ function TimetableDisplay({
       )
     );
   }, [parsedData, searchTerm, showInvalid]);
+  
+  const handleFixEntries = () => {
+    if (!filteredData) return;
+
+    const updatedData = (parsedData as TimetableEntry[]).map(entry => {
+      // Find if this entry is in the filtered (visible) list of invalid entries
+      const invalidEntry = filteredData.find(fe => fe.id === entry.id);
+      if (invalidEntry && (invalidEntry.lecturer.toLowerCase() === 'tba' || invalidEntry.lecturer === '')) {
+        const text = invalidEntry.courseCode;
+        let splitIndex = -1;
+
+        // Find the last occurrence of a digit or a closing parenthesis
+        for (let i = text.length - 1; i >= 0; i--) {
+          if (/\d/.test(text[i]) || text[i] === ')') {
+            splitIndex = i + 1;
+            break;
+          }
+        }
+        
+        if (splitIndex !== -1 && splitIndex < text.length) {
+          const courseCode = text.substring(0, splitIndex).trim();
+          const lecturer = text.substring(splitIndex).trim();
+          // Only update if a potential lecturer name is found
+          if (lecturer) {
+             return { ...entry, courseCode, lecturer };
+          }
+        }
+      }
+      return entry; // Return original entry if not fixed
+    });
+    
+    setParsedData(updatedData);
+    toast({ title: "Entries Corrected", description: "The parsing logic has been applied to the filtered entries." });
+  };
+
 
   const groupedByDate = useMemo(() => {
     if (!filteredData) return {};
@@ -2313,6 +2348,12 @@ function TimetableDisplay({
               </CardDescription>
             </div>
             <div className='flex gap-2'>
+                 {showInvalid && !isExamsTimetable && (
+                  <Button variant="outline" onClick={handleFixEntries} size="sm">
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Fix Invalid Entries
+                  </Button>
+                )}
                 {onDistribute && (
                     isDistributed ? (
                     <Badge variant="secondary" className="text-green-600 border-green-600">
@@ -3566,4 +3607,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
