@@ -80,14 +80,21 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 // Helper function to convert time string (e.g., "7:00 AM") to minutes from midnight
 const timeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
-    // Extract the start time if it's a range
-    const timePart = timeStr.split(' - ')[0]?.trim() || '';
-    const [time, modifier] = timePart.split(' ');
-    if (!time) return 0;
-    let [hours, minutes] = time.split(':').map(Number);
-    if (modifier?.toUpperCase() === 'PM' && hours < 12) hours += 12;
-    if (modifier?.toUpperCase() === 'AM' && hours === 12) hours = 0;
-    return (hours || 0) * 60 + (minutes || 0);
+    const timePart = timeStr.split('-')[0].trim();
+    const match = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return 0;
+
+    let [_, hoursStr, minutesStr, modifier] = match;
+    let hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+    
+    if (modifier.toUpperCase() === 'PM' && hours < 12) {
+      hours += 12;
+    }
+    if (modifier.toUpperCase() === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    return hours * 60 + minutes;
 };
 
 const minutesToTime = (minutes: number): string => {
@@ -1209,17 +1216,17 @@ function StaffResitView() {
 }
 
 function StaffTimetableView({
-  schedule,
   masterSchedule,
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
+  setSidebarSchedule,
 }: {
-  schedule: TimetableEntry[];
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
+  setSidebarSchedule: (schedule: TimetableEntry[]) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1284,6 +1291,13 @@ function StaffTimetableView({
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
+  
+  useEffect(() => {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const today = days[new Date().getDay()];
+    const todaysSchedule = staffSchedule.filter(e => e.day === today);
+    setSidebarSchedule(todaysSchedule);
+  }, [staffSchedule, setSidebarSchedule]);
 
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -3682,7 +3696,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void }) {
+export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void; setSidebarSchedule?: (schedule: TimetableEntry[]) => void; }) {
   const { 
     user, 
     allUsers,
@@ -3729,11 +3743,11 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
         return <StudentTimetableView schedule={studentTimetable} />;
       case 'staff':
         return <StaffTimetableView 
-                  schedule={[]} // Pass empty array initially, will be populated by manual selection
                   masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
+                  setSidebarSchedule={setSidebarSchedule || (() => {})}
                />;
       case 'administrator':
         return <AdminTimetableView />
@@ -3774,6 +3788,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 

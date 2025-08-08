@@ -41,55 +41,10 @@ function ScheduleItem({
   );
 }
 
-export default function ScheduleSidebar() {
-  const { user, allUsers, masterSchedule, staffSchedules, rejectedEntries } = useUser();
-
-  const todaysSchedule = useMemo(() => {
-    if (!user) return [];
-    
-    const combinedSchedule = [...(masterSchedule || []), ...staffSchedules];
-    if (combinedSchedule.length === 0) return [];
-
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const today = days[new Date().getDay()];
-
-    if (user.role === 'student') {
-        const userDepartment = user.department;
-        return combinedSchedule.filter(entry =>
-            entry.day === today &&
-            entry.level === user.level &&
-            entry.departments.includes(userDepartment)
-        );
-    }
-    
-    if (user.role === 'staff') {
-        const staffEntries = combinedSchedule.filter(entry => 
-            entry.day === today &&
-            isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
-        );
-
-        const userRejectedIds = new Set(rejectedEntries[user.id] || []);
-        if (userRejectedIds.size === 0) return staffEntries;
-
-        const staffCourses = (masterSchedule || []).filter(entry =>
-            isLecturerMatchWithUsers(entry.lecturer, user, allUsers)
-        );
-        
-        const rejectedMasterIds = new Set<number>();
-        staffCourses.forEach(course => {
-            if (userRejectedIds.has(course.id)) { // This id is the group id now
-                const masterEntriesForCourse = (masterSchedule || []).filter(ms => ms.courseCode === course.courseCode && ms.lecturer === course.lecturer);
-                masterEntriesForCourse.forEach(me => rejectedMasterIds.add(me.id));
-            }
-        });
-        
-        return staffEntries.filter(entry => !rejectedMasterIds.has(entry.id));
-    }
-
-    return []; // No personal schedule for admin
-  }, [masterSchedule, staffSchedules, user, rejectedEntries, allUsers]);
-
-  const hasSchedule = todaysSchedule.length > 0;
+export default function ScheduleSidebar({ schedule }: { schedule: TimetableEntry[] }) {
+  const { user, masterSchedule } = useUser();
+  
+  const hasSchedule = schedule && schedule.length > 0;
 
   if (!user) return null;
 
@@ -104,7 +59,7 @@ export default function ScheduleSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-4 space-y-4">
         {hasSchedule ? (
-          todaysSchedule.map((event) => (
+          schedule.map((event) => (
             <ScheduleItem
               key={event.id}
               title={event.courseCode}
@@ -116,7 +71,11 @@ export default function ScheduleSidebar() {
           ))
         ) : (
           <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-            <p>No classes scheduled for today.</p>
+             {user.role === 'staff' ? (
+                <p>Select your name(s) to view today's schedule.</p>
+             ) : (
+                <p>No classes scheduled for today.</p>
+             )}
           </div>
         )}
       </SidebarContent>
