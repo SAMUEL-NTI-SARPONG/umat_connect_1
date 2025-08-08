@@ -68,6 +68,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -503,7 +504,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     // Sunday is 0, Monday is 1, etc. but our array is 0-indexed from Monday.
     return days[today === 0 ? 6 : today - 1] || 'Monday';
   });
-  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
   const dailySchedule = useMemo(() => {
     return schedule.reduce((acc, event) => {
@@ -516,170 +516,91 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, typeof schedule>);
   }, [schedule]);
 
-    const freeRoomsForDay = useMemo(() => {
-        const daySlots = emptySlots.filter(slot => slot.day === activeDay);
-        if (daySlots.length === 0) return [];
-    
-        const rooms = daySlots.reduce((acc, slot) => {
-          if (!acc[slot.location]) {
-            acc[slot.location] = [];
-          }
-          acc[slot.location].push(slot.time);
-          return acc;
-        }, {} as Record<string, string[]>);
-    
-        const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
-        
-        for (const room in rooms) {
-          const slots = (rooms[room] || [])
-            .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
-            .sort((a, b) => a.start - b.start);
-          
-          if (slots.length === 0) continue;
-          
-          const ranges: string[] = [];
-          let currentRangeStart = slots[0].start;
-          let currentRangeEnd = slots[0].end;
-      
-          for (let i = 1; i < slots.length; i++) {
-            if (slots[i].start === currentRangeEnd) {
-              currentRangeEnd = slots[i].end;
-            } else {
-              ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-              currentRangeStart = slots[i].start;
-              currentRangeEnd = slots[i].end;
-            }
-          }
-          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-          consolidatedRooms.push({ room, freeRanges: ranges });
-        }
-    
-        return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
-    }, [emptySlots, activeDay]);
-
   return (
     <Tabs defaultValue="class" className="w-full">
-      <div className="flex justify-center">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
-            <TabsTrigger value="class">Class Timetable</TabsTrigger>
-            <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-            <TabsTrigger value="resit">Special Resit</TabsTrigger>
-          </TabsList>
-      </div>
-        <TabsContent value="class" className="mt-6">
-            {!isClassTimetableDistributed ? (
-                 <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                    <CardContent className="text-center text-muted-foreground">
-                    <p className="font-medium">Class Timetable Not Available</p>
-                    <p className="text-sm">The class timetable will appear here once it's published.</p>
-                    </CardContent>
-                </Card>
-            ) : (
-            <>
-            <div className="flex justify-end mb-4">
-                <Button variant="outline" size="sm" onClick={() => setIsFreeRoomModalOpen(true)}>
+      <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
+        <TabsTrigger value="class">Class Timetable</TabsTrigger>
+        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+      </TabsList>
+      <TabsContent value="class" className="mt-6">
+        {!isClassTimetableDistributed ? (
+             <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                <CardContent className="text-center text-muted-foreground">
+                <p className="font-medium">Class Timetable Not Available</p>
+                <p className="text-sm">The class timetable will appear here once it's published.</p>
+                </CardContent>
+            </Card>
+        ) : (
+        <>
+        <div className="flex justify-end mb-4">
+            <SidebarTrigger side="right">
+                <Button variant="outline" size="sm">
                     <SearchIcon className="mr-2 h-4 w-4" />
                     Find Free Rooms
                 </Button>
+            </SidebarTrigger>
+        </div>
+
+        <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
+            <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+                <TabsList className="grid w-full grid-cols-7 h-12">
+                    {days.map(day => (
+                    <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
+                    ))}
+                </TabsList>
             </div>
-
-            <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-                <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
-                    <TabsList className="grid w-full grid-cols-7 h-12">
-                        {days.map(day => (
-                        <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
+            <div className="py-6">
+            {days.map(day => (
+                <TabsContent key={day} value={day}>
+                {(dailySchedule[day] || []).length > 0 ? (
+                    <div className="space-y-4 max-w-md mx-auto">
+                        {dailySchedule[day].map((event) => (
+                           <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
+                            <div className="flex flex-wrap justify-between items-start gap-2">
+                                <div className="flex-grow">
+                                  <p className="font-semibold break-words">{event.courseCode}</p>
+                                  <p className="text-sm text-muted-foreground">{event.time}</p>
+                                </div>
+                                <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
+                                  {statusConfig[event.status].text}
+                                </Badge>
+                              </div>
+                              <Separator className="my-3" />
+                              <div className="flex flex-col space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="break-words">{event.room}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="break-words">{event.lecturer}</span>
+                                </div>
+                              </div>
+                          </Card>
                         ))}
-                    </TabsList>
-                </div>
-                <div className="py-6">
-                {days.map(day => (
-                    <TabsContent key={day} value={day}>
-                    {(dailySchedule[day] || []).length > 0 ? (
-                        <div className="space-y-4 max-w-md mx-auto">
-                            {dailySchedule[day].map((event) => (
-                                <Card key={event.id} className="p-4">
-                                  <div className="flex flex-wrap justify-between items-start gap-2">
-                                    <div className="flex-grow">
-                                      <p className="font-semibold break-words">{event.courseCode}</p>
-                                      <p className="text-sm text-muted-foreground">{event.time}</p>
-                                    </div>
-                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                                      {statusConfig[event.status].text}
-                                    </Badge>
-                                  </div>
-                                  <Separator className="my-3" />
-                                  <div className="flex flex-col space-y-2 text-sm">
-                                    <div className="flex items-center gap-2">
-                                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                      <span className="break-words">{event.room}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                      <span className="break-words">{event.lecturer}</span>
-                                    </div>
-                                  </div>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
-                            <CardContent className="text-center text-muted-foreground">
-                                <p className="font-medium">No classes scheduled for {day}.</p>
-                                <p className="text-sm">Enjoy your day off!</p>
-                            </CardContent>
-                        </Card>
-                    )}
-                    </TabsContent>
-                ))}
-                </div>
-            </Tabs>
-            </>
-            )}
-        </TabsContent>
-        <TabsContent value="exams" className="mt-6">
-            <StudentExamsView />
-        </TabsContent>
-        <TabsContent value="resit" className="mt-6">
-            <StudentResitView />
-        </TabsContent>
-
-        <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
-            <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                    <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
-                    <DialogDescription>
-                        Here are the classrooms that are available and their free time slots.
-                    </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                    {freeRoomsForDay.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {freeRoomsForDay.map(({ room, freeRanges }) => (
-                                <Card key={room}>
-                                    <CardHeader className="p-4">
-                                        <CardTitle className="text-base">{room}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-4 pt-0">
-                                        <div className="space-y-1">
-                                            {freeRanges.map((range, idx) => (
-                                            <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center p-12 text-muted-foreground">
-                            <p>No free classrooms found for {activeDay}.</p>
-                        </div>
-                    )}
-                </ScrollArea>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    </div>
+                ) : (
+                    <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
+                        <CardContent className="text-center text-muted-foreground">
+                            <p className="font-medium">No classes scheduled for {day}.</p>
+                            <p className="text-sm">Enjoy your day off!</p>
+                        </CardContent>
+                    </Card>
+                )}
+                </TabsContent>
+            ))}
+            </div>
+        </Tabs>
+        </>
+        )}
+    </TabsContent>
+    <TabsContent value="exams" className="mt-6">
+        <StudentExamsView />
+    </TabsContent>
+    <TabsContent value="resit" className="mt-6">
+        <StudentResitView />
+    </TabsContent>
     </Tabs>
   );
 }

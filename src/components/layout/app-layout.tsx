@@ -13,28 +13,14 @@ import AppHeader from '@/components/layout/app-header';
 import BottomNavbar from '@/components/layout/bottom-navbar';
 import LoginPage from '@/app/login/page';
 import React, { useState, useEffect, useMemo } from 'react';
+import FreeRoomsSidebar from '../timetable/free-rooms-sidebar';
+import { usePathname } from 'next/navigation';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, masterSchedule, staffSchedules, isClassTimetableDistributed } = useUser();
-  const [studentSchedule, setStudentSchedule] = useState<TimetableEntry[]>([]);
+  const { user } = useUser();
+  const pathname = usePathname();
 
-  const combinedSchedule = useMemo(() => {
-    if (!isClassTimetableDistributed) return [];
-    return [...(masterSchedule || []), ...staffSchedules];
-  }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
-  
-  useEffect(() => {
-    if (user?.role === 'student') {
-       const filtered = combinedSchedule.filter(entry =>
-        entry.level === user.level &&
-        user.department &&
-        (entry.departments || []).includes(user.department)
-      );
-      setStudentSchedule(filtered);
-    } else {
-      setStudentSchedule([]);
-    }
-  }, [user, combinedSchedule]);
+  const showRightSidebar = user?.role === 'student' && pathname === '/timetable';
   
   if (!user) {
     return <LoginPage />;
@@ -50,9 +36,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Sidebar>
           <SidebarInset className="flex flex-col flex-1">
             <main className="flex-1 px-4 py-4 md:px-6 md:py-6">
-               {React.cloneElement(children as React.ReactElement, { studentSchedule })}
+               {children}
             </main>
           </SidebarInset>
+           {showRightSidebar && (
+             <Sidebar side="right" variant="floating" collapsible="offcanvas" className="hidden md:block">
+                <FreeRoomsSidebar />
+             </Sidebar>
+           )}
         </div>
         <BottomNavbar />
       </SidebarProvider>
