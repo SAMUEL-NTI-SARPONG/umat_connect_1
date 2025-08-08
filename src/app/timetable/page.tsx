@@ -1421,9 +1421,22 @@ function StaffTimetableView({
 
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], startTimes: [], endTimes: [] };
+    
+    const isWeekend = editedFormData.day === 'Saturday' || editedFormData.day === 'Sunday';
+    let daySlots: EmptySlot[] = [];
 
-    // Find all 1-hour slots for the selected day
-    const daySlots = emptySlots.filter(s => s.day === editedFormData.day);
+    if (isWeekend) {
+      const allRooms = masterSchedule ? [...new Set(masterSchedule.map(e => e.room))] : [];
+      const standardTimes = ['7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM', '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'];
+      allRooms.forEach(room => {
+        standardTimes.forEach(time => {
+          daySlots.push({ day: editedFormData.day!, location: room, time });
+        });
+      });
+    } else {
+      daySlots = emptySlots.filter(s => s.day === editedFormData.day);
+    }
+    
     const rooms = [...new Set(daySlots.map(s => s.location))].sort();
 
     // Filter by selected room
@@ -1467,7 +1480,7 @@ function StaffTimetableView({
     }
     
     return { rooms, startTimes: [...new Set(allStartTimes)], endTimes: allEndTimes };
-  }, [emptySlots, editedFormData, startTime]);
+  }, [emptySlots, editedFormData, startTime, masterSchedule]);
 
   const availableSlotsForCreate = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
@@ -2296,7 +2309,7 @@ function TimetableDisplay({
       }
     }
     
-    return { rooms, startTimes: allStartTimes, endTimes: allEndTimes };
+    return { rooms, startTimes: [...new Set(allStartTimes)], endTimes: allEndTimes };
 }, [emptySlots, editedFormData, startTime, isExamsTimetable]);
 
   useEffect(() => {
@@ -3761,6 +3774,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
