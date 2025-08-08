@@ -9,8 +9,12 @@ export const getFromStorage = <T,>(key: string, defaultValue: T): T => {
   try {
     const item = window.localStorage.getItem(key);
     if (item) {
-        // Special handling for Maps
         const parsed = JSON.parse(item);
+        // Add a null check to prevent TypeError
+        if (parsed === null) {
+            return defaultValue;
+        }
+        // Special handling for Maps
         if (parsed.dataType === 'Map' && Array.isArray(parsed.value)) {
             return new Map(parsed.value) as T;
         }
