@@ -602,61 +602,31 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                 {days.map(day => (
                     <TabsContent key={day} value={day}>
                     {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                        <div className="md:border md:rounded-lg md:overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="hidden md:table-header-group">
-                                        <TableRow>
-                                            <TableHead className="w-[20%]">Time</TableHead>
-                                            <TableHead>Course</TableHead>
-                                            <TableHead className="w-[20%]">Location</TableHead>
-                                            <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
-                                            <TableHead className="w-[15%]">Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {dailySchedule[day].map((event, index) => (
-                                            <TableRow key={`${event.id}-${index}`} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0">
-                                                <TableCell className="block md:hidden p-0 w-full">
-                                                    <div className="border rounded-lg p-4 space-y-2 m-2">
-                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                                        <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
-                                                        <div className="font-medium break-words pl-5">{event.time}</div>
-                                                        </div>
-                                                        <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
-                                                        <div className="font-medium break-words pl-5">{event.courseCode}</div>
-                                                        </div>
-                                                        <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
-                                                        <div className="font-medium break-words pl-5">{event.room}</div>
-                                                        </div>
-                                                        <div>
-                                                        <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
-                                                            <div className="pl-5">
-                                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                                {statusConfig[event.status].text}
-                                                            </Badge>
-                                                        </div>
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                                <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
-                                                <TableCell className="hidden md:table-cell">
-                                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                        {statusConfig[event.status].text}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
+                        <div className="space-y-4 max-w-md mx-auto">
+                            {dailySchedule[day].map((event, index) => (
+                                <Card key={`${event.id}-${index}`} className="p-4">
+                                    <div className="flex flex-wrap justify-between items-start gap-2">
+                                        <div className="flex-grow">
+                                            <p className="font-semibold break-words">{event.courseCode}</p>
+                                            <p className="text-sm text-muted-foreground">{event.time}</p>
+                                        </div>
+                                        <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
+                                            {statusConfig[event.status].text}
+                                        </Badge>
+                                    </div>
+                                    <Separator className="my-3" />
+                                    <div className="flex flex-col space-y-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            <span className="break-words">{event.room}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            <span className="break-words">{event.lecturer}</span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
                         </div>
                     ) : (
                         <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -1230,13 +1200,11 @@ function StaffTimetableView({
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
-  setSidebarSchedule,
 }: {
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
-  setSidebarSchedule: (schedule: TimetableEntry[]) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1302,15 +1270,6 @@ function StaffTimetableView({
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
   
-  useEffect(() => {
-    if (setSidebarSchedule) {
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const today = days[new Date().getDay()];
-      const todaysSchedule = staffSchedule.filter(e => e.day === today);
-      setSidebarSchedule(todaysSchedule);
-    }
-  }, [staffSchedule, setSidebarSchedule]);
-
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
     if (daySlots.length === 0) return [];
@@ -3708,7 +3667,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void; }) {
+export default function TimetablePage() {
   const { 
     user, 
     allUsers,
@@ -3736,16 +3695,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
         (entry.departments || []).includes(user.department)
       );
   }, [combinedSchedule, user]);
-  
-  const [sidebarSchedule, setSidebarSchedule] = useState<TimetableEntry[]>([]);
-
-  useEffect(() => {
-      if (user?.role === 'student' && setStudentSchedule) {
-        setStudentSchedule(studentTimetable);
-      } else if(setStudentSchedule) {
-        setStudentSchedule([]);
-      }
-  }, [user, studentTimetable, setStudentSchedule]);
 
   if (!user) {
     return <p>Loading...</p>;
@@ -3761,7 +3710,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
-                  setSidebarSchedule={setSidebarSchedule}
                />;
       case 'administrator':
         return <AdminTimetableView />
@@ -3802,6 +3750,7 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
 
