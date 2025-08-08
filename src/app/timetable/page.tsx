@@ -1581,24 +1581,24 @@ function StaffTimetableView({
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => (
                           <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-semibold">{event.courseCode}</p>
+                            <div className="flex flex-wrap justify-between items-start gap-2">
+                                <div className="flex-grow">
+                                  <p className="font-semibold break-words">{event.courseCode}</p>
                                   <p className="text-sm text-muted-foreground">{event.time}</p>
                                 </div>
-                                <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
                                   {statusConfig[event.status].text}
                                 </Badge>
                               </div>
                               <Separator className="my-3" />
                               <div className="flex flex-col space-y-2 text-sm">
                                 <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                                  <span>{event.room}</span>
+                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="break-words">{event.room}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                  <span>{event.lecturer}</span>
+                                  <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="break-words">{event.lecturer}</span>
                                 </div>
                               </div>
                           </Card>
