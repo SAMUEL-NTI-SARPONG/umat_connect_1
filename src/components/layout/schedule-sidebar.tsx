@@ -46,39 +46,13 @@ export default function ScheduleSidebar({ schedule }: { schedule: TimetableEntry
   
   const hasSchedule = schedule && schedule.length > 0;
 
-  if (!user) return null;
+  if (user?.role !== 'administrator') {
+    return null;
+  }
 
   if (user.role === 'administrator') {
     return <AdminStats />;
   }
 
-  return (
-    <div className="hidden md:flex flex-col h-full">
-      <SidebarHeader>
-        <CardTitle className="text-lg font-semibold">Today's Schedule</CardTitle>
-      </SidebarHeader>
-      <SidebarContent className="p-4 space-y-4">
-        {hasSchedule ? (
-          schedule.map((event) => (
-            <ScheduleItem
-              key={event.id}
-              title={event.courseCode}
-              time={event.time.replace(/ AM| PM/g, '')} // Make time more compact
-              location={event.room}
-              lecturer={event.lecturer}
-              status={event.status}
-            />
-          ))
-        ) : (
-          <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-             {user.role === 'staff' ? (
-                <p>Select your name(s) to view today's schedule.</p>
-             ) : (
-                <p>No classes scheduled for today.</p>
-             )}
-          </div>
-        )}
-      </SidebarContent>
-    </div>
-  );
+  return null;
 }

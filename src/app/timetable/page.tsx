@@ -1303,10 +1303,12 @@ function StaffTimetableView({
   }, [masterSchedule, selectedLecturers]);
   
   useEffect(() => {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const today = days[new Date().getDay()];
-    const todaysSchedule = staffSchedule.filter(e => e.day === today);
-    setSidebarSchedule(todaysSchedule);
+    if (setSidebarSchedule) {
+      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const today = days[new Date().getDay()];
+      const todaysSchedule = staffSchedule.filter(e => e.day === today);
+      setSidebarSchedule(todaysSchedule);
+    }
   }, [staffSchedule, setSidebarSchedule]);
 
   const freeRoomsForDay = useMemo(() => {
@@ -3798,6 +3800,7 @@ export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }
 
 
     
+
 
 
 

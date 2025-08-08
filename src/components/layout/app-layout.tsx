@@ -39,7 +39,7 @@ export default function AppLayout({ children, studentSchedule }: { children: Rea
                {React.cloneElement(children as React.ReactElement, { setSidebarSchedule })}
             </main>
           </SidebarInset>
-          {user.role !== 'administrator' && (
+          {user.role === 'administrator' && (
             <Sidebar side="right" variant="floating" collapsible="icon">
                 <ScheduleSidebar schedule={sidebarSchedule}/>
             </Sidebar>
