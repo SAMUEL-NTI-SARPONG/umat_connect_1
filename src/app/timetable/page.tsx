@@ -1428,13 +1428,32 @@ function StaffTimetableView({
 
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
-    const daySlots = emptySlots.filter(slot => slot.day === editedFormData.day);
+    
+    const timeToMinutes = (timeStr: string) => {
+        if (!timeStr) return 0;
+        const [time, modifier] = timeStr.split(' ');
+        if (!time) return 0;
+        let [hours, minutes] = time.split(':').map(Number);
+        if (modifier === 'PM' && hours !== 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + (minutes || 0);
+    };
+
+    const daySlots = emptySlots
+        .filter(slot => slot.day === editedFormData.day)
+        .sort((a,b) => timeToMinutes(a.time.split(' - ')[0]) - timeToMinutes(b.time.split(' - ')[0]));
+
     const rooms = [...new Set(daySlots.map(slot => slot.location))];
-    const roomDaySlots = daySlots.filter(slot => slot.location === editedFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+    
+    const roomDaySlots = daySlots
+        .filter(slot => slot.location === editedFormData.room)
+        .map(s => s.time);
+    
     const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
     
     let endTimes: string[] = [];
     const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
+    
     if (startTime && startIndex !== -1) {
       for (let i = startIndex; i < roomDaySlots.length; i++) {
         const currentSlot = roomDaySlots[i];
@@ -1442,9 +1461,12 @@ function StaffTimetableView({
 
         const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
         if (prevSlot && prevSlot.includes(' - ')) {
-          if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+          const prevEndTime = prevSlot.split(' - ')[1].trim();
+          const currentStartTime = currentSlot.split(' - ')[0].trim();
+          if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
+              break; 
+          }
         }
-        
         endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
