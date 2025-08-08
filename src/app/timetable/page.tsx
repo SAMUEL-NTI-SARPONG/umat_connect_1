@@ -498,7 +498,11 @@ function StudentResitView() {
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   const { user, emptySlots, isClassTimetableDistributed } = useUser();
-  const [activeDay, setActiveDay] = useState("Monday");
+  const [activeDay, setActiveDay] = useState(() => {
+    const today = new Date().getDay();
+    // Sunday is 0, Monday is 1, etc. but our array is 0-indexed from Monday.
+    return days[today === 0 ? 6 : today - 1] || 'Monday';
+  });
   const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
   const dailySchedule = useMemo(() => {
@@ -591,17 +595,17 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </div>
 
             <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-                <ScrollArea className="w-full whitespace-nowrap">
-                    <TabsList>
-                    {days.map(day => (
-                        <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day}</TabsTrigger>
-                    ))}
+                <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
+                    <TabsList className="grid w-full grid-cols-7 h-12">
+                        {days.map(day => (
+                        <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0, 3)}</TabsTrigger>
+                        ))}
                     </TabsList>
-                </ScrollArea>
+                </div>
                 <div className="py-6">
                 {days.map(day => (
                     <TabsContent key={day} value={day}>
-                    {dailySchedule[day] && dailySchedule[day].length > 0 ? (
+                    {(dailySchedule[day] || []).length > 0 ? (
                         <div className="space-y-4 max-w-md mx-auto">
                             {dailySchedule[day].map((event) => (
                                 <Card key={event.id} className="p-4">
@@ -1200,11 +1204,13 @@ function StaffTimetableView({
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
+  setSidebarSchedule
 }: {
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
+  setSidebarSchedule: (schedule: TimetableEntry[]) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1269,6 +1275,13 @@ function StaffTimetableView({
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
+  
+  useEffect(() => {
+    const today = new Date().getDay();
+    const currentDay = days[today === 0 ? 6 : today - 1] || 'Monday';
+    const todaysSchedule = staffSchedule.filter(e => e.day === currentDay);
+    setSidebarSchedule(todaysSchedule);
+  }, [staffSchedule, setSidebarSchedule]);
   
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -3680,6 +3693,8 @@ export default function TimetablePage() {
     isClassTimetableDistributed,
   } = useUser();
   
+  const [sidebarSchedule, setSidebarSchedule] = useState<TimetableEntry[]>([]);
+  
   const combinedSchedule = useMemo(() => {
     if (!isClassTimetableDistributed) return [];
     return [...(masterSchedule || []), ...staffSchedules];
@@ -3709,6 +3724,7 @@ export default function TimetablePage() {
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
+                  setSidebarSchedule={setSidebarSchedule}
                />;
       case 'administrator':
         return <AdminTimetableView />
@@ -3759,3 +3775,6 @@ export default function TimetablePage() {
 
 
 
+
+
+    
