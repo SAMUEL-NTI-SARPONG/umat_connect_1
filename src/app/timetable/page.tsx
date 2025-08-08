@@ -77,6 +77,17 @@ const statusConfig = {
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+// Helper function to convert time string (e.g., "7:00 AM") to minutes from midnight
+const timeToMinutes = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const [time, modifier] = timeStr.split(' ');
+    if (!time) return 0;
+    let [hours, minutes] = time.split(':').map(Number);
+    if (modifier?.toUpperCase() === 'PM' && hours < 12) hours += 12;
+    if (modifier?.toUpperCase() === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + (minutes || 0);
+};
+
 function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     if (exams.length === 0) {
       return (
@@ -486,16 +497,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, string[]>);
 
     const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
-
-    const timeToMinutes = (timeStr: string) => {
-      if (!timeStr) return 0;
-      const [time, modifier] = timeStr.split(' ');
-      if (!time) return 0;
-      let [hours, minutes] = time.split(':').map(Number);
-      if (modifier === 'PM' && hours !== 12) hours += 12;
-      if (modifier === 'AM' && hours === 12) hours = 0; // 12 AM is 00:00
-      return hours * 60 + (minutes || 0);
-    };
     
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
@@ -509,19 +510,21 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
       slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
       
       const ranges: string[] = [];
-      let currentRangeStart = slots[0].start;
-      let currentRangeEnd = slots[0].end;
-
-      for (let i = 1; i < slots.length; i++) {
-        if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
-          currentRangeEnd = slots[i].end;
-        } else {
-          ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-          currentRangeStart = slots[i].start;
-          currentRangeEnd = slots[i].end;
+      if (slots.length > 0) {
+        let currentRangeStart = slots[0].start;
+        let currentRangeEnd = slots[0].end;
+  
+        for (let i = 1; i < slots.length; i++) {
+          if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
+            currentRangeEnd = slots[i].end;
+          } else {
+            ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+            currentRangeStart = slots[i].start;
+            currentRangeEnd = slots[i].end;
+          }
         }
+        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
       }
-      ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
       consolidatedRooms.push({ room, freeRanges: ranges });
     }
 
@@ -1291,42 +1294,34 @@ function StaffTimetableView({
     }, {} as Record<string, string[]>);
 
     const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
-
-    const timeToMinutes = (timeStr: string) => {
-      if (!timeStr) return 0;
-      const [time, modifier] = timeStr.split(' ');
-      if (!time) return 0;
-      let [hours, minutes] = time.split(':').map(Number);
-      if (modifier === 'PM' && hours !== 12) hours += 12;
-      if (modifier === 'AM' && hours === 12) hours = 0; // 12 AM is 00:00
-      return hours * 60 + (minutes || 0);
-    };
-
+    
     for (const room in rooms) {
       const slots = (rooms[room] || []).map(time => {
           if (!time || !time.includes('-')) return null;
           const [start, end] = time.split(' - ');
           return { start, end };
       }).filter(Boolean) as { start: string; end: string }[];
-
+      
       if (slots.length === 0) continue;
       
       slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-
+      
       const ranges: string[] = [];
-      let currentRangeStart = slots[0].start;
-      let currentRangeEnd = slots[0].end;
-
-      for (let i = 1; i < slots.length; i++) {
-        if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
-          currentRangeEnd = slots[i].end;
-        } else {
-          ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-          currentRangeStart = slots[i].start;
-          currentRangeEnd = slots[i].end;
+      if (slots.length > 0) {
+        let currentRangeStart = slots[0].start;
+        let currentRangeEnd = slots[0].end;
+  
+        for (let i = 1; i < slots.length; i++) {
+          if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
+            currentRangeEnd = slots[i].end;
+          } else {
+            ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
+            currentRangeStart = slots[i].start;
+            currentRangeEnd = slots[i].end;
+          }
         }
+        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
       }
-      ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
       consolidatedRooms.push({ room, freeRanges: ranges });
     }
 
@@ -1427,50 +1422,42 @@ function StaffTimetableView({
   }, [staffSchedule]);
 
   const availableSlotsForEdit = useMemo(() => {
-    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
-    
-    const timeToMinutes = (timeStr: string) => {
-        if (!timeStr) return 0;
-        const [time, modifier] = timeStr.split(' ');
-        if (!time) return 0;
-        let [hours, minutes] = time.split(':').map(Number);
-        if (modifier === 'PM' && hours !== 12) hours += 12;
-        if (modifier === 'AM' && hours === 12) hours = 0;
-        return hours * 60 + (minutes || 0);
-    };
+    if (!editedFormData) return { rooms: [], startTimes: [], endTimes: [] };
 
-    const daySlots = emptySlots
-        .filter(slot => slot.day === editedFormData.day)
-        .sort((a,b) => timeToMinutes(a.time.split(' - ')[0]) - timeToMinutes(b.time.split(' - ')[0]));
+    // Get all 1-hour slots for the selected day and room
+    const oneHourSlots = emptySlots
+      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
+      .map(slot => slot.time)
+      .sort((a, b) => timeToMinutes(a.split(' - ')[0]) - timeToMinutes(b.split(' - ')[0]));
 
-    const rooms = [...new Set(daySlots.map(slot => slot.location))];
+    const allStartTimes = [...new Set(oneHourSlots.map(time => time.split(' - ')[0].trim()))];
     
-    const roomDaySlots = daySlots
-        .filter(slot => slot.location === editedFormData.room)
-        .map(s => s.time);
-    
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
-    
-    let endTimes: string[] = [];
-    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
-    
-    if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
-        const currentSlot = roomDaySlots[i];
-        if (!currentSlot || !currentSlot.includes(' - ')) continue;
+    let allEndTimes: string[] = [];
+    if (startTime) {
+      const startIndex = oneHourSlots.findIndex(slot => slot.startsWith(startTime));
+      if (startIndex !== -1) {
+        for (let i = startIndex; i < oneHourSlots.length; i++) {
+          const currentSlot = oneHourSlots[i];
+          const prevSlot = i > startIndex ? oneHourSlots[i - 1] : null;
 
-        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.includes(' - ')) {
-          const prevEndTime = prevSlot.split(' - ')[1].trim();
-          const currentStartTime = currentSlot.split(' - ')[0].trim();
-          if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
-              break; 
+          if (prevSlot) {
+            // Check if the current slot is consecutive to the previous one
+            const prevEndTime = prevSlot.split(' - ')[1].trim();
+            const currentStartTime = currentSlot.split(' - ')[0].trim();
+            if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
+              break; // Stop if there's a gap
+            }
           }
+          allEndTimes.push(currentSlot.split(' - ')[1].trim());
         }
-        endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
-    return { rooms, times: roomDaySlots, startTimes, endTimes };
+    
+    return { 
+        rooms: [...new Set(emptySlots.filter(s => s.day === editedFormData.day).map(s => s.location))], 
+        startTimes: allStartTimes, 
+        endTimes: allEndTimes
+    };
   }, [emptySlots, editedFormData, startTime]);
 
   const availableSlotsForCreate = useMemo(() => {
@@ -2253,32 +2240,40 @@ function TimetableDisplay({
   const [endTime, setEndTime] = useState<string>('');
   
   const availableSlotsForEdit = useMemo(() => {
-    if (!editedFormData) return { rooms: [], times: [], startTimes: [], endTimes: [] };
-    const day = 'day' in editedFormData ? editedFormData.day : '';
-    const room = 'room' in editedFormData ? editedFormData.room : '';
+    if (!editedFormData || isExamsTimetable) return { rooms: [], startTimes: [], endTimes: [] };
+    const { day, room } = editedFormData as TimetableEntry;
+    
+    const daySlots = emptySlots.filter(s => s.day === day);
+    const rooms = [...new Set(daySlots.map(s => s.location))];
 
-    const daySlots = emptySlots.filter(slot => slot.day === day);
-    const rooms = [...new Set(daySlots.map(slot => slot.location))];
-    const roomDaySlots = daySlots.filter(slot => slot.location === room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
+    const roomDaySlots = daySlots
+      .filter(s => s.location === room)
+      .sort((a, b) => timeToMinutes(a.time.split(' - ')[0]) - timeToMinutes(b.time.split(' - ')[0]));
+
+    const startTimes = [...new Set(roomDaySlots.map(s => s.time.split(' - ')[0].trim()))];
     
     let endTimes: string[] = [];
-    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(startTime));
-    if (startTime && startIndex !== -1) {
-      for (let i = startIndex; i < roomDaySlots.length; i++) {
-        const currentSlot = roomDaySlots[i];
-        if (!currentSlot || !currentSlot.includes(' - ')) continue;
+    if (startTime) {
+      const startIndex = roomDaySlots.findIndex(slot => slot.time.startsWith(startTime));
+      if (startIndex !== -1) {
+        for (let i = startIndex; i < roomDaySlots.length; i++) {
+          const currentSlot = roomDaySlots[i];
+          const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
 
-        const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-        if (prevSlot && prevSlot.includes(' - ')) {
-          if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
+          if (prevSlot) {
+            const prevEndTime = prevSlot.time.split(' - ')[1].trim();
+            const currentStartTime = currentSlot.time.split(' - ')[0].trim();
+            if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
+              break; 
+            }
+          }
+          endTimes.push(currentSlot.time.split(' - ')[1].trim());
         }
-        
-        endTimes.push(currentSlot.split(' - ')[1].trim());
       }
     }
-    return { rooms, times: roomDaySlots, startTimes, endTimes };
-  }, [emptySlots, editedFormData, startTime]);
+    
+    return { rooms, startTimes, endTimes };
+}, [emptySlots, editedFormData, startTime, isExamsTimetable]);
 
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
@@ -3742,3 +3737,4 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
