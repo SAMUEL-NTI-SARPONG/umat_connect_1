@@ -48,7 +48,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-        <SidebarTrigger side="right" className="md:hidden" />
+        
       </div>
     </header>
   );
