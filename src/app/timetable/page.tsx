@@ -706,6 +706,18 @@ const initialCreateFormState = {
   time: '',
 };
 
+const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
+    const seen = new Set<string>();
+    return exams.filter((exam) => {
+      const key = `${exam.dateStr}-${exam.period}-${exam.courseCode}-${exam.class}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  };
+
 function StaffExamDetails({ exams }: { exams: (ExamEntry & { role: string })[] }) {
     if (exams.length === 0) {
       return (
@@ -784,18 +796,6 @@ function StaffExamsView() {
             else newSet.delete(name);
             return newSet;
         });
-    };
-
-    const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
-      const seen = new Set<string>();
-      return exams.filter((exam) => {
-        const key = `${exam.dateStr}-${exam.period}-${exam.courseCode}-${exam.class}`;
-        if (seen.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      });
     };
 
     const { staffExams, examDays, firstExamDate, lastExamDate, numberOfMonths } = useMemo(() => {
@@ -1578,65 +1578,31 @@ function StaffTimetableView({
               {days.map(day => (
                 <TabsContent key={day} value={day}>
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                    <div className="md:border md:rounded-lg md:overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="hidden md:table-header-group">
-                                    <TableRow>
-                                        <TableHead className="w-[20%]">Time</TableHead>
-                                        <TableHead>Course</TableHead>
-                                        <TableHead className="w-[20%]">Location</TableHead>
-                                        <TableHead className="hidden lg:table-cell w-[25%]">Lecturer</TableHead>
-                                        <TableHead className="w-[15%]">Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {dailySchedule[day].map((event, index) => (
-                                    <TableRow key={`${event.id}-${index}`} onClick={() => handleRowClick(event)} className="block md:table-row -ml-4 -mr-4 md:ml-0 md:mr-0 md:border-b mb-4 md:mb-0 cursor-pointer">
-                                        <TableCell className="block md:hidden p-0 w-full">
-                                          <div className="border rounded-lg p-4 space-y-4 m-2">
-                                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
-                                              <div>
-                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><CalendarIcon className="w-3 h-3"/>Time</div>
-                                                <div className="font-medium break-words pl-5">{event.time}</div>
-                                              </div>
-                                              <div>
-                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><BookUser className="w-3 h-3"/>Course</div>
-                                                <div className="font-medium break-words pl-5">{event.courseCode}</div>
-                                              </div>
-                                              <div>
-                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="w-3 h-3"/>Location</div>
-                                                <div className="font-medium break-words pl-5">{event.room}</div>
-                                              </div>
-                                              <div>
-                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><UserIcon className="w-3 h-3"/>Lecturer</div>
-                                                <div className="font-medium break-words pl-5">{event.lecturer}</div>
-                                              </div>
-                                              <div>
-                                                <div className="font-bold text-xs text-muted-foreground flex items-center gap-1.5"><AlertCircle className="w-3 h-3"/>Status</div>
-                                                <div className="pl-5">
-                                                  <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                    {statusConfig[event.status].text}
-                                                  </Badge>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="hidden md:table-cell font-medium">{event.time}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{event.courseCode}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{event.room}</TableCell>
-                                        <TableCell className="hidden lg:table-cell">{event.lecturer}</TableCell>
-                                        <TableCell className="hidden md:table-cell">
-                                            <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
-                                                {statusConfig[event.status].text}
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                    <div className="space-y-4">
+                        {dailySchedule[day].map((event) => (
+                          <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-semibold">{event.courseCode}</p>
+                                  <p className="text-sm text-muted-foreground">{event.time}</p>
+                                </div>
+                                <Badge variant="outline" className={cn("capitalize font-normal text-xs", statusConfig[event.status].border, 'border-l-4')}>
+                                  {statusConfig[event.status].text}
+                                </Badge>
+                              </div>
+                              <Separator className="my-3" />
+                              <div className="flex flex-col space-y-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span>{event.room}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                  <span>{event.lecturer}</span>
+                                </div>
+                              </div>
+                          </Card>
+                        ))}
                     </div>
                   ) : (
                     <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -2240,7 +2206,7 @@ function TimetableDisplay({
   isDistributed?: boolean;
   onDistribute?: () => { success: boolean, message: string, studentCount?: number };
 }) {
-  const { toast } = useToast();
+  const { toast } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
