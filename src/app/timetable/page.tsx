@@ -82,7 +82,17 @@ const timeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
     const timePart = timeStr.split('-')[0].trim();
     const match = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!match) return 0;
+    if (!match) {
+      const singleMatch = timePart.match(/(\d{1,2})\s*(AM|PM)/i);
+      if (singleMatch) {
+        let [_, hoursStr, modifier] = singleMatch;
+        let hours = parseInt(hoursStr, 10);
+        if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+        if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        return hours * 60;
+      }
+      return 0;
+    }
 
     let [_, hoursStr, minutesStr, modifier] = match;
     let hours = parseInt(hoursStr, 10);
@@ -3788,6 +3798,7 @@ export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }
 
 
     
+
 
 
 
