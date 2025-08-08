@@ -80,12 +80,23 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 // Helper function to convert time string (e.g., "7:00 AM") to minutes from midnight
 const timeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
-    const [time, modifier] = timeStr.split(' ');
+    // Extract the start time if it's a range
+    const timePart = timeStr.split(' - ')[0]?.trim() || '';
+    const [time, modifier] = timePart.split(' ');
     if (!time) return 0;
     let [hours, minutes] = time.split(':').map(Number);
     if (modifier?.toUpperCase() === 'PM' && hours < 12) hours += 12;
     if (modifier?.toUpperCase() === 'AM' && hours === 12) hours = 0;
-    return hours * 60 + (minutes || 0);
+    return (hours || 0) * 60 + (minutes || 0);
+};
+
+const minutesToTime = (minutes: number): string => {
+    let hours = Math.floor(minutes / 60);
+    const mins = String(minutes % 60).padStart(2, '0');
+    const modifier = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${mins} ${modifier}`;
 };
 
 function ExamDetails({ exams }: { exams: ExamEntry[] }) {
@@ -484,53 +495,46 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, typeof schedule>);
   }, [schedule]);
 
-  const freeRoomsForDay = useMemo(() => {
-    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
-    if (daySlots.length === 0) return [];
-
-    const rooms: Record<string, string[]> = daySlots.reduce((acc, slot) => {
-      if (!acc[slot.location]) {
-        acc[slot.location] = [];
-      }
-      acc[slot.location].push(slot.time);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
+    const freeRoomsForDay = useMemo(() => {
+        const daySlots = emptySlots.filter(slot => slot.day === activeDay);
+        if (daySlots.length === 0) return [];
     
-    for (const room in rooms) {
-      const slots = (rooms[room] || []).map(time => {
-          if (!time || !time.includes('-')) return null;
-          const [start, end] = time.split(' - ');
-          return { start, end };
-      }).filter(Boolean) as { start: string; end: string }[];
-      
-      if (slots.length === 0) continue;
-      
-      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-      
-      const ranges: string[] = [];
-      if (slots.length > 0) {
-        let currentRangeStart = slots[0].start;
-        let currentRangeEnd = slots[0].end;
-  
-        for (let i = 1; i < slots.length; i++) {
-          if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
-            currentRangeEnd = slots[i].end;
-          } else {
-            ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-            currentRangeStart = slots[i].start;
-            currentRangeEnd = slots[i].end;
+        const rooms = daySlots.reduce((acc, slot) => {
+          if (!acc[slot.location]) {
+            acc[slot.location] = [];
           }
+          acc[slot.location].push(slot.time);
+          return acc;
+        }, {} as Record<string, string[]>);
+    
+        const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
+        
+        for (const room in rooms) {
+          const slots = (rooms[room] || [])
+            .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
+            .sort((a, b) => a.start - b.start);
+          
+          if (slots.length === 0) continue;
+          
+          const ranges: string[] = [];
+          let currentRangeStart = slots[0].start;
+          let currentRangeEnd = slots[0].end;
+      
+          for (let i = 1; i < slots.length; i++) {
+            if (slots[i].start === currentRangeEnd) {
+              currentRangeEnd = slots[i].end;
+            } else {
+              ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+              currentRangeStart = slots[i].start;
+              currentRangeEnd = slots[i].end;
+            }
+          }
+          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+          consolidatedRooms.push({ room, freeRanges: ranges });
         }
-        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-      }
-      consolidatedRooms.push({ room, freeRanges: ranges });
-    }
-
-    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
-  }, [emptySlots, activeDay]);
-
+    
+        return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
+    }, [emptySlots, activeDay]);
 
   return (
     <Tabs defaultValue="class" className="w-full">
@@ -1285,7 +1289,7 @@ function StaffTimetableView({
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
     if (daySlots.length === 0) return [];
 
-    const rooms: Record<string, string[]> = daySlots.reduce((acc, slot) => {
+    const rooms = daySlots.reduce((acc, slot) => {
       if (!acc[slot.location]) {
         acc[slot.location] = [];
       }
@@ -1296,32 +1300,26 @@ function StaffTimetableView({
     const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
     
     for (const room in rooms) {
-      const slots = (rooms[room] || []).map(time => {
-          if (!time || !time.includes('-')) return null;
-          const [start, end] = time.split(' - ');
-          return { start, end };
-      }).filter(Boolean) as { start: string; end: string }[];
+      const slots = (rooms[room] || [])
+        .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
+        .sort((a, b) => a.start - b.start);
       
       if (slots.length === 0) continue;
       
-      slots.sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
-      
       const ranges: string[] = [];
-      if (slots.length > 0) {
-        let currentRangeStart = slots[0].start;
-        let currentRangeEnd = slots[0].end;
+      let currentRangeStart = slots[0].start;
+      let currentRangeEnd = slots[0].end;
   
-        for (let i = 1; i < slots.length; i++) {
-          if (timeToMinutes(currentRangeEnd) === timeToMinutes(slots[i].start)) {
-            currentRangeEnd = slots[i].end;
-          } else {
-            ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
-            currentRangeStart = slots[i].start;
-            currentRangeEnd = slots[i].end;
-          }
+      for (let i = 1; i < slots.length; i++) {
+        if (slots[i].start === currentRangeEnd) {
+          currentRangeEnd = slots[i].end;
+        } else {
+          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+          currentRangeStart = slots[i].start;
+          currentRangeEnd = slots[i].end;
         }
-        ranges.push(`${currentRangeStart} - ${currentRangeEnd}`);
       }
+      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
       consolidatedRooms.push({ room, freeRanges: ranges });
     }
 
@@ -1424,40 +1422,51 @@ function StaffTimetableView({
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], startTimes: [], endTimes: [] };
 
-    // Get all 1-hour slots for the selected day and room
-    const oneHourSlots = emptySlots
-      .filter(slot => slot.day === editedFormData.day && slot.location === editedFormData.room)
-      .map(slot => slot.time)
-      .sort((a, b) => timeToMinutes(a.split(' - ')[0]) - timeToMinutes(b.split(' - ')[0]));
+    // Find all 1-hour slots for the selected day
+    const daySlots = emptySlots.filter(s => s.day === editedFormData.day);
+    const rooms = [...new Set(daySlots.map(s => s.location))].sort();
 
-    const allStartTimes = [...new Set(oneHourSlots.map(time => time.split(' - ')[0].trim()))];
+    // Filter by selected room
+    const roomDaySlots = daySlots
+      .filter(s => s.location === editedFormData.room)
+      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
+      .sort((a, b) => a.start - b.start);
+
+    // Merge consecutive slots
+    const mergedSlots: { start: number, end: number }[] = [];
+    if (roomDaySlots.length > 0) {
+      let current = { ...roomDaySlots[0] };
+      for (let i = 1; i < roomDaySlots.length; i++) {
+        if (roomDaySlots[i].start === current.end) {
+          current.end = roomDaySlots[i].end;
+        } else {
+          mergedSlots.push(current);
+          current = { ...roomDaySlots[i] };
+        }
+      }
+      mergedSlots.push(current);
+    }
     
+    // Generate all possible 1-hour start times from merged slots
+    const allStartTimes: string[] = [];
+    mergedSlots.forEach(slot => {
+      for (let t = slot.start; t < slot.end; t += 60) {
+        allStartTimes.push(minutesToTime(t));
+      }
+    });
+
     let allEndTimes: string[] = [];
     if (startTime) {
-      const startIndex = oneHourSlots.findIndex(slot => slot.startsWith(startTime));
-      if (startIndex !== -1) {
-        for (let i = startIndex; i < oneHourSlots.length; i++) {
-          const currentSlot = oneHourSlots[i];
-          const prevSlot = i > startIndex ? oneHourSlots[i - 1] : null;
-
-          if (prevSlot) {
-            // Check if the current slot is consecutive to the previous one
-            const prevEndTime = prevSlot.split(' - ')[1].trim();
-            const currentStartTime = currentSlot.split(' - ')[0].trim();
-            if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
-              break; // Stop if there's a gap
-            }
-          }
-          allEndTimes.push(currentSlot.split(' - ')[1].trim());
+      const startMinutes = timeToMinutes(startTime);
+      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
+      if (containingSlot) {
+        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
+          allEndTimes.push(minutesToTime(t));
         }
       }
     }
     
-    return { 
-        rooms: [...new Set(emptySlots.filter(s => s.day === editedFormData.day).map(s => s.location))], 
-        startTimes: allStartTimes, 
-        endTimes: allEndTimes
-    };
+    return { rooms, startTimes: allStartTimes, endTimes: allEndTimes };
   }, [emptySlots, editedFormData, startTime]);
 
   const availableSlotsForCreate = useMemo(() => {
@@ -2243,36 +2252,51 @@ function TimetableDisplay({
     if (!editedFormData || isExamsTimetable) return { rooms: [], startTimes: [], endTimes: [] };
     const { day, room } = editedFormData as TimetableEntry;
     
+    // Find all 1-hour slots for the selected day
     const daySlots = emptySlots.filter(s => s.day === day);
-    const rooms = [...new Set(daySlots.map(s => s.location))];
+    const rooms = [...new Set(daySlots.map(s => s.location))].sort();
 
+    // Filter by selected room and convert to minutes
     const roomDaySlots = daySlots
       .filter(s => s.location === room)
-      .sort((a, b) => timeToMinutes(a.time.split(' - ')[0]) - timeToMinutes(b.time.split(' - ')[0]));
+      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
+      .sort((a, b) => a.start - b.start);
 
-    const startTimes = [...new Set(roomDaySlots.map(s => s.time.split(' - ')[0].trim()))];
+    // Merge consecutive slots
+    const mergedSlots: { start: number, end: number }[] = [];
+    if (roomDaySlots.length > 0) {
+      let current = { ...roomDaySlots[0] };
+      for (let i = 1; i < roomDaySlots.length; i++) {
+        if (roomDaySlots[i].start === current.end) {
+          current.end = roomDaySlots[i].end;
+        } else {
+          mergedSlots.push(current);
+          current = { ...roomDaySlots[i] };
+        }
+      }
+      mergedSlots.push(current);
+    }
     
-    let endTimes: string[] = [];
-    if (startTime) {
-      const startIndex = roomDaySlots.findIndex(slot => slot.time.startsWith(startTime));
-      if (startIndex !== -1) {
-        for (let i = startIndex; i < roomDaySlots.length; i++) {
-          const currentSlot = roomDaySlots[i];
-          const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
+    // Generate all possible 1-hour start times from merged slots
+    const allStartTimes: string[] = [];
+    mergedSlots.forEach(slot => {
+      for (let t = slot.start; t < slot.end; t += 60) {
+        allStartTimes.push(minutesToTime(t));
+      }
+    });
 
-          if (prevSlot) {
-            const prevEndTime = prevSlot.time.split(' - ')[1].trim();
-            const currentStartTime = currentSlot.time.split(' - ')[0].trim();
-            if (timeToMinutes(prevEndTime) !== timeToMinutes(currentStartTime)) {
-              break; 
-            }
-          }
-          endTimes.push(currentSlot.time.split(' - ')[1].trim());
+    let allEndTimes: string[] = [];
+    if (startTime) {
+      const startMinutes = timeToMinutes(startTime);
+      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
+      if (containingSlot) {
+        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
+          allEndTimes.push(minutesToTime(t));
         }
       }
     }
     
-    return { rooms, startTimes, endTimes };
+    return { rooms, startTimes: allStartTimes, endTimes: allEndTimes };
 }, [emptySlots, editedFormData, startTime, isExamsTimetable]);
 
   useEffect(() => {
@@ -3737,4 +3761,5 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
