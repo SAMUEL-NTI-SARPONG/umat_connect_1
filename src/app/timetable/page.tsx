@@ -1466,7 +1466,7 @@ function StaffTimetableView({
       }
     }
     
-    return { rooms, startTimes: allStartTimes, endTimes: allEndTimes };
+    return { rooms, startTimes: [...new Set(allStartTimes)], endTimes: allEndTimes };
   }, [emptySlots, editedFormData, startTime]);
 
   const availableSlotsForCreate = useMemo(() => {
@@ -3761,5 +3761,6 @@ export default function TimetablePage({ setStudentSchedule }: { setStudentSchedu
 
 
     
+
 
 
