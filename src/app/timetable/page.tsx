@@ -603,28 +603,28 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                     <TabsContent key={day} value={day}>
                     {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                         <div className="space-y-4 max-w-md mx-auto">
-                            {dailySchedule[day].map((event, index) => (
-                                <Card key={`${event.id}-${index}`} className="p-4">
-                                    <div className="flex flex-wrap justify-between items-start gap-2">
-                                        <div className="flex-grow">
-                                            <p className="font-semibold break-words">{event.courseCode}</p>
-                                            <p className="text-sm text-muted-foreground">{event.time}</p>
-                                        </div>
-                                        <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                                            {statusConfig[event.status].text}
-                                        </Badge>
+                            {dailySchedule[day].map((event) => (
+                                <Card key={event.id} className="p-4">
+                                  <div className="flex flex-wrap justify-between items-start gap-2">
+                                    <div className="flex-grow">
+                                      <p className="font-semibold break-words">{event.courseCode}</p>
+                                      <p className="text-sm text-muted-foreground">{event.time}</p>
                                     </div>
-                                    <Separator className="my-3" />
-                                    <div className="flex flex-col space-y-2 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                            <span className="break-words">{event.room}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                            <span className="break-words">{event.lecturer}</span>
-                                        </div>
+                                    <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
+                                      {statusConfig[event.status].text}
+                                    </Badge>
+                                  </div>
+                                  <Separator className="my-3" />
+                                  <div className="flex flex-col space-y-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                      <span className="break-words">{event.room}</span>
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                      <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                      <span className="break-words">{event.lecturer}</span>
+                                    </div>
+                                  </div>
                                 </Card>
                             ))}
                         </div>
@@ -1407,10 +1407,9 @@ function StaffTimetableView({
   const availableSlotsForEdit = useMemo(() => {
     if (!editedFormData) return { rooms: [], startTimes: [], endTimes: [] };
     
-    const isWeekend = editedFormData.day === 'Saturday' || editedFormData.day === 'Sunday';
     let daySlots: EmptySlot[] = [];
 
-    if (isWeekend) {
+    if (editedFormData.day === 'Saturday' || editedFormData.day === 'Sunday') {
       const allRooms = masterSchedule ? [...new Set(masterSchedule.map(e => e.room))] : [];
       const standardTimes = ['7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM', '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'];
       allRooms.forEach(room => {
@@ -3750,6 +3749,7 @@ export default function TimetablePage() {
 
 
     
+
 
 
 
