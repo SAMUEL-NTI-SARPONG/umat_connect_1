@@ -8,7 +8,15 @@ export const getFromStorage = <T,>(key: string, defaultValue: T): T => {
   }
   try {
     const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    if (item) {
+        // Special handling for Maps
+        const parsed = JSON.parse(item);
+        if (parsed.dataType === 'Map' && Array.isArray(parsed.value)) {
+            return new Map(parsed.value) as T;
+        }
+        return parsed;
+    }
+    return defaultValue;
   } catch (error) {
     console.error(`Error reading from localStorage key “${key}”:`, error);
     return defaultValue;
@@ -18,8 +26,14 @@ export const getFromStorage = <T,>(key: string, defaultValue: T): T => {
 export const saveToStorage = <T,>(key: string, value: T) => {
   if (typeof window === 'undefined') return;
   try {
-    const item = JSON.stringify(value);
-    window.localStorage.setItem(key, item);
+    let itemToStore;
+    // Special handling for Maps
+    if (value instanceof Map) {
+        itemToStore = JSON.stringify({ dataType: 'Map', value: Array.from(value.entries()) });
+    } else {
+        itemToStore = JSON.stringify(value);
+    }
+    window.localStorage.setItem(key, itemToStore);
   } catch (error) {
     // Catch quota exceeded errors
     if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {

@@ -15,7 +15,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [studentSchedule, setStudentSchedule] = React.useState<TimetableEntry[]>([]);
   
   return (
     <html lang="en" suppressHydrationWarning>
@@ -41,8 +40,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider>
-            <AppLayout studentSchedule={studentSchedule}>
-              {React.cloneElement(children as React.ReactElement, { setStudentSchedule })}
+            <AppLayout>
+              {children}
             </AppLayout>
           </UserProvider>
           <Toaster />

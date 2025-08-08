@@ -3708,7 +3708,7 @@ function AddPracticalDialog({ isOpen, onClose, onAddPractical }: { isOpen: boole
     );
 }
 
-export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void; setSidebarSchedule?: (schedule: TimetableEntry[]) => void; }) {
+export default function TimetablePage({ setStudentSchedule }: { setStudentSchedule?: (schedule: TimetableEntry[]) => void; }) {
   const { 
     user, 
     allUsers,
@@ -3737,6 +3737,8 @@ export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }
       );
   }, [combinedSchedule, user]);
   
+  const [sidebarSchedule, setSidebarSchedule] = useState<TimetableEntry[]>([]);
+
   useEffect(() => {
       if (user?.role === 'student' && setStudentSchedule) {
         setStudentSchedule(studentTimetable);
@@ -3759,7 +3761,7 @@ export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
-                  setSidebarSchedule={setSidebarSchedule || (() => {})}
+                  setSidebarSchedule={setSidebarSchedule}
                />;
       case 'administrator':
         return <AdminTimetableView />
@@ -3800,6 +3802,7 @@ export default function TimetablePage({ setStudentSchedule, setSidebarSchedule }
 
 
     
+
 
 
 

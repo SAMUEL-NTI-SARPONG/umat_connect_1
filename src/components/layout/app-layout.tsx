@@ -13,10 +13,29 @@ import AppHeader from '@/components/layout/app-header';
 import BottomNavbar from '@/components/layout/bottom-navbar';
 import TopScheduleBar from '@/components/layout/top-schedule-bar';
 import LoginPage from '@/app/login/page';
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
-export default function AppLayout({ children, studentSchedule }: { children: React.ReactNode, studentSchedule: TimetableEntry[] }) {
-  const { user } = useUser();
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, masterSchedule, staffSchedules, isClassTimetableDistributed } = useUser();
+  const [studentSchedule, setStudentSchedule] = useState<TimetableEntry[]>([]);
+
+  const combinedSchedule = useMemo(() => {
+    if (!isClassTimetableDistributed) return [];
+    return [...(masterSchedule || []), ...staffSchedules];
+  }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
+  
+  useEffect(() => {
+    if (user?.role === 'student') {
+       const filtered = combinedSchedule.filter(entry =>
+        entry.level === user.level &&
+        user.department &&
+        (entry.departments || []).includes(user.department)
+      );
+      setStudentSchedule(filtered);
+    } else {
+      setStudentSchedule([]);
+    }
+  }, [user, combinedSchedule]);
   
   if (!user) {
     return <LoginPage />;
@@ -33,7 +52,7 @@ export default function AppLayout({ children, studentSchedule }: { children: Rea
           <SidebarInset className="flex flex-col flex-1">
             <TopScheduleBar studentSchedule={studentSchedule} />
             <main className="flex-1 px-4 pb-20 pt-2 md:px-6 md:pb-0 md:pt-0">
-               {children}
+               {React.cloneElement(children as React.ReactElement, { setStudentSchedule })}
             </main>
           </SidebarInset>
         </div>

@@ -12,6 +12,7 @@ import {
 } from 'react';
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { getFromStorage, saveToStorage } from '@/lib/storage';
 
 
 // Define the shape of timetable entries and empty slots
@@ -215,31 +216,41 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+    const [state, setState] = useState<T>(() => getFromStorage(key, defaultValue));
+    useEffect(() => {
+        saveToStorage(key, state);
+    }, [key, state]);
+    return [state, setState];
+};
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  
+  const [allUsers, setAllUsers] = useLocalStorageState<User[]>('allUsers', defaultUsers);
   const [user, setUser] = useState<User | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>(defaultUsers);
-  const [masterSchedule, setMasterScheduleState] = useState<TimetableEntry[] | null>(null);
-  const [isClassTimetableDistributed, setClassTimetableDistributed] = useState(false);
-  const [staffSchedules, setStaffSchedules] = useState<TimetableEntry[]>([]);
-  const [emptySlots, setEmptySlotsState] = useState<EmptySlot[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [reviewedSchedules, setReviewedSchedules] = useState<number[]>([]);
-  const [rejectedEntries, setRejectedEntries] = useState<RejectedEntries>({});
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [specialResitTimetable, setSpecialResitTimetableState] = useState<SpecialResitTimetable | null>(null);
-  const [studentResitSelections, setStudentResitSelections] = useState<StudentResitSelections>({});
-  const [examsTimetable, setExamsTimetableState] = useState<ExamsTimetable | null>(null);
-  const [faculties, setFaculties] = useState<Faculty[]>(initialFaculties);
-  const [departmentMap, setDepartmentMap] = useState<Map<string, string>>(initialDepartmentMap);
-  const [allDepartments, setAllDepartments] = useState<string[]>(initialAllDepartments);
 
+  const [masterSchedule, setMasterScheduleState] = useLocalStorageState<TimetableEntry[] | null>('masterSchedule', null);
+  const [isClassTimetableDistributed, setClassTimetableDistributed] = useLocalStorageState<boolean>('isClassTimetableDistributed', false);
+  const [staffSchedules, setStaffSchedules] = useLocalStorageState<TimetableEntry[]>('staffSchedules', []);
+  const [emptySlots, setEmptySlotsState] = useLocalStorageState<EmptySlot[]>('emptySlots', []);
+  const [posts, setPosts] = useLocalStorageState<Post[]>('posts', []);
+  const [reviewedSchedules, setReviewedSchedules] = useLocalStorageState<number[]>('reviewedSchedules', []);
+  const [rejectedEntries, setRejectedEntries] = useLocalStorageState<RejectedEntries>('rejectedEntries', {});
+  const [notifications, setNotifications] = useLocalStorageState<Notification[]>('notifications', []);
+  const [specialResitTimetable, setSpecialResitTimetableState] = useLocalStorageState<SpecialResitTimetable | null>('specialResitTimetable', null);
+  const [studentResitSelections, setStudentResitSelections] = useLocalStorageState<StudentResitSelections>('studentResitSelections', {});
+  const [examsTimetable, setExamsTimetableState] = useLocalStorageState<ExamsTimetable | null>('examsTimetable', null);
+  const [faculties, setFaculties] = useLocalStorageState<Faculty[]>('faculties', initialFaculties);
+  const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
+  const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
+  
   // This useEffect handles session-based login persistence.
   useEffect(() => {
     try {
         const storedUserId = sessionStorage.getItem('userId');
         if (storedUserId) {
-          const foundUser = defaultUsers.find(u => u.id === parseInt(storedUserId, 10));
+          const foundUser = allUsers.find(u => u.id === parseInt(storedUserId, 10));
           if (foundUser) {
             setUser(foundUser);
           }
@@ -247,31 +258,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
         console.error("Failed to read from sessionStorage:", error);
     }
-  }, []);
+  }, [allUsers]);
 
-  // Load data from localStorage on initial render
-  useEffect(() => {
-    const loadFromStorage = (key: string, setter: (data: any) => void) => {
-        try {
-            const storedData = localStorage.getItem(key);
-            if (storedData && typeof storedData === 'string') {
-                const parsedData = JSON.parse(storedData);
-                // Basic validation to ensure it's not just an empty object
-                if (parsedData && Object.keys(parsedData).length > 0) {
-                    setter(parsedData);
-                }
-            }
-        } catch(e) {
-            console.error(`Failed to parse ${key} from localStorage:`, e);
-            // Optionally, remove the corrupted data
-            localStorage.removeItem(key);
-        }
-    };
-    
-    loadFromStorage('specialResitSchedule', setSpecialResitTimetableState);
-    loadFromStorage('studentResitSelections', setStudentResitSelections);
-    loadFromStorage('examsTimetable', setExamsTimetableState);
-  }, []);
 
   const login = (userId: number) => {
     const foundUser = allUsers.find(u => u.id === userId);
@@ -300,15 +288,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setUser(updatedUser);
     }
     toast({ title: "Profile Updated", description: "Your profile has been saved successfully." });
-  }, [user, toast]);
+  }, [user, toast, setAllUsers]);
   
   const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
-    toast({ title: "Timetable Updated", description: "The new master schedule has been distributed." });
-  }, [toast]);
+    if (data) {
+        toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
+    }
+  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -316,7 +306,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     setClassTimetableDistributed(true);
     return { success: true, message: 'The class timetable is now live for all users.' };
-  }, [masterSchedule]);
+  }, [masterSchedule, setClassTimetableDistributed]);
 
   const updateScheduleStatus = useCallback((updatedEntry: TimetableEntry) => {
     let originalEntry: TimetableEntry | undefined;
@@ -356,11 +346,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         !(slot.day === updatedEntry.day && slot.location === updatedEntry.room && slot.time === updatedEntry.time)
     ));
     
-  }, []);
+  }, [setEmptySlotsState, setMasterScheduleState, setStaffSchedules]);
   
   const setEmptySlots = useCallback((slots: EmptySlot[]) => {
     setEmptySlotsState(slots);
-  }, []);
+  }, [setEmptySlotsState]);
 
   const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => {
     if (!user) {
@@ -380,12 +370,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setPosts(prevPosts => [newPost, ...prevPosts]);
     toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
 
-  }, [user, toast]);
+  }, [user, toast, setPosts]);
 
   const deletePost = useCallback((postId: number) => {
     setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
     toast({ title: 'Post Deleted', description: 'Your post has been removed.' });
-  }, [toast]);
+  }, [toast, setPosts]);
 
   const fetchNotifications = useCallback(async () => {
     // This function is a no-op in local mode.
@@ -406,7 +396,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       timestamp: new Date().toISOString(),
     };
     setNotifications(prev => [newNotification, ...prev]);
-  }, []);
+  }, [setNotifications]);
 
   const addComment = useCallback(async (postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
@@ -447,7 +437,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             commentId: newComment.id,
         });
     }
-  }, [user, addNotification, toast]);
+  }, [user, addNotification, toast, setPosts]);
 
   const addReply = useCallback(async (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => {
       if (!user) return;
@@ -507,18 +497,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
           }
           return updatedPosts;
       });
-  }, [user, addNotification, toast]);
+  }, [user, addNotification, toast, setPosts]);
 
 
   const markNotificationAsRead = useCallback(async (notificationId: string) => {
     setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n));
-  }, []);
+  }, [setNotifications]);
 
   const clearAllNotifications = useCallback(async () => {
     if (!user) return;
     setNotifications(prev => prev.map(n => n.recipientId === user.id ? { ...n, isRead: true } : n));
     toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
-  }, [user?.id, toast]);
+  }, [user?.id, toast, setNotifications]);
 
   const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
     if (!user || user.role !== 'staff') return;
@@ -533,39 +523,30 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setStaffSchedules(prev => [...prev, newEntry]);
     toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
 
-  }, [user, toast]);
+  }, [user, toast, setStaffSchedules]);
   
   const markScheduleAsReviewed = useCallback((userId: number) => {
     setReviewedSchedules(prev => [...new Set([...prev, userId])]);
     toast({ title: "Schedule Confirmed", description: "Thank you for reviewing your schedule." });
-  }, [toast]);
+  }, [toast, setReviewedSchedules]);
   
   const rejectScheduleEntry = useCallback((userId: number, entryId: number) => {
     setRejectedEntries(prev => {
       const userRejections = prev[userId] || [];
       return { ...prev, [userId]: [...new Set([...userRejections, entryId])] };
     });
-  }, []);
+  }, [setRejectedEntries]);
   
   const unrejectScheduleEntry = useCallback((userId: number, entryId: number) => {
     setRejectedEntries(prev => {
       const userRejections = prev[userId] || [];
       return { ...prev, [userId]: userRejections.filter(id => id !== entryId) };
     });
-  }, []);
+  }, [setRejectedEntries]);
 
   const setSpecialResitTimetable = useCallback((data: SpecialResitTimetable | null) => {
     setSpecialResitTimetableState(data);
-    try {
-        if (data) {
-          localStorage.setItem('specialResitSchedule', JSON.stringify(data));
-        } else {
-          localStorage.removeItem('specialResitSchedule');
-        }
-    } catch (error) {
-        console.error("Failed to write to localStorage:", error);
-    }
-  }, []);
+  }, [setSpecialResitTimetableState]);
 
   const distributeSpecialResitTimetable = useCallback(() => {
     setSpecialResitTimetableState(prev => {
@@ -624,28 +605,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
             }]
         };
 
-        try {
-            localStorage.setItem('specialResitSchedule', JSON.stringify(distributedData));
-        } catch (error) {
-            console.error("Failed to write to localStorage:", error);
-        }
-        
         return distributedData;
     });
-  }, [allUsers]);
+  }, [allUsers, setSpecialResitTimetableState]);
   
   const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
     setExamsTimetableState(data);
-    try {
-        if (data) {
-          localStorage.setItem('examsTimetable', JSON.stringify(data));
-        } else {
-          localStorage.removeItem('examsTimetable');
-        }
-    } catch (error) {
-        console.error("Failed to write to localStorage:", error);
-    }
-  }, []);
+  }, [setExamsTimetableState]);
 
   const distributeExamsTimetable = useCallback(() => {
     if (!examsTimetable) {
@@ -658,11 +624,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setExamsTimetableState(prev => {
       if (!prev) return null;
       const distributedData = { ...prev, isDistributed: true };
-      try {
-        localStorage.setItem('examsTimetable', JSON.stringify(distributedData));
-      } catch (error) {
-        console.error("Failed to write to localStorage:", error);
-      }
       return distributedData;
     });
   
@@ -689,20 +650,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
       message: `The exams timetable is now live for ${studentsWithSchedules.length} students and relevant staff.`,
       studentCount: studentsWithSchedules.length
     };
-  }, [examsTimetable, allUsers, user, addNotification]);
+  }, [examsTimetable, allUsers, user, addNotification, setExamsTimetableState]);
 
   const updateStudentResitSelection = useCallback((entryIds: number[]) => {
     if (!user) return;
     setStudentResitSelections(prev => {
         const newState = { ...prev, [user.id]: entryIds };
-        try {
-            localStorage.setItem('studentResitSelections', JSON.stringify(newState));
-        } catch (error) {
-            console.error("Failed to write to localStorage:", error);
-        }
         return newState;
     });
-  }, [user]);
+  }, [user, setStudentResitSelections]);
 
   const addFaculty = useCallback((name: string) => {
     if (faculties.some(f => f.name.toLowerCase() === name.toLowerCase())) {
@@ -711,12 +667,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     setFaculties(prev => [...prev, { name, departments: [] }]);
     toast({ title: "Faculty Added", description: `The "${name}" faculty has been created.` });
-  }, [faculties, toast]);
+  }, [faculties, toast, setFaculties]);
 
   const updateFaculty = useCallback((oldName: string, newName: string) => {
     setFaculties(prev => prev.map(f => f.name === oldName ? { ...f, name: newName } : f));
     toast({ title: "Faculty Updated", description: "The faculty name has been updated." });
-  }, [toast]);
+  }, [toast, setFaculties]);
 
   const deleteFaculty = useCallback((name: string) => {
     setFaculties(prev => {
@@ -733,7 +689,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return prev.filter(f => f.name !== name);
     });
     toast({ title: "Faculty Deleted", description: `The "${name}" faculty has been deleted.` });
-  }, [toast]);
+  }, [toast, setFaculties, setAllDepartments, setDepartmentMap]);
 
   const addDepartment = useCallback(({ name, initial, facultyName }: { name: string; initial: string; facultyName: string }) => {
     setFaculties(prev => prev.map(f => {
@@ -745,7 +701,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setAllDepartments(prev => [...prev, name].sort());
     setDepartmentMap(prev => new Map(prev).set(initial, name));
     toast({ title: "Department Added", description: `"${name}" has been added to the ${facultyName} faculty.` });
-  }, [toast]);
+  }, [toast, setFaculties, setAllDepartments, setDepartmentMap]);
 
   const updateDepartment = useCallback(({ oldName, newName, newInitial }: { oldName: string; newName: string; newInitial: string }) => {
     let oldInitial = '';
@@ -767,7 +723,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return newMap;
     });
     toast({ title: "Department Updated", description: "The department details have been updated." });
-  }, [toast]);
+  }, [toast, setFaculties, setAllDepartments, setDepartmentMap]);
   
   const moveDepartment = useCallback(({ departmentName, newFacultyName }: { departmentName: string; newFacultyName: string }) => {
     let departmentToMove: Department | null = null;
@@ -790,7 +746,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
     });
     toast({ title: "Department Moved", description: `Moved "${departmentName}" to the ${newFacultyName} faculty.` });
-  }, [toast]);
+  }, [toast, setFaculties]);
 
   const deleteDepartment = useCallback((name: string) => {
     let initialToDelete = '';
@@ -813,7 +769,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
     }
     toast({ title: "Department Deleted", description: `The "${name}" department has been deleted.` });
-  }, [toast]);
+  }, [toast, setFaculties, setAllDepartments, setDepartmentMap]);
 
 
   const resetState = () => {
@@ -836,13 +792,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
-        try {
-            localStorage.removeItem('specialResitSchedule');
-            localStorage.removeItem('studentResitSelections');
-            localStorage.removeItem('examsTimetable');
-        } catch (error) {
-            console.error("Failed to clear localStorage:", error);
-        }
+        sessionStorage.clear();
+        localStorage.clear();
     }
 
     toast({ title: "Application Reset", description: "All data has been reset to its initial state." });
