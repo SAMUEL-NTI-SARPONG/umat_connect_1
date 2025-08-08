@@ -560,22 +560,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   return (
     <Tabs defaultValue="class" className="w-full">
       <div className="flex justify-center">
-        <ScrollArea className="w-full whitespace-nowrap">
-          <TabsList>
-            <TabsTrigger value="class">
-              <span className="sm:hidden">Class</span>
-              <span className="hidden sm:inline">Class Timetable</span>
-            </TabsTrigger>
-            <TabsTrigger value="exams">
-              <span className="sm:hidden">Exams</span>
-              <span className="hidden sm:inline">Exams Timetable</span>
-            </TabsTrigger>
-            <TabsTrigger value="resit">
-              <span className="sm:hidden">Resit</span>
-              <span className="hidden sm:inline">Special Resit</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
+            <TabsTrigger value="class">Class Timetable</TabsTrigger>
+            <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+            <TabsTrigger value="resit">Special Resit</TabsTrigger>
           </TabsList>
-        </ScrollArea>
       </div>
         <TabsContent value="class" className="mt-6">
             {!isClassTimetableDistributed ? (
@@ -1204,13 +1193,11 @@ function StaffTimetableView({
   emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
-  setSidebarSchedule
 }: {
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
-  setSidebarSchedule: (schedule: TimetableEntry[]) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1275,13 +1262,6 @@ function StaffTimetableView({
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
-  
-  useEffect(() => {
-    const today = new Date().getDay();
-    const currentDay = days[today === 0 ? 6 : today - 1] || 'Monday';
-    const todaysSchedule = staffSchedule.filter(e => e.day === currentDay);
-    setSidebarSchedule(todaysSchedule);
-  }, [staffSchedule, setSidebarSchedule]);
   
   const freeRoomsForDay = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === activeDay);
@@ -3693,8 +3673,6 @@ export default function TimetablePage() {
     isClassTimetableDistributed,
   } = useUser();
   
-  const [sidebarSchedule, setSidebarSchedule] = useState<TimetableEntry[]>([]);
-  
   const combinedSchedule = useMemo(() => {
     if (!isClassTimetableDistributed) return [];
     return [...(masterSchedule || []), ...staffSchedules];
@@ -3724,7 +3702,6 @@ export default function TimetablePage() {
                   emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule}
                   updateScheduleStatus={updateScheduleStatus}
-                  setSidebarSchedule={setSidebarSchedule}
                />;
       case 'administrator':
         return <AdminTimetableView />
