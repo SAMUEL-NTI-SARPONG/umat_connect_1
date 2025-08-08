@@ -1578,7 +1578,7 @@ function StaffTimetableView({
               {days.map(day => (
                 <TabsContent key={day} value={day}>
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => (
                           <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                               <div className="flex justify-between items-start">
