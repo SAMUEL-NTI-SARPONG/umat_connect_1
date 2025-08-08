@@ -148,323 +148,16 @@ interface StaffAccount {
   id: string;
 }
 
-// Improved Levenshtein distance with early termination
-function levenshteinDistance(a: string, b: string, maxDistance?: number): number {
-  if (Math.abs(a.length - b.length) > (maxDistance || Infinity)) {
-    return maxDistance || Infinity;
-  }
-
-  const matrix: number[][] = Array(a.length + 1)
-    .fill(0)
-    .map(() => Array(b.length + 1).fill(0));
-
-  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    let minRowValue = Infinity;
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1].toLowerCase() === b[j - 1].toLowerCase() ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1, // deletion
-        matrix[i][j - 1] + 1, // insertion
-        matrix[i - 1][j - 1] + cost // substitution
-      );
-      minRowValue = Math.min(minRowValue, matrix[i][j]);
-    }
-    
-    // Early termination if minimum distance in row exceeds threshold
-    if (maxDistance && minRowValue > maxDistance) {
-      return maxDistance + 1;
-    }
-  }
-  
-  return matrix[a.length][b.length];
-}
-
-// Enhanced name normalization
-function normalizeName(name: string): string {
-  if (!name || typeof name !== 'string') return '';
-  
-  // Common academic titles (more comprehensive)
-  const titles = [
-    'DR', 'PROF', 'PROFESSOR', 'ASSOC PROF', 'ASSOCIATE PROFESSOR', 
-    'ASST PROF', 'ASSISTANT PROFESSOR', 'MR', 'MS', 'MRS', 'MISS',
-    'ENGR', 'ENGINEER', 'REV', 'REVEREND', 'HON', 'HONORABLE'
-  ];
-  
-  let normalized = name.toLowerCase().trim();
-  
-  // Remove titles (fixed regex escaping)
-  titles.forEach((title) => {
-    const regex = new RegExp(`\\b${title.toLowerCase()}\\b`, 'gi');
-    normalized = normalized.replace(regex, '');
-  });
-  
-  // Remove common punctuation and normalize spaces
-  normalized = normalized
-    .replace(/[.,;:'"()[\\]{}]/g, '') // Remove punctuation
-    .replace(/[-_]/g, ' ') // Convert dashes and underscores to spaces
-    .replace(/\s+/g, ' ') // Normalize multiple spaces
-    .trim();
-    
-  return normalized;
-}
-
-// Enhanced timetable name parsing
-function parseTimetableName(name: string): { 
-  surname: string; 
-  firstname?: string; 
-  otherName?: string;
-  initials?: string[];
-} {
-  const normalized = normalizeName(name);
-  if (!normalized) return { surname: '' };
-  
-  const parts = normalized.split(' ').filter(part => part.length > 0);
-  
-  if (parts.length === 0) return { surname: '' };
-  if (parts.length === 1) return { surname: parts[0] };
-  
-  // Identify initials (single characters or characters followed by period)
-  const initials: string[] = [];
-  const fullNames: string[] = [];
-  
-  parts.forEach(part => {
-    const cleanPart = part.replace('.', '');
-    if (cleanPart.length === 1) {
-      initials.push(cleanPart.toUpperCase());
-    } else {
-      fullNames.push(cleanPart);
-    }
-  });
-  
-  // Handle different name patterns
-  let surname = '';
-  let firstname = '';
-  let otherName = '';
-  
-  if (fullNames.length >= 1) {
-    // Last full name is typically the surname
-    surname = fullNames[fullNames.length - 1];
-    
-    if (fullNames.length >= 2) {
-      // First full name is typically the firstname
-      firstname = fullNames[0];
-      
-      // Middle names
-      if (fullNames.length > 2) {
-        otherName = fullNames.slice(1, -1).join(' ');
-      }
-    }
-    
-    // Add initials to otherName if we have them
-    if (initials.length > 0) {
-      if (otherName) {
-        otherName = `${initials.join(' ')} ${otherName}`;
-      } else {
-        otherName = initials.join(' ');
-      }
-    }
-  } else if (initials.length >= 2) {
-    // Only initials available - last one is surname initial
-    surname = initials[initials.length - 1];
-    firstname = initials[0];
-    if (initials.length > 2) {
-      otherName = initials.slice(1, -1).join(' ');
-    }
-  }
-  
-  return {
-    surname,
-    ...(firstname && { firstname }),
-    ...(otherName && { otherName }),
-    initials
-  };
-}
-
-// Enhanced similarity calculation
-function calculateNameSimilarity(parsed: ReturnType<typeof parseTimetableName>, staff: StaffAccount): number {
-  const staffSurname = normalizeName(staff.surname);
-  const staffFirstname = staff.firstname ? normalizeName(staff.firstname) : '';
-  const staffOtherName = staff.otherName ? normalizeName(staff.otherName) : '';
-  
-  if (!parsed.surname || !staffSurname) return 0;
-  
-  // Surname similarity (most important)
-  const surnameDistance = levenshteinDistance(parsed.surname, staffSurname, 3);
-  const surnameSimilarity = surnameDistance <= 3 ? 
-    1 - surnameDistance / Math.max(parsed.surname.length, staffSurname.length) : 0;
-  
-  // If surname similarity is too low, don't bother with other calculations
-  if (surnameSimilarity < 0.6) return 0;
-  
-  let firstnameSimilarity = 0;
-  if (parsed.firstname && staffFirstname) {
-    if (parsed.firstname.length === 1) {
-      // Initial matching
-      firstnameSimilarity = parsed.firstname.toLowerCase() === staffFirstname[0].toLowerCase() ? 1 : 0;
-    } else {
-      const firstnameDistance = levenshteinDistance(parsed.firstname, staffFirstname, 2);
-      firstnameSimilarity = firstnameDistance <= 2 ? 
-        1 - firstnameDistance / Math.max(parsed.firstname.length, staffFirstname.length) : 0;
-    }
-  } else if (!parsed.firstname && !staffFirstname) {
-    firstnameSimilarity = 0.5; // Neutral when both missing
-  }
-  
-  let otherNameSimilarity = 0;
-  if (parsed.otherName && staffOtherName) {
-    // Handle multiple initials or names in otherName
-    const parsedOthers = parsed.otherName.split(' ');
-    const staffOthers = staffOtherName.split(' ');
-    
-    let matches = 0;
-    let total = Math.max(parsedOthers.length, staffOthers.length);
-    
-    for (const parsedOther of parsedOthers) {
-      for (const staffOther of staffOthers) {
-        if (parsedOther.length === 1 || staffOther.length === 1) {
-          // Initial matching
-          if (parsedOther[0].toLowerCase() === staffOther[0].toLowerCase()) {
-            matches++;
-            break;
-          }
-        } else {
-          // Full name matching
-          const distance = levenshteinDistance(parsedOther, staffOther, 2);
-          if (distance <= 1) {
-            matches += 1 - distance / Math.max(parsedOther.length, staffOther.length);
-            break;
-          }
-        }
-      }
-    }
-    
-    otherNameSimilarity = total > 0 ? matches / total : 0;
-  } else if (!parsed.otherName && !staffOtherName) {
-    otherNameSimilarity = 0.5; // Neutral when both missing
-  }
-  
-  // Weighted scoring with adaptive weights
-  let surnameWeight = 0.7;
-  let firstnameWeight = 0.25;
-  let otherNameWeight = 0.05;
-  
-  // Adjust weights if we have limited information
-  if (!parsed.firstname || !staffFirstname) {
-    surnameWeight = 0.8;
-    firstnameWeight = 0.1;
-    otherNameWeight = 0.1;
-  }
-  
-  if (!parsed.otherName || !staffOtherName) {
-    surnameWeight = 0.75;
-    firstnameWeight = 0.25;
-    otherNameWeight = 0;
-  }
-  
-  return surnameWeight * surnameSimilarity + 
-         firstnameWeight * firstnameSimilarity + 
-         otherNameWeight * otherNameSimilarity;
-}
-
-// Enhanced name matching with multiple threshold levels
-function matchLecturerNames(
-  timetableName: string,
-  staffDatabase: StaffAccount[]
-): { matchedAccount: StaffAccount | null; confidence: number; matchType: string }[] {
-  if (!timetableName || !staffDatabase || staffDatabase.length === 0) {
-    return [{ matchedAccount: null, confidence: 0, matchType: 'no_data' }];
-  }
-  
-  const results: { matchedAccount: StaffAccount | null; confidence: number; matchType: string }[] = [];
-  
-  // Handle multiple lecturers (co-lecturers)
-  const coLecturers = timetableName.split(/[/&,]/).map(name => name.trim()).filter(name => name.length > 0);
-  
-  for (const lecturerName of coLecturers) {
-    if (!lecturerName) {
-      results.push({ matchedAccount: null, confidence: 0, matchType: 'empty_name' });
-      continue;
-    }
-    
-    const parsed = parseTimetableName(lecturerName);
-    let bestMatch: StaffAccount | null = null;
-    let bestScore = 0;
-    let matchType = 'no_match';
-    
-    // First pass: Look for high-confidence matches
-    for (const staff of staffDatabase) {
-      const score = calculateNameSimilarity(parsed, staff);
-      
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = staff;
-      }
-    }
-    
-    // Determine match type and confidence threshold
-    if (bestScore >= 0.9) {
-      matchType = 'high_confidence';
-    } else if (bestScore >= 0.75) {
-      matchType = 'medium_confidence';
-    } else if (bestScore >= 0.6) {
-      matchType = 'low_confidence';
-    } else {
-      bestMatch = null;
-      matchType = 'no_match';
-      bestScore = 0;
-    }
-    
-    results.push({ 
-      matchedAccount: bestMatch, 
-      confidence: bestScore,
-      matchType 
-    });
-  }
-  
-  return results;
-}
-
-// Function to convert a User object to a StaffAccount object
-const userToStaffAccount = (user: User): StaffAccount => {
-  const name = user.name || '';
-  const parts = name.split(' ').filter(Boolean);
-  let title = '';
-  const titles = ['Prof.', 'Professor', 'Dr.', 'Doctor', 'Mr.', 'Mrs.', 'Ms.', 'Miss', 'Engr.'];
-  if (parts.length > 0 && titles.includes(parts[0])) {
-    title = parts.shift() || '';
-  }
-  const surname = parts.pop() || '';
-  const firstname = parts.shift() || '';
-  const otherName = parts.join(' ');
-  return {
-    id: String(user.id),
-    title,
-    firstname,
-    surname,
-    otherName,
-  };
-};
-
 export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: User, allUsers: User[]): boolean => {
     if (!entryLecturerName || typeof entryLecturerName !== 'string' || !staffUser) return false;
     
-    // Simple direct match for the new manual selection logic
+    // Direct match is the most reliable.
     if (entryLecturerName === staffUser.name) {
         return true;
     }
-
-    const staffAccount = userToStaffAccount(staffUser);
-    const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
-
-    const matches = matchLecturerNames(entryLecturerName, allStaffAsAccounts);
-
-    return matches.some(match => 
-        match.matchedAccount?.id === staffAccount.id &&
-        (match.matchType === 'high_confidence' || match.matchType === 'medium_confidence')
-    );
+    // Fallback for simple cases
+    const staffNameParts = staffUser.name.toLowerCase().split(' ').filter(p => p.length > 2);
+    return staffNameParts.some(part => entryLecturerName.toLowerCase().includes(part));
 };
 
 
@@ -479,7 +172,7 @@ interface UserContextType {
   setMasterSchedule: (data: TimetableEntry[] | null) => void;
   isClassTimetableDistributed: boolean;
   distributeClassTimetable: () => { success: boolean; message: string };
-  updateScheduleStatus: (entryId: number, status: EventStatus) => void;
+  updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
   emptySlots: EmptySlot[];
   setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
@@ -625,14 +318,44 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return { success: true, message: 'The class timetable is now live for all users.' };
   }, [masterSchedule]);
 
-  const updateScheduleStatus = useCallback((entryId: number, status: EventStatus) => {
-    const updateSchedule = (schedule: TimetableEntry[] | null) => {
+  const updateScheduleStatus = useCallback((updatedEntry: TimetableEntry) => {
+    let originalEntry: TimetableEntry | undefined;
+
+    const updateSchedule = (schedule: TimetableEntry[] | null): TimetableEntry[] | null => {
         if (!schedule) return null;
-        return schedule.map(e => e.id === entryId ? { ...e, status } : e);
+        return schedule.map(e => {
+            if (e.id === updatedEntry.id) {
+                originalEntry = e; // Capture the original state before updating
+                return updatedEntry;
+            }
+            return e;
+        });
     }
 
-    setMasterScheduleState(updateSchedule);
+    setMasterScheduleState(prev => updateSchedule(prev));
     setStaffSchedules(prev => updateSchedule(prev) || []);
+
+    // If the entry was moved (rescheduled), free up the old slot
+    if (originalEntry && (originalEntry.day !== updatedEntry.day || originalEntry.room !== updatedEntry.room || originalEntry.time !== updatedEntry.time)) {
+        setEmptySlotsState(prev => {
+            const newSlot: EmptySlot = {
+                day: originalEntry!.day,
+                location: originalEntry!.room,
+                time: originalEntry!.time,
+            };
+            // Avoid adding duplicate empty slots
+            if (!prev.some(slot => slot.day === newSlot.day && slot.location === newSlot.location && slot.time === newSlot.time)) {
+                return [...prev, newSlot];
+            }
+            return prev;
+        });
+    }
+    
+    // Also remove the newly occupied slot from empty slots list
+    setEmptySlotsState(prev => prev.filter(slot => 
+        !(slot.day === updatedEntry.day && slot.location === updatedEntry.room && slot.time === updatedEntry.time)
+    ));
+    
   }, []);
   
   const setEmptySlots = useCallback((slots: EmptySlot[]) => {
@@ -847,20 +570,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const distributeSpecialResitTimetable = useCallback(() => {
     setSpecialResitTimetableState(prev => {
         if (!prev) return null;
-
-        const allStaffAsAccounts = allUsers.filter(u => u.role === 'staff').map(userToStaffAccount);
+        const allStaffUsers = allUsers.filter(u => u.role === 'staff');
         
         let allEntriesFlat: SpecialResitEntry[];
 
-        // CORRECTLY handle both pre-distribution and post-distribution data structures.
         if (prev.isDistributed) {
-            // If already distributed, flatten the DistributedResitSchedule structure
             allEntriesFlat = prev.sheets.flatMap(sheet => 
                 sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
             );
         } else {
-            // If not distributed, it's the raw upload structure from actions.ts
-            // which is { lecturer: '...', courses: [entry] } for each row
             allEntriesFlat = prev.sheets.flatMap(sheet =>
                 sheet.entries.flatMap(lecturerSchedule => lecturerSchedule.courses)
             );
@@ -871,19 +589,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         allEntriesFlat.forEach(entry => {
             let assigned = false;
             if (entry.examiner) {
-                const matches = matchLecturerNames(entry.examiner, allStaffAsAccounts);
-                const highConfidenceMatch = matches.find(m => m.matchType === 'high_confidence' || m.matchType === 'medium_confidence');
-
-                if (highConfidenceMatch && highConfidenceMatch.matchedAccount) {
-                    const staffUser = allUsers.find(u => String(u.id) === highConfidenceMatch.matchedAccount!.id);
-                    if (staffUser) {
-                        const staffName = staffUser.name;
-                        if (!distributedMap.has(staffName)) {
-                            distributedMap.set(staffName, []);
-                        }
-                        distributedMap.get(staffName)!.push(entry);
-                        assigned = true;
+                // Find a matching staff member
+                const staffUser = allStaffUsers.find(staff => isLecturerMatchWithUsers(entry.examiner!, staff, allUsers));
+                if (staffUser) {
+                    const staffName = staffUser.name;
+                    if (!distributedMap.has(staffName)) {
+                        distributedMap.set(staffName, []);
                     }
+                    distributedMap.get(staffName)!.push(entry);
+                    assigned = true;
                 }
             }
             if (!assigned) {
@@ -899,7 +613,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             newEntries.push({ lecturer, courses });
         });
         
-        // Filter out the empty "Unassigned" group if it exists but has no courses
         const finalEntries = newEntries.filter(e => !(e.lecturer === 'Unassigned' && e.courses.length === 0));
 
         const distributedData: SpecialResitTimetable = {

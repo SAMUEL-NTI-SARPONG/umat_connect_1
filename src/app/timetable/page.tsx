@@ -820,7 +820,7 @@ function StaffExamsView() {
             })
             .filter(exam => exam.role);
 
-        const dedupedExams = deduplicateStaffExams(filteredStaffExams);
+        const dedupedExams = deduplicateStaffExams(filteredStaffExams as any[]);
         
         if (dedupedExams.length === 0) {
             return { staffExams: [], examDays: [], firstExamDate: new Date(), lastExamDate: new Date(), numberOfMonths: 1 };
@@ -838,7 +838,7 @@ function StaffExamsView() {
         const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
 
         return {
-            staffExams: dedupedExams,
+            staffExams: dedupedExams as any,
             examDays: sortedExamDays.map(d => new Date(d.split('-').reverse().join('-'))),
             firstExamDate: firstDate,
             lastExamDate: lastDate,
@@ -1212,7 +1212,7 @@ function StaffTimetableView({
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
-  updateScheduleStatus: (entryId: number, status: EventStatus) => void;
+  updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | null>(null);
@@ -1341,15 +1341,16 @@ function StaffTimetableView({
     setIsActionModalOpen(true);
   };
 
-  const handleStatusChange = (id: number, newStatus: EventStatus) => {
-    updateScheduleStatus(id, newStatus);
+  const handleStatusChange = (newStatus: EventStatus) => {
+    if (!selectedEntry) return;
+    updateScheduleStatus({ ...selectedEntry, status: newStatus });
     setIsActionModalOpen(false);
   };
 
-  const handleRescheduleClick = (entry: TimetableEntry) => {
-    setSelectedEntry(entry);
-    setEditedFormData(entry);
-    const [start, end] = entry.time.split(' - ');
+  const handleRescheduleClick = () => {
+    if (!selectedEntry) return;
+    setEditedFormData(selectedEntry);
+    const [start, end] = selectedEntry.time.split(' - ');
     setStartTime(start?.trim() || '');
     setEndTime(end?.trim() || '');
     setIsActionModalOpen(false);
@@ -1359,8 +1360,7 @@ function StaffTimetableView({
   const handleSaveEdit = () => {
     if (!editedFormData) return;
     const updatedEntry = { ...editedFormData, time: `${startTime} - ${endTime}` };
-    // This is tricky. We're assuming the entry is in the master schedule.
-    updateScheduleStatus(updatedEntry.id, updatedEntry.status); // This needs to be a full update.
+    updateScheduleStatus(updatedEntry);
     closeAllModals();
   };
   
@@ -1384,7 +1384,7 @@ function StaffTimetableView({
   const handleEditInputChange = (field: keyof TimetableEntry, value: string | number | string[]) => {
     if (!editedFormData) return;
     const updatedData = { ...editedFormData, [field]: value };
-    if (field === 'room') {
+    if (field === 'room' || field === 'day') {
       setStartTime('');
       setEndTime('');
     }
@@ -1684,7 +1684,7 @@ function StaffTimetableView({
               <div className="flex flex-col gap-3 py-4">
                  <Button
                     variant="outline"
-                    onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'confirmed')}
+                    onClick={() => handleStatusChange('confirmed')}
                     disabled={selectedEntry?.status === 'confirmed'}
                     className="w-full justify-start"
                 >
@@ -1692,14 +1692,14 @@ function StaffTimetableView({
                 </Button>
                 <Button
                     variant="outline"
-                    onClick={() => selectedEntry && handleRescheduleClick(selectedEntry)}
+                    onClick={handleRescheduleClick}
                     className="w-full justify-start"
                 >
                     <CalendarClock className="mr-2 h-4 w-4" /> Reschedule Class
                 </Button>
                 <Button
                     variant="outline"
-                    onClick={() => selectedEntry && handleStatusChange(selectedEntry.id, 'canceled')}
+                    onClick={() => handleStatusChange('canceled')}
                     disabled={selectedEntry?.status === 'canceled'}
                     className="w-full justify-start text-destructive hover:text-destructive"
                 >
@@ -1718,10 +1718,21 @@ function StaffTimetableView({
               <DialogHeader>
                 <DialogTitle>Reschedule Class</DialogTitle>
                 <DialogDescription>
-                  Select a new room and time for this class.
+                  Select a new day, room and time for this class.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="day" className="text-right">Day</Label>
+                    <Select value={editedFormData?.day || ''} onValueChange={(value) => handleEditInputChange('day', value)}>
+                        <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select a day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="room" className="text-right">Room</Label>
                   <Select value={editedFormData?.room || ''} onValueChange={(value) => handleEditInputChange('room', value)}>
