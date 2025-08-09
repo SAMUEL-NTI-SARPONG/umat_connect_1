@@ -525,7 +525,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
-                               <p className="font-semibold text-lg break-words">{event.courseCode}</p>
+                               <p className="font-normal text-lg break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
                              <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
@@ -536,11 +536,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                            <div className="flex flex-col space-y-2 text-sm">
                              <div className="flex items-center gap-2">
                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                               <span className="break-words font-medium">{event.room}</span>
+                               <span className="break-words font-normal">{event.room}</span>
                              </div>
                              <div className="flex items-center gap-2">
                                <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                               <span className="break-words font-medium">{event.lecturer}</span>
+                               <span className="break-words font-normal">{event.lecturer}</span>
                              </div>
                            </div>
                          </Card>
@@ -1476,7 +1476,7 @@ function StaffTimetableView({
                            <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
-                               <p className="font-semibold text-lg break-words">{event.courseCode}</p>
+                               <p className="font-normal text-lg break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
                              <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
@@ -1487,11 +1487,11 @@ function StaffTimetableView({
                            <div className="flex flex-col space-y-2 text-sm">
                              <div className="flex items-center gap-2">
                                <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                               <span className="break-words font-medium">{event.room}</span>
+                               <span className="break-words font-normal">{event.room}</span>
                              </div>
                              <div className="flex items-center gap-2">
                                <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                               <span className="break-words font-medium">{event.lecturer}</span>
+                               <span className="break-words font-normal">{event.lecturer}</span>
                              </div>
                            </div>
                          </Card>
@@ -3638,6 +3638,8 @@ export default function TimetablePage() {
 
 
 
+
+    
 
     
 
