@@ -523,27 +523,27 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => (
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
-                            <div className="flex flex-wrap justify-between items-start gap-2">
-                                <div className="flex-grow">
-                                  <p className="font-semibold text-base break-words">{event.courseCode}</p>
-                                  <p className="text-sm text-muted-foreground">{event.time}</p>
-                                </div>
-                                <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                                  {statusConfig[event.status].text}
-                                </Badge>
-                              </div>
-                              <Separator className="my-3" />
-                              <div className="flex flex-col space-y-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="break-words font-medium">{event.room}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="break-words font-medium">{event.lecturer}</span>
-                                </div>
-                              </div>
-                          </Card>
+                           <div className="flex flex-wrap justify-between items-start gap-2">
+                             <div className="flex-grow">
+                               <p className="font-semibold text-base break-words">{event.courseCode}</p>
+                               <p className="text-sm text-muted-foreground">{event.time}</p>
+                             </div>
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
+                               {statusConfig[event.status].text}
+                             </Badge>
+                           </div>
+                           <Separator className="my-3" />
+                           <div className="flex flex-col space-y-2 text-sm">
+                             <div className="flex items-center gap-2">
+                               <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                               <span className="break-words font-medium">{event.room}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                               <span className="break-words font-medium">{event.lecturer}</span>
+                             </div>
+                           </div>
+                         </Card>
                         ))}
                     </div>
                 ) : (
@@ -976,37 +976,37 @@ function StaffResitView() {
                 <ScrollArea className="h-[60vh]">
                     <div className="space-y-4 max-w-md mx-auto">
                         {staffResits.map((resit) => (
-                            <Card key={resit.id} className="p-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold text-base">{resit.courseCode}</p>
-                                        <p className="text-sm text-muted-foreground">{resit.courseName}</p>
-                                    </div>
-                                    <div className="text-right flex flex-col items-end gap-1">
-                                        <Badge variant="outline">{resit.date}</Badge>
-                                        <Badge variant="secondary" className="font-normal">{resit.session}</Badge>
-                                    </div>
-                                </div>
-                                <Separator className="my-3" />
-                                 <div className="flex flex-col space-y-2 text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">{resit.room}</span>
-                                    </div>
-                                     <div className="flex items-center gap-2">
-                                        <Users2 className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">{resit.numberOfStudents} student(s)</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <BookUser className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">{resit.department}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                        <span className="font-medium">Examiner: {resit.examiner}</span>
-                                    </div>
-                                </div>
-                            </Card>
+                           <Card key={resit.id} className="p-4">
+                           <div className="flex justify-between items-start">
+                             <div>
+                               <p className="font-semibold text-base">{resit.courseCode}</p>
+                               <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+                             </div>
+                             <div className="text-right flex flex-col items-end gap-1">
+                               <Badge variant="outline">{resit.date}</Badge>
+                               <Badge variant="secondary" className="font-normal">{resit.session}</Badge>
+                             </div>
+                           </div>
+                           <Separator className="my-3" />
+                           <div className="flex flex-col space-y-2 text-sm">
+                             <div className="flex items-center gap-2">
+                               <MapPin className="h-4 w-4 text-muted-foreground" />
+                               <span className="font-medium">{resit.room}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <Users2 className="h-4 w-4 text-muted-foreground" />
+                               <span className="font-medium">{resit.numberOfStudents} student(s)</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <BookUser className="h-4 w-4 text-muted-foreground" />
+                               <span className="font-medium">{resit.department}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <UserIcon className="h-4 w-4 text-muted-foreground" />
+                               <span className="font-medium">Examiner: {resit.examiner}</span>
+                             </div>
+                           </div>
+                         </Card>
                         ))}
                     </div>
                 </ScrollArea>
@@ -1473,28 +1473,28 @@ function StaffTimetableView({
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => (
-                          <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
-                            <div className="flex flex-wrap justify-between items-start gap-2">
-                                <div className="flex-grow">
-                                  <p className="font-semibold text-base break-words">{event.courseCode}</p>
-                                  <p className="text-sm text-muted-foreground">{event.time}</p>
-                                </div>
-                                <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                                  {statusConfig[event.status].text}
-                                </Badge>
-                              </div>
-                              <Separator className="my-3" />
-                              <div className="flex flex-col space-y-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="break-words font-medium">{event.room}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                  <span className="break-words font-medium">{event.lecturer}</span>
-                                </div>
-                              </div>
-                          </Card>
+                           <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
+                           <div className="flex flex-wrap justify-between items-start gap-2">
+                             <div className="flex-grow">
+                               <p className="font-semibold text-base break-words">{event.courseCode}</p>
+                               <p className="text-sm text-muted-foreground">{event.time}</p>
+                             </div>
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
+                               {statusConfig[event.status].text}
+                             </Badge>
+                           </div>
+                           <Separator className="my-3" />
+                           <div className="flex flex-col space-y-2 text-sm">
+                             <div className="flex items-center gap-2">
+                               <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                               <span className="break-words font-medium">{event.room}</span>
+                             </div>
+                             <div className="flex items-center gap-2">
+                               <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                               <span className="break-words font-medium">{event.lecturer}</span>
+                             </div>
+                           </div>
+                         </Card>
                         ))}
                     </div>
                   ) : (
