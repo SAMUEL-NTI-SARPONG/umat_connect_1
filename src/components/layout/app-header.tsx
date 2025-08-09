@@ -50,9 +50,10 @@ export default function AppHeader() {
       <div className="flex-1 flex justify-end">
         {user?.role === 'student' && (
           <FreeRoomsDialog>
-             <Button variant="outline" size="icon" className="h-9 w-9">
-                <Search className="h-4 w-4" />
-                <span className="sr-only">Find Free Rooms</span>
+             <Button variant="outline" size="sm">
+                <Search className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Find Free Rooms</span>
+                <span className="sm:hidden">Free Rooms</span>
               </Button>
           </FreeRoomsDialog>
         )}
