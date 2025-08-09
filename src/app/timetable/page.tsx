@@ -477,57 +477,25 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, typeof schedule>);
   }, [schedule]);
 
-  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
-
-  const freeRoomsForDay = useMemo(() => {
-    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
-    if (daySlots.length === 0) return [];
-
-    const rooms = daySlots.reduce((acc, slot) => {
-      if (!acc[slot.location]) {
-        acc[slot.location] = [];
-      }
-      acc[slot.location].push(slot.time);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
-    
-    for (const room in rooms) {
-      const slots = (rooms[room] || [])
-        .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
-        .sort((a, b) => a.start - b.start);
-      
-      if (slots.length === 0) continue;
-      
-      const ranges: string[] = [];
-      let currentRangeStart = slots[0].start;
-      let currentRangeEnd = slots[0].end;
-  
-      for (let i = 1; i < slots.length; i++) {
-        if (slots[i].start === currentRangeEnd) {
-          currentRangeEnd = slots[i].end;
-        } else {
-          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-          currentRangeStart = slots[i].start;
-          currentRangeEnd = slots[i].end;
-        }
-      }
-      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-      consolidatedRooms.push({ room, freeRanges: ranges });
-    }
-
-    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
-  }, [emptySlots, activeDay]);
-
 
   return (
     <Tabs defaultValue="class" className="w-full">
-      <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
-        <TabsTrigger value="class">Class Timetable</TabsTrigger>
-        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-        <TabsTrigger value="resit">Special Resit</TabsTrigger>
-      </TabsList>
+      <ScrollArea className="w-full whitespace-nowrap">
+        <TabsList>
+          <TabsTrigger value="class">
+            <span className="sm:hidden">Class</span>
+            <span className="hidden sm:inline">Class Timetable</span>
+          </TabsTrigger>
+          <TabsTrigger value="exams">
+            <span className="sm:hidden">Exams</span>
+            <span className="hidden sm:inline">Exams Timetable</span>
+          </TabsTrigger>
+          <TabsTrigger value="resit">
+            <span className="sm:hidden">Resit</span>
+            <span className="hidden sm:inline">Special Resit</span>
+          </TabsTrigger>
+        </TabsList>
+      </ScrollArea>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
              <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -538,52 +506,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             </Card>
         ) : (
         <>
-        <div className="flex justify-end mb-4">
-            <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <SearchIcon className="mr-2 h-4 w-4" />
-                  Find Free Rooms
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                      <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
-                      <DialogDescription>
-                          Here are the classrooms that are available and their free time slots.
-                      </DialogDescription>
-                  </DialogHeader>
-                  <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                      {freeRoomsForDay.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {freeRoomsForDay.map(({ room, freeRanges }) => (
-                                  <Card key={room}>
-                                      <CardHeader className="p-4">
-                                          <CardTitle className="text-base">{room}</CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="p-4 pt-0">
-                                          <div className="flex flex-wrap gap-1">
-                                              {freeRanges.map((range, idx) => (
-                                                 <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
-                                              ))}
-                                          </div>
-                                      </CardContent>
-                                  </Card>
-                              ))}
-                          </div>
-                      ) : (
-                          <div className="text-center p-12 text-muted-foreground">
-                              <p>No free classrooms found for {activeDay}.</p>
-                          </div>
-                      )}
-                  </ScrollArea>
-                  <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-                  </DialogFooter>
-              </DialogContent>
-            </Dialog>
-        </div>
-
         <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
             <div className="sticky top-[56px] z-10 bg-background/95 backdrop-blur-sm -mx-4 md:-mx-6 px-4 md:px-6 py-2 border-b">
                 <TabsList className="grid w-full grid-cols-7 h-12">
@@ -3718,3 +3640,4 @@ export default function TimetablePage() {
 
 
     
+
