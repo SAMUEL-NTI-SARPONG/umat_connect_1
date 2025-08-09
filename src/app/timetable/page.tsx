@@ -525,7 +525,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
-                               <p className="font-normal text-lg break-words">{event.courseCode}</p>
+                               <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
                              <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
@@ -979,7 +979,7 @@ function StaffResitView() {
                            <Card key={resit.id} className="p-4">
                            <div className="flex justify-between items-start gap-4">
                              <div className="flex-1">
-                               <p className="font-semibold text-base">{resit.courseCode}</p>
+                               <p className="font-normal text-base">{resit.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{resit.courseName}</p>
                              </div>
                              <div className="text-right flex flex-col items-end gap-1">
@@ -991,7 +991,7 @@ function StaffResitView() {
                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                              <div className="flex items-center gap-2">
                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                               <span className="font-medium">{resit.room}</span>
+                               <span className="font-normal">{resit.room}</span>
                              </div>
                              <div className="flex items-center gap-2">
                                <Users2 className="h-4 w-4 text-muted-foreground" />
@@ -999,11 +999,11 @@ function StaffResitView() {
                              </div>
                              <div className="flex items-center gap-2 col-span-2">
                                <BookUser className="h-4 w-4 text-muted-foreground" />
-                               <span className="font-medium">{resit.department}</span>
+                               <span className="font-normal">{resit.department}</span>
                              </div>
                              <div className="flex items-center gap-2 col-span-2">
                                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                               <span className="font-medium">Examiner: {resit.examiner}</span>
+                               <span className="font-normal">Examiner: {resit.examiner}</span>
                              </div>
                            </div>
                          </Card>
@@ -1476,7 +1476,7 @@ function StaffTimetableView({
                            <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
-                               <p className="font-normal text-lg break-words">{event.courseCode}</p>
+                               <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
                              <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
