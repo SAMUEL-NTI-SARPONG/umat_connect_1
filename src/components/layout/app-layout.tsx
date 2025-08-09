@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <AppHeader />
         
         {user.role === 'student' && pathname.startsWith('/timetable') && (
-            <div className="md:hidden flex justify-center pb-4 mt-2">
+            <div className="md:hidden flex justify-center pt-2 pb-4">
                 <FreeRoomsDialog />
             </div>
         )}
