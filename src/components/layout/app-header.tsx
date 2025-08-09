@@ -44,19 +44,11 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 text-center flex items-center justify-center gap-2">
-        <h1 className="text-xl font-bold text-foreground">{title}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
       </div>
 
       <div className="flex-1 flex justify-end">
-        {user?.role === 'student' && (
-          <FreeRoomsDialog>
-             <Button variant="outline" size="sm" className="sm:w-auto">
-                <Search className="h-4 w-4 mr-0 sm:mr-2" />
-                <span className="hidden sm:inline">Find Free Rooms</span>
-                <span className="sm:hidden">Free Rooms</span>
-              </Button>
-          </FreeRoomsDialog>
-        )}
+       {/* The "Find Free Rooms" button has been moved */}
       </div>
     </header>
   );

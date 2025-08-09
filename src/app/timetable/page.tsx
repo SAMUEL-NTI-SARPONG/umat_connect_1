@@ -69,6 +69,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
+import FreeRoomsDialog from '@/components/timetable/free-rooms-dialog';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -480,20 +481,23 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">
-            <span className="hidden sm:inline">Class Timetable</span>
-            <span className="sm:hidden">Class</span>
-        </TabsTrigger>
-        <TabsTrigger value="exams">
-            <span className="hidden sm:inline">Exams Timetable</span>
-            <span className="sm:hidden">Exams</span>
-        </TabsTrigger>
-        <TabsTrigger value="resit">
-            <span className="hidden sm:inline">Special Resit</span>
-            <span className="sm:hidden">Resit</span>
-        </TabsTrigger>
-      </TabsList>
+      <div className="flex justify-between items-center mb-4">
+        <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="class">Class</TabsTrigger>
+            <TabsTrigger value="exams">Exams</TabsTrigger>
+            <TabsTrigger value="resit">Resit</TabsTrigger>
+        </TabsList>
+      </div>
+
+      <div className="block md:hidden mb-4">
+        <FreeRoomsDialog>
+          <Button variant="outline" className="w-full">
+            <Search className="mr-2 h-4 w-4" />
+            Find Free Rooms
+          </Button>
+        </FreeRoomsDialog>
+      </div>
+      
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
              <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -1371,18 +1375,9 @@ function StaffTimetableView({
   return (
     <Tabs defaultValue="class" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">
-            <span className="hidden sm:inline">Class Timetable</span>
-            <span className="sm:hidden">Class</span>
-        </TabsTrigger>
-        <TabsTrigger value="exams">
-            <span className="hidden sm:inline">Exams Timetable</span>
-            <span className="sm:hidden">Exams</span>
-        </TabsTrigger>
-        <TabsTrigger value="resit">
-            <span className="hidden sm:inline">Special Resit</span>
-            <span className="sm:hidden">Resit</span>
-        </TabsTrigger>
+        <TabsTrigger value="class">Class</TabsTrigger>
+        <TabsTrigger value="exams">Exams</TabsTrigger>
+        <TabsTrigger value="resit">Resit</TabsTrigger>
       </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (

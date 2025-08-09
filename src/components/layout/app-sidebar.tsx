@@ -10,13 +10,14 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, School } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, School, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
 import { ProfileAvatar } from '../ui/profile-avatar';
 import { Badge } from '../ui/badge';
 import { useMemo } from 'react';
+import FreeRoomsDialog from '../timetable/free-rooms-dialog';
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -86,6 +87,16 @@ export default function AppSidebar() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+           )}
+           {user.role === 'student' && (
+             <SidebarMenuItem>
+                <FreeRoomsDialog>
+                  <SidebarMenuButton tooltip="Find Free Rooms">
+                    <Search />
+                    <span>Find Free Rooms</span>
+                  </SidebarMenuButton>
+                </FreeRoomsDialog>
+             </SidebarMenuItem>
            )}
           <SidebarMenuItem>
             <Link href="/notifications" passHref>
