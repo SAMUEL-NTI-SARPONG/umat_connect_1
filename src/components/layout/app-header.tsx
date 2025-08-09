@@ -51,7 +51,7 @@ export default function AppHeader() {
         {user?.role === 'student' && (
           <FreeRoomsDialog>
              <Button variant="outline" size="sm">
-                <Search className="h-4 w-4 sm:mr-2" />
+                <Search className="h-4 w-4 mr-0 sm:mr-2" />
                 <span className="hidden sm:inline">Find Free Rooms</span>
                 <span className="sm:hidden">Free Rooms</span>
               </Button>
