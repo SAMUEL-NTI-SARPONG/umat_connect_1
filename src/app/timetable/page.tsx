@@ -68,7 +68,7 @@ import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { minutesToTime, timeToMinutes } from '@/lib/time';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -77,45 +77,6 @@ const statusConfig = {
 };
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-// Helper function to convert time string (e.g., "7:00 AM") to minutes from midnight
-const timeToMinutes = (timeStr: string): number => {
-    if (!timeStr) return 0;
-    const timePart = timeStr.split('-')[0].trim();
-    const match = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!match) {
-      const singleMatch = timePart.match(/(\d{1,2})\s*(AM|PM)/i);
-      if (singleMatch) {
-        let [_, hoursStr, modifier] = singleMatch;
-        let hours = parseInt(hoursStr, 10);
-        if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-        if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-        return hours * 60;
-      }
-      return 0;
-    }
-
-    let [_, hoursStr, minutesStr, modifier] = match;
-    let hours = parseInt(hoursStr, 10);
-    const minutes = parseInt(minutesStr, 10);
-    
-    if (modifier.toUpperCase() === 'PM' && hours < 12) {
-      hours += 12;
-    }
-    if (modifier.toUpperCase() === 'AM' && hours === 12) {
-      hours = 0;
-    }
-    return hours * 60 + minutes;
-};
-
-const minutesToTime = (minutes: number): string => {
-    let hours = Math.floor(minutes / 60);
-    const mins = String(minutes % 60).padStart(2, '0');
-    const modifier = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    if (hours === 0) hours = 12;
-    return `${hours}:${mins} ${modifier}`;
-};
 
 function ExamDetails({ exams }: { exams: ExamEntry[] }) {
     if (exams.length === 0) {
@@ -516,6 +477,50 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
     }, {} as Record<string, typeof schedule>);
   }, [schedule]);
 
+  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
+
+  const freeRoomsForDay = useMemo(() => {
+    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
+    if (daySlots.length === 0) return [];
+
+    const rooms = daySlots.reduce((acc, slot) => {
+      if (!acc[slot.location]) {
+        acc[slot.location] = [];
+      }
+      acc[slot.location].push(slot.time);
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
+    
+    for (const room in rooms) {
+      const slots = (rooms[room] || [])
+        .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
+        .sort((a, b) => a.start - b.start);
+      
+      if (slots.length === 0) continue;
+      
+      const ranges: string[] = [];
+      let currentRangeStart = slots[0].start;
+      let currentRangeEnd = slots[0].end;
+  
+      for (let i = 1; i < slots.length; i++) {
+        if (slots[i].start === currentRangeEnd) {
+          currentRangeEnd = slots[i].end;
+        } else {
+          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+          currentRangeStart = slots[i].start;
+          currentRangeEnd = slots[i].end;
+        }
+      }
+      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+      consolidatedRooms.push({ room, freeRanges: ranges });
+    }
+
+    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
+  }, [emptySlots, activeDay]);
+
+
   return (
     <Tabs defaultValue="class" className="w-full">
       <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
@@ -534,12 +539,49 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
         ) : (
         <>
         <div className="flex justify-end mb-4">
-            <SidebarTrigger side="right">
+            <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
+              <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
-                    <SearchIcon className="mr-2 h-4 w-4" />
-                    Find Free Rooms
+                  <SearchIcon className="mr-2 h-4 w-4" />
+                  Find Free Rooms
                 </Button>
-            </SidebarTrigger>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                      <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
+                      <DialogDescription>
+                          Here are the classrooms that are available and their free time slots.
+                      </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-[60vh] my-4 pr-6">
+                      {freeRoomsForDay.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {freeRoomsForDay.map(({ room, freeRanges }) => (
+                                  <Card key={room}>
+                                      <CardHeader className="p-4">
+                                          <CardTitle className="text-base">{room}</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="p-4 pt-0">
+                                          <div className="flex flex-wrap gap-1">
+                                              {freeRanges.map((range, idx) => (
+                                                 <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
+                                              ))}
+                                          </div>
+                                      </CardContent>
+                                  </Card>
+                              ))}
+                          </div>
+                      ) : (
+                          <div className="text-center p-12 text-muted-foreground">
+                              <p>No free classrooms found for {activeDay}.</p>
+                          </div>
+                      )}
+                  </ScrollArea>
+                  <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
+                  </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
 
         <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
@@ -1473,7 +1515,7 @@ function StaffTimetableView({
                                                 <CardTitle className="text-base">{room}</CardTitle>
                                             </CardHeader>
                                             <CardContent className="p-4 pt-0">
-                                                <div className="space-y-1">
+                                                <div className="flex flex-wrap gap-1">
                                                     {freeRanges.map((range, idx) => (
                                                        <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
                                                     ))}
@@ -1680,7 +1722,7 @@ function StaffTimetableView({
                     <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
                       <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
                       <SelectContent>
-                        {availableSlotsForEdit.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                        {availableSlotsForEdit.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>

@@ -13,15 +13,12 @@ import AppHeader from '@/components/layout/app-header';
 import BottomNavbar from '@/components/layout/bottom-navbar';
 import LoginPage from '@/app/login/page';
 import React, { useState, useEffect, useMemo } from 'react';
-import FreeRoomsSidebar from '../timetable/free-rooms-sidebar';
 import { usePathname } from 'next/navigation';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const pathname = usePathname();
 
-  const showRightSidebar = user?.role === 'student' && pathname === '/timetable';
-  
   if (!user) {
     return <LoginPage />;
   }
@@ -39,11 +36,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                {children}
             </main>
           </SidebarInset>
-           {showRightSidebar && (
-             <Sidebar side="right" variant="floating" collapsible="offcanvas" className="hidden md:block">
-                <FreeRoomsSidebar />
-             </Sidebar>
-           )}
         </div>
         <BottomNavbar />
       </SidebarProvider>
