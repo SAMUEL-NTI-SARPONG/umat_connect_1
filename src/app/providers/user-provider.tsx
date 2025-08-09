@@ -212,6 +212,9 @@ interface UserContextType {
   moveDepartment: (data: { departmentName: string; newFacultyName: string }) => void;
   deleteDepartment: (name: string) => void;
   toast: (options: { title: string; description?: string; variant?: "default" | "destructive" }) => void;
+  playingAlarm: Howl | null;
+  playAlarm: (soundSrc: string) => Howl;
+  stopAlarm: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -244,6 +247,26 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [faculties, setFaculties] = useLocalStorageState<Faculty[]>('faculties', initialFaculties);
   const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
   const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
+  const [playingAlarm, setPlayingAlarm] = useState<Howl | null>(null);
+
+  const playAlarm = useCallback((soundSrc: string) => {
+    const sound = new (require('howler').Howl)({
+        src: [soundSrc],
+        loop: true,
+        volume: 0.5,
+    });
+    sound.play();
+    setPlayingAlarm(sound);
+    return sound;
+  }, []);
+
+  const stopAlarm = useCallback(() => {
+    if (playingAlarm) {
+        playingAlarm.stop();
+        setPlayingAlarm(null);
+    }
+  }, [playingAlarm]);
+
   
   // This useEffect handles session-based login persistence.
   useEffect(() => {
@@ -850,6 +873,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     moveDepartment,
     deleteDepartment,
     toast,
+    playingAlarm,
+    playAlarm,
+    stopAlarm,
   }), [
       user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, emptySlots, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
@@ -857,7 +883,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule, setEmptySlots, setSpecialResitTimetable, setExamsTimetable,
-      updateScheduleStatus
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;

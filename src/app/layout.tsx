@@ -8,7 +8,12 @@ import { ThemeProvider } from './providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import AppLayout from '@/components/layout/app-layout';
 import type { TimetableEntry } from './providers/user-provider';
+import { useAlarm } from '@/hooks/use-alarm';
 
+function AppAlarm() {
+  useAlarm();
+  return null;
+}
 
 export default function RootLayout({
   children,
@@ -40,6 +45,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserProvider>
+            <AppAlarm />
             <AppLayout>
               {children}
             </AppLayout>
