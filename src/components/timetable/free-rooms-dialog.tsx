@@ -80,7 +80,7 @@ export default function FreeRoomsDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="success">
           <Search className="mr-2 h-4 w-4" />
           Find Free Rooms
         </Button>
