@@ -48,7 +48,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-       {/* The "Find Free Rooms" button has been moved */}
+       
       </div>
     </header>
   );
