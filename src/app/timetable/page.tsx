@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -480,9 +481,18 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
   return (
     <Tabs defaultValue="class" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">Class Timetable</TabsTrigger>
-        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+        <TabsTrigger value="class">
+            <span className="hidden sm:inline">Class Timetable</span>
+            <span className="sm:hidden">Class</span>
+        </TabsTrigger>
+        <TabsTrigger value="exams">
+            <span className="hidden sm:inline">Exams Timetable</span>
+            <span className="sm:hidden">Exams</span>
+        </TabsTrigger>
+        <TabsTrigger value="resit">
+            <span className="hidden sm:inline">Special Resit</span>
+            <span className="sm:hidden">Resit</span>
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
@@ -1361,9 +1371,18 @@ function StaffTimetableView({
   return (
     <Tabs defaultValue="class" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="class">Class Timetable</TabsTrigger>
-        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
-        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+        <TabsTrigger value="class">
+            <span className="hidden sm:inline">Class Timetable</span>
+            <span className="sm:hidden">Class</span>
+        </TabsTrigger>
+        <TabsTrigger value="exams">
+            <span className="hidden sm:inline">Exams Timetable</span>
+            <span className="sm:hidden">Exams</span>
+        </TabsTrigger>
+        <TabsTrigger value="resit">
+            <span className="hidden sm:inline">Special Resit</span>
+            <span className="sm:hidden">Resit</span>
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
@@ -3617,5 +3636,3 @@ export default function TimetablePage() {
 
 
     
-
-

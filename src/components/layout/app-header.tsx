@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { GraduationCap, PlusCircle } from 'lucide-react';
+import { GraduationCap, PlusCircle, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@/app/providers/user-provider';
 import CreatePost from '../home/create-post';
@@ -49,7 +49,18 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-        {user?.role === 'student' && <FreeRoomsDialog />}
+        {user?.role === 'student' && (
+          <FreeRoomsDialog>
+             <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+                <Search className="mr-2 h-4 w-4" />
+                Find Free Rooms
+              </Button>
+               <Button variant="outline" size="icon" className="sm:hidden">
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Find Free Rooms</span>
+              </Button>
+          </FreeRoomsDialog>
+        )}
       </div>
     </header>
   );
