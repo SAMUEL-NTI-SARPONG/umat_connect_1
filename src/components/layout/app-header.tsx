@@ -37,7 +37,6 @@ export default function AppHeader() {
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-4 p-4 border-b bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2 flex-1">
-        <SidebarTrigger side="left" className="md:hidden" />
         <Link href="/" className="flex items-center gap-2">
             <GraduationCap className="w-8 h-8 text-primary" />
             <h2 className="text-lg font-semibold hidden sm:block">UMaT Connect</h2>
@@ -51,11 +50,7 @@ export default function AppHeader() {
       <div className="flex-1 flex justify-end">
         {user?.role === 'student' && (
           <FreeRoomsDialog>
-             <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-                <Search className="mr-2 h-4 w-4" />
-                Find Free Rooms
-              </Button>
-               <Button variant="outline" size="icon" className="sm:hidden">
+             <Button variant="outline" size="icon" className="h-9 w-9">
                 <Search className="h-4 w-4" />
                 <span className="sr-only">Find Free Rooms</span>
               </Button>
