@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -480,22 +479,11 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 
   return (
     <Tabs defaultValue="class" className="w-full">
-      <ScrollArea className="w-full whitespace-nowrap">
-        <TabsList>
-          <TabsTrigger value="class">
-            <span className="sm:hidden">Class</span>
-            <span className="hidden sm:inline">Class Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="exams">
-            <span className="sm:hidden">Exams</span>
-            <span className="hidden sm:inline">Exams Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="resit">
-            <span className="sm:hidden">Resit</span>
-            <span className="hidden sm:inline">Special Resit</span>
-          </TabsTrigger>
-        </TabsList>
-      </ScrollArea>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="class">Class Timetable</TabsTrigger>
+        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+      </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
              <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -1372,22 +1360,11 @@ function StaffTimetableView({
 
   return (
     <Tabs defaultValue="class" className="w-full">
-       <ScrollArea className="w-full whitespace-nowrap">
-        <TabsList>
-          <TabsTrigger value="class">
-            <span className="sm:hidden">Class</span>
-            <span className="hidden sm:inline">Class Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="exams">
-            <span className="sm:hidden">Exams</span>
-            <span className="hidden sm:inline">Exams Timetable</span>
-          </TabsTrigger>
-          <TabsTrigger value="resit">
-            <span className="sm:hidden">Resit</span>
-            <span className="hidden sm:inline">Special Resit</span>
-          </TabsTrigger>
-        </TabsList>
-      </ScrollArea>
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="class">Class Timetable</TabsTrigger>
+        <TabsTrigger value="exams">Exams Timetable</TabsTrigger>
+        <TabsTrigger value="resit">Special Resit</TabsTrigger>
+      </TabsList>
       <TabsContent value="class" className="mt-6">
         {!isClassTimetableDistributed ? (
             <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -3640,4 +3617,5 @@ export default function TimetablePage() {
 
 
     
+
 
