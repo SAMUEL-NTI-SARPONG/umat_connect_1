@@ -128,13 +128,11 @@ export default function AppSidebar() {
                         <Search className="mr-2 h-4 w-4" />
                         Find Free Rooms
                     </Button>
-                </FreeRoomsDialog>
-                 <FreeRoomsDialog>
                     <Button variant="outline" size="icon" className="w-full hidden group-data-[collapsible=icon]:flex">
                         <Search className="h-4 w-4" />
                         <span className="sr-only">Find Free Rooms</span>
                     </Button>
-                 </FreeRoomsDialog>
+                </FreeRoomsDialog>
             </div>
         )}
         <SidebarMenu>
