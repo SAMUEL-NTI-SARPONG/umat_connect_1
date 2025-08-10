@@ -149,7 +149,7 @@ interface StaffAccount {
   id: string;
 }
 
-export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: User, allUsers: User[]): boolean => {
+export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: User): boolean => {
     if (!entryLecturerName || typeof entryLecturerName !== 'string' || !staffUser) return false;
     
     // Direct match is the most reliable.
@@ -594,7 +594,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             let assigned = false;
             if (entry.examiner) {
                 // Find a matching staff member
-                const staffUser = allStaffUsers.find(staff => isLecturerMatchWithUsers(entry.examiner!, staff, allUsers));
+                const staffUser = allStaffUsers.find(staff => isLecturerMatchWithUsers(entry.examiner!, staff));
                 if (staffUser) {
                     const staffName = staffUser.name;
                     if (!distributedMap.has(staffName)) {

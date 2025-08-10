@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useUser, type TimetableEntry } from '@/app/providers/user-provider';
+import { useUser, type TimetableEntry, isLecturerMatchWithUsers } from '@/app/providers/user-provider';
 import { timeToMinutes } from '@/lib/time';
 
 const ALARM_LEAD_TIME_MINUTES = 30;
@@ -18,17 +18,16 @@ export function useAlarm() {
     const combinedSchedule = [...(masterSchedule || []), ...staffSchedules];
 
     if (user.role === 'student') {
-        return combinedSchedule.filter(entry =>
-            entry.level === user.level &&
-            user.department &&
-            (entry.departments || []).includes(user.department)
-        );
+      return combinedSchedule.filter(entry =>
+        entry.level === user.level &&
+        user.department &&
+        (entry.departments || []).includes(user.department)
+      );
     }
     if (user.role === 'staff') {
-        const staffNameParts = user.name.toLowerCase().split(' ').filter(p => p.length > 2);
-        return combinedSchedule.filter(entry => 
-            staffNameParts.some(part => entry.lecturer.toLowerCase().includes(part))
-        );
+      return combinedSchedule.filter(entry => 
+        isLecturerMatchWithUsers(entry.lecturer, user)
+      );
     }
     return [];
   }, [user, masterSchedule, staffSchedules, isClassTimetableDistributed]);
