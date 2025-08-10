@@ -37,16 +37,29 @@ export function useAlarm() {
 
     const timeouts = userSchedule.map(event => {
       const now = new Date();
+      const currentDay = now.getDay();
       const eventDayIndex = dayMap[event.day];
+
       if (eventDayIndex === undefined) return null;
 
       const eventTimeMinutes = timeToMinutes(event.time);
       const eventHour = Math.floor(eventTimeMinutes / 60);
       const eventMinute = eventTimeMinutes % 60;
-
+      
+      // Calculate the next occurrence of the event's day
+      let daysUntilEvent = eventDayIndex - currentDay;
+      if (daysUntilEvent < 0) {
+        daysUntilEvent += 7; // It's next week
+      }
+      
       const eventDate = new Date();
-      eventDate.setDate(now.getDate() - now.getDay() + eventDayIndex);
+      eventDate.setDate(now.getDate() + daysUntilEvent);
       eventDate.setHours(eventHour, eventMinute, 0, 0);
+
+      // If the calculated event time is in the past for today, schedule it for next week instead
+      if (daysUntilEvent === 0 && eventDate.getTime() < now.getTime()) {
+        eventDate.setDate(eventDate.getDate() + 7);
+      }
       
       const alarmTime = new Date(eventDate.getTime() - ALARM_LEAD_TIME_MINUTES * 60 * 1000);
 
@@ -56,12 +69,11 @@ export function useAlarm() {
         const timeoutId = setTimeout(() => {
           Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-              const sound = playAlarm(ALARM_SOUND_URL);
+              playAlarm(ALARM_SOUND_URL);
 
               const notification = new Notification('Upcoming Class', {
                 body: `${event.courseCode} is starting in 30 minutes at ${event.room}.`,
                 icon: '/icons/icon-192x192.png',
-                actions: [{ action: 'stop_alarm', title: 'Stop Alarm' }]
               });
 
               notification.onclick = () => {
@@ -87,6 +99,7 @@ export function useAlarm() {
           clearTimeout(timeoutId);
         }
       });
+      stopAlarm(); // Stop any active alarm on component unmount/re-render
     };
   }, [userSchedule, playAlarm, stopAlarm]);
 }
