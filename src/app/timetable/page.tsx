@@ -577,7 +577,6 @@ const initialCreateFormState = {
   level: 100,
   departments: [],
   room: '',
-  time: '',
 };
 
 const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
@@ -1306,26 +1305,46 @@ function StaffTimetableView({
 
   const availableSlotsForCreate = useMemo(() => {
     const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
-    const rooms = [...new Set(daySlots.map(slot => slot.location))];
-    const roomDaySlots = daySlots.filter(slot => slot.location === createFormData.room).map(s => s.time).sort((a, b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
-    const startTimes = [...new Set(roomDaySlots.map(time => time.split(' - ')[0].trim()))];
+    const rooms = [...new Set(daySlots.map(slot => slot.location))].sort();
+    
+    const roomDaySlots = daySlots
+      .filter(s => s.location === createFormData.room)
+      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
+      .sort((a, b) => a.start - b.start);
+
+    const mergedSlots: { start: number, end: number }[] = [];
+    if (roomDaySlots.length > 0) {
+      let current = { ...roomDaySlots[0] };
+      for (let i = 1; i < roomDaySlots.length; i++) {
+        if (roomDaySlots[i].start === current.end) {
+          current.end = roomDaySlots[i].end;
+        } else {
+          mergedSlots.push(current);
+          current = { ...roomDaySlots[i] };
+        }
+      }
+      mergedSlots.push(current);
+    }
+    
+    const startTimes: string[] = [];
+    mergedSlots.forEach(slot => {
+      for (let t = slot.start; t < slot.end; t += 60) {
+        startTimes.push(minutesToTime(t));
+      }
+    });
 
     let endTimes: string[] = [];
-    const startIndex = roomDaySlots.findIndex(slot => slot.startsWith(createStartTime));
-    if (createStartTime && startIndex !== -1) {
-        for (let i = startIndex; i < roomDaySlots.length; i++) {
-            const currentSlot = roomDaySlots[i];
-            if (!currentSlot || !currentSlot.includes(' - ')) continue;
-
-            const prevSlot = i > startIndex ? roomDaySlots[i - 1] : null;
-            if (prevSlot && prevSlot.includes(' - ')) {
-                if (prevSlot.split(' - ')[1].trim() !== currentSlot.split(' - ')[0].trim()) break;
-            }
-            
-            endTimes.push(currentSlot.split(' - ')[1].trim());
+    if (createStartTime) {
+      const startMinutes = timeToMinutes(createStartTime);
+      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
+      if (containingSlot) {
+        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
+          endTimes.push(minutesToTime(t));
         }
+      }
     }
-    return { rooms, times: roomDaySlots, startTimes, endTimes };
+    
+    return { rooms, startTimes, endTimes };
   }, [emptySlots, createFormData, createStartTime]);
   
   const userRejectedEntryIds = (user && rejectedEntries[user.id]) || [];
@@ -1534,8 +1553,67 @@ function StaffTimetableView({
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                {/* Form fields will go here in the next step */}
-                <p className="text-sm text-muted-foreground text-center">Form controls for scheduling will be implemented here.</p>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="day-create" className="text-right">Day</Label>
+                  <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
+                    <SelectTrigger id="day-create" className="col-span-3">
+                      <SelectValue placeholder="Select a day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="room-create" className="text-right">Room</Label>
+                  <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)}>
+                    <SelectTrigger id="room-create" className="col-span-3">
+                      <SelectValue placeholder="Select a room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Time</Label>
+                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                    <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
+                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
+                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                      <SelectContent>
+                        {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="courseCode-create" className="text-right">Course</Label>
+                    <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="departments-create" className="text-right">Dept(s)</Label>
+                    <Input id="departments-create" value={createFormData.departments.join(', ')} onChange={(e) => handleCreateInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" placeholder="e.g., CE, ME" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="level-create" className="text-right">Level</Label>
+                    <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', Number(value))}>
+                        <SelectTrigger id="level-create" className="col-span-3">
+                            <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="100">100</SelectItem>
+                            <SelectItem value="200">200</SelectItem>
+                            <SelectItem value="300">300</SelectItem>
+                            <SelectItem value="400">400</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
@@ -3583,4 +3661,5 @@ export default function TimetablePage() {
     
 
     
+
 
