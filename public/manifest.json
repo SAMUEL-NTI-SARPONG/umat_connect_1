@@ -2,11 +2,14 @@
 {
   "name": "UMaT Connect",
   "short_name": "UMaTConnect",
-  "description": "A communication and information hub for UMaT students and staff.",
+  "description": "A student and staff portal for UMaT.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#EDE7F6",
-  "theme_color": "#7986CB",
+  "background_color": "#ffffff",
+  "theme_color": "#113F67",
+  "service_worker": {
+    "src": "/service-worker.js"
+  },
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
