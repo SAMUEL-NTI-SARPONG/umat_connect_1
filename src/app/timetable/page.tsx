@@ -1372,6 +1372,10 @@ function StaffTimetableView({
                     <UserSearch className="w-4 h-4 mr-2" />
                     Select My Name(s)
                 </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Add Class / Quiz
+                </Button>
             </div>
           </div>
           <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
@@ -1520,6 +1524,26 @@ function StaffTimetableView({
             </DialogContent>
           </Dialog>
           
+          {/* Create Modal */}
+          <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New Class / Quiz</DialogTitle>
+                <DialogDescription>
+                  Select an available slot and enter the class details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                {/* Form fields will go here in the next step */}
+                <p className="text-sm text-muted-foreground text-center">Form controls for scheduling will be implemented here.</p>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+                <Button type="submit" onClick={handleSaveCreate}>Save Schedule</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Edit Modal */}
           <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
             <DialogContent className="sm:max-w-md">
