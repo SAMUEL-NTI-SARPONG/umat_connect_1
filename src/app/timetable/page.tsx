@@ -1093,7 +1093,6 @@ function StaffTimetableView({
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [activeDay, setActiveDay] = useState("Monday");
-  const [isFreeRoomModalOpen, setIsFreeRoomModalOpen] = useState(false);
 
   const [editedFormData, setEditedFormData] = useState<TimetableEntry | null>(null);
   const [createFormData, setCreateFormData] = useState<any>(initialCreateFormState);
@@ -1150,47 +1149,6 @@ function StaffTimetableView({
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
   
-  const freeRoomsForDay = useMemo(() => {
-    const daySlots = emptySlots.filter(slot => slot.day === activeDay);
-    if (daySlots.length === 0) return [];
-
-    const rooms = daySlots.reduce((acc, slot) => {
-      if (!acc[slot.location]) {
-        acc[slot.location] = [];
-      }
-      acc[slot.location].push(slot.time);
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    const consolidatedRooms: { room: string; freeRanges: string[] }[] = [];
-    
-    for (const room in rooms) {
-      const slots = (rooms[room] || [])
-        .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
-        .sort((a, b) => a.start - b.start);
-      
-      if (slots.length === 0) continue;
-      
-      const ranges: string[] = [];
-      let currentRangeStart = slots[0].start;
-      let currentRangeEnd = slots[0].end;
-  
-      for (let i = 1; i < slots.length; i++) {
-        if (slots[i].start === currentRangeEnd) {
-          currentRangeEnd = slots[i].end;
-        } else {
-          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-          currentRangeStart = slots[i].start;
-          currentRangeEnd = slots[i].end;
-        }
-      }
-      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-      consolidatedRooms.push({ room, freeRanges: ranges });
-    }
-
-    return consolidatedRooms.sort((a, b) => a.room.localeCompare(b.room));
-  }, [emptySlots, activeDay]);
-
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
@@ -1414,49 +1372,6 @@ function StaffTimetableView({
                     <UserSearch className="w-4 h-4 mr-2" />
                     Select My Name(s)
                 </Button>
-                 <Dialog open={isFreeRoomModalOpen} onOpenChange={setIsFreeRoomModalOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                            <SearchIcon className="mr-2 h-4 w-4" />
-                            Find Free Rooms
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                            <DialogTitle>Free Classrooms for {activeDay}</DialogTitle>
-                            <DialogDescription>
-                                Here are the classrooms that are available and their free time slots.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-[60vh] my-4 pr-6">
-                            {freeRoomsForDay.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {freeRoomsForDay.map(({ room, freeRanges }) => (
-                                        <Card key={room}>
-                                            <CardHeader className="p-4">
-                                                <CardTitle className="text-base">{room}</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="p-4 pt-0">
-                                                <div className="flex flex-wrap gap-1">
-                                                    {freeRanges.map((range, idx) => (
-                                                       <Badge key={idx} variant="secondary" className="font-normal text-xs whitespace-nowrap">{range}</Badge>
-                                                    ))}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center p-12 text-muted-foreground">
-                                    <p>No free classrooms found for {activeDay}.</p>
-                                </div>
-                            )}
-                        </ScrollArea>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsFreeRoomModalOpen(false)}>Close</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
           </div>
           <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
@@ -3644,3 +3559,4 @@ export default function TimetablePage() {
     
 
     
+
