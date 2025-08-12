@@ -1428,10 +1428,92 @@ function StaffTimetableView({
                     <UserSearch className="w-4 h-4 mr-2" />
                     Select My Name(s)
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  Add Class / Quiz
-                </Button>
+                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <PlusCircle className="w-4 h-4 mr-2" />
+                      Add Class / Quiz
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Add New Class / Quiz</DialogTitle>
+                      <DialogDescription>
+                        Select an available slot and enter the class details.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="day-create" className="text-right">Day</Label>
+                        <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
+                          <SelectTrigger id="day-create" className="col-span-3">
+                            <SelectValue placeholder="Select a day" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="room-create" className="text-right">Room</Label>
+                        <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)}>
+                          <SelectTrigger id="room-create" className="col-span-3">
+                            <SelectValue placeholder="Select a room" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSlotsForCreate.rooms.map((room, index) => <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label className="text-right">Time</Label>
+                        <div className="col-span-3 grid grid-cols-2 gap-2">
+                          <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
+                            <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
+                            <SelectContent>
+                              {availableSlotsForCreate.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
+                            <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
+                            <SelectContent>
+                              {availableSlotsForCreate.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
+                          <div className="col-span-3">
+                            <MultiSelectCombobox
+                              options={lecturerCourses}
+                              selected={createFormData.courses}
+                              onChange={handleCreateMultiSelectChange}
+                              placeholder="Select courses..."
+                              searchPlaceholder="Search courses..."
+                              notFoundMessage="No course found."
+                              className="w-full"
+                            />
+                          </div>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="is-quiz" className="text-right">Type</Label>
+                        <div className="col-span-3 flex items-center space-x-2">
+                          <Switch
+                              id="is-quiz"
+                              checked={createFormData.isQuiz}
+                              onCheckedChange={(checked) => handleCreateInputChange('isQuiz', checked)}
+                          />
+                          <Label htmlFor="is-quiz">Is this a quiz?</Label>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
+                      <Button type="submit" onClick={handleSaveCreate}>Save Schedule</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
             </div>
           </div>
           <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
@@ -1582,87 +1664,7 @@ function StaffTimetableView({
             </DialogContent>
           </Dialog>
           
-          {/* Create Modal */}
-          <Dialog open={isCreateModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Class / Quiz</DialogTitle>
-                <DialogDescription>
-                  Select an available slot and enter the class details.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="day-create" className="text-right">Day</Label>
-                  <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
-                    <SelectTrigger id="day-create" className="col-span-3">
-                      <SelectValue placeholder="Select a day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="room-create" className="text-right">Room</Label>
-                  <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)}>
-                    <SelectTrigger id="room-create" className="col-span-3">
-                      <SelectValue placeholder="Select a room" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSlotsForCreate.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Time</Label>
-                  <div className="col-span-3 grid grid-cols-2 gap-2">
-                    <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
-                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForCreate.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
-                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForCreate.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
-                    <div className="col-span-3">
-                      <MultiSelectCombobox
-                        options={lecturerCourses}
-                        selected={createFormData.courses}
-                        onChange={handleCreateMultiSelectChange}
-                        placeholder="Select courses..."
-                        searchPlaceholder="Search courses..."
-                        notFoundMessage="No course found."
-                        className="w-full"
-                      />
-                    </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="is-quiz" className="text-right">Type</Label>
-                  <div className="col-span-3 flex items-center space-x-2">
-                    <Switch
-                        id="is-quiz"
-                        checked={createFormData.isQuiz}
-                        onCheckedChange={(checked) => handleCreateInputChange('isQuiz', checked)}
-                    />
-                    <Label htmlFor="is-quiz">Is this a quiz?</Label>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-                <Button type="submit" onClick={handleSaveCreate}>Save Schedule</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          {/* Create Modal - removed and integrated with button */}
 
           {/* Edit Modal */}
           <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>

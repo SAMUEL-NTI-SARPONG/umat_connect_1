@@ -1,7 +1,8 @@
+
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Badge } from "./badge"
+import { Checkbox } from "./checkbox"
 
 export interface ComboboxOption {
     value: string;
@@ -91,3 +94,86 @@ export function Combobox({
     </Popover>
   )
 }
+
+export function MultiSelectCombobox({
+    options,
+    selected,
+    onChange,
+    placeholder = "Select options...",
+    searchPlaceholder = "Search...",
+    notFoundMessage = "No option found.",
+    className
+}: {
+    options: { value: string, label: string }[];
+    selected: string[];
+    onChange: (selected: string[]) => void;
+    placeholder?: string;
+    searchPlaceholder?: string;
+    notFoundMessage?: string;
+    className?: string;
+}) {
+    const [open, setOpen] = React.useState(false);
+    const selectedSet = React.useMemo(() => new Set(selected), [selected]);
+
+    const handleSelect = (value: string) => {
+        const newSelected = new Set(selectedSet);
+        if (newSelected.has(value)) {
+            newSelected.delete(value);
+        } else {
+            newSelected.add(value);
+        }
+        onChange(Array.from(newSelected));
+    };
+
+    const selectedLabels = options
+        .filter(option => selectedSet.has(option.value))
+        .map(option => option.label);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <div
+                    className={cn(
+                        "flex flex-wrap gap-1 items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
+                        className
+                    )}
+                >
+                    {selectedLabels.length > 0 ? (
+                        selectedLabels.map(label => (
+                            <Badge key={label} variant="secondary">
+                                {label}
+                            </Badge>
+                        ))
+                    ) : (
+                        <span className="text-muted-foreground">{placeholder}</span>
+                    )}
+                    <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+                </div>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder} />
+                    <CommandList>
+                        <CommandEmpty>{notFoundMessage}</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    onSelect={() => handleSelect(option.value)}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Checkbox
+                                        checked={selectedSet.has(option.value)}
+                                        className="h-4 w-4"
+                                    />
+                                    <span>{option.label}</span>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
