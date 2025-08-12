@@ -70,7 +70,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
 import FreeRoomsDialog from '@/components/timetable/free-rooms-dialog';
-import { MultiSelectCombobox } from '@/components/ui/combobox';
+import { Combobox, MultiSelectCombobox } from '@/components/ui/combobox';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -578,8 +578,10 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 const initialCreateFormState = {
   day: 'Monday',
   room: '',
-  courses: [] as string[],
+  courseCode: '',
   isQuiz: false,
+  departments: [] as string[],
+  level: 100,
 };
 
 const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
@@ -1157,30 +1159,18 @@ function StaffTimetableView({
     });
     
     return masterSchedule.filter(entry => {
-      const entryName = entry.lecturer.toLowerCase();
-      // Direct match
-      if (selectedLecturers.some(sl => sl.toLowerCase() === entryName)) return true;
-      
-      // Partial match (first two words)
-      const entryNamePrefix = entryName.split(' ').slice(0, 2).join(' ');
-      return selectedNameParts.has(entryNamePrefix);
+      if (entry.lecturer) {
+        const entryName = entry.lecturer.toLowerCase();
+        // Direct match
+        if (selectedLecturers.some(sl => sl.toLowerCase() === entryName)) return true;
+        
+        // Partial match (first two words)
+        const entryNamePrefix = entryName.split(' ').slice(0, 2).join(' ');
+        if (selectedNameParts.has(entryNamePrefix)) return true;
+      }
+      return false;
     });
 }, [masterSchedule, selectedLecturers]);
-
-  const lecturerCourses = useMemo(() => {
-    if (!masterSchedule || selectedLecturers.length === 0) return [];
-    const courseSet = new Set<string>();
-    
-    staffSchedule.forEach(entry => {
-      const courses = entry.courseCode.split(',').map(c => c.trim());
-      courses.forEach(c => courseSet.add(c));
-    });
-    
-    return Array.from(courseSet).sort().map(course => ({
-      value: course,
-      label: course
-    }));
-  }, [masterSchedule, selectedLecturers, staffSchedule]);
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
@@ -1213,20 +1203,17 @@ function StaffTimetableView({
   };
   
   const handleSaveCreate = () => {
-    const { day, room, courses, isQuiz } = createFormData;
-    if (!courses.length || !day || !room || !createStartTime || !createEndTime) {
+    const { day, room, courseCode, isQuiz, departments, level } = createFormData;
+    if (!courseCode || !day || !room || !createStartTime || !createEndTime || departments.length === 0) {
       alert("Please fill all required fields");
       return;
     }
     
-    const firstCourseCode = courses[0];
-    const courseEntry = masterSchedule?.find(e => e.courseCode.includes(firstCourseCode));
-    
     addStaffSchedule({
-      courseCode: courses.join(', '),
+      courseCode,
       day,
-      level: courseEntry?.level || 0,
-      departments: courseEntry?.departments || [],
+      level,
+      departments,
       room,
       time: `${createStartTime} - ${createEndTime}`,
       isQuiz,
@@ -1250,6 +1237,12 @@ function StaffTimetableView({
         if (field === 'day' || field === 'room') {
             setCreateStartTime('');
             setCreateEndTime('');
+        }
+        if (field === 'departments' && typeof value === 'string') {
+          newState.departments = [value];
+        }
+        if (field === 'level') {
+          newState.level = Number(value);
         }
         return newState;
     });
@@ -1482,17 +1475,34 @@ function StaffTimetableView({
                       </div>
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
-                          <div className="col-span-3">
-                          <MultiSelectCombobox
-                              options={lecturerCourses}
-                              selected={createFormData.courses}
-                              onChange={(values) => handleCreateInputChange('courses', values)}
-                              placeholder="Select courses..."
-                              searchPlaceholder="Search courses..."
-                              notFoundMessage="No course found."
-                              className="w-full"
-                            />
-                          </div>
+                          <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="department-create" className="text-right">Department</Label>
+                        <Select value={createFormData.departments[0] || ''} onValueChange={(value) => handleCreateInputChange('departments', value)}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select department" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allDepartments.map(dept => (
+                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="level-create" className="text-right">Level</Label>
+                        <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', value)}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select level" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="100">100</SelectItem>
+                                <SelectItem value="200">200</SelectItem>
+                                <SelectItem value="300">300</SelectItem>
+                                <SelectItem value="400">400</SelectItem>
+                            </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="is-quiz" className="text-right">Type</Label>
@@ -3703,6 +3713,7 @@ export default function TimetablePage() {
     
 
     
+
 
 
 
