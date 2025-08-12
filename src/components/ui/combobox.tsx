@@ -162,8 +162,10 @@ export function MultiSelectCombobox({
                                 <CommandItem
                                     key={option.value}
                                     value={option.value}
-                                    onSelect={() => handleSelect(option.value)}
-                                    disabled={false}
+                                    onSelect={(currentValue) => {
+                                        handleSelect(option.value)
+                                    }}
+                                    className="cursor-pointer"
                                 >
                                     <Checkbox
                                         checked={selectedSet.has(option.value)}

@@ -1148,30 +1148,39 @@ function StaffTimetableView({
 
   const staffSchedule = useMemo(() => {
     if (!masterSchedule || selectedLecturers.length === 0) return [];
-    return masterSchedule.filter(entry =>
-      selectedLecturers.some(selectedName =>
-        entry.lecturer.toLowerCase().includes(selectedName.toLowerCase())
-      )
-    );
-  }, [masterSchedule, selectedLecturers]);
+    
+    // Create a set of the first two parts of each selected name for broader matching
+    const selectedNameParts = new Set<string>();
+    selectedLecturers.forEach(name => {
+      const parts = name.toLowerCase().split(' ').slice(0, 2);
+      if (parts.length > 0) selectedNameParts.add(parts.join(' '));
+    });
+    
+    return masterSchedule.filter(entry => {
+      const entryName = entry.lecturer.toLowerCase();
+      // Direct match
+      if (selectedLecturers.some(sl => sl.toLowerCase() === entryName)) return true;
+      
+      // Partial match (first two words)
+      const entryNamePrefix = entryName.split(' ').slice(0, 2).join(' ');
+      return selectedNameParts.has(entryNamePrefix);
+    });
+}, [masterSchedule, selectedLecturers]);
 
   const lecturerCourses = useMemo(() => {
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     const courseSet = new Set<string>();
-    const filteredSchedule = masterSchedule.filter(entry =>
-      selectedLecturers.some(selectedName =>
-        entry.lecturer.toLowerCase().includes(selectedName.toLowerCase())
-      )
-    );
-    filteredSchedule.forEach(entry => {
+    
+    staffSchedule.forEach(entry => {
       const courses = entry.courseCode.split(',').map(c => c.trim());
       courses.forEach(c => courseSet.add(c));
     });
+    
     return Array.from(courseSet).sort().map(course => ({
       value: course,
       label: course
     }));
-  }, [masterSchedule, selectedLecturers]);
+  }, [masterSchedule, selectedLecturers, staffSchedule]);
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
@@ -3694,6 +3703,7 @@ export default function TimetablePage() {
     
 
     
+
 
 
 
