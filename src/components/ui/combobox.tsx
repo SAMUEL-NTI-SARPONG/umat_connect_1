@@ -132,23 +132,25 @@ export function MultiSelectCombobox({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <div
-                    className={cn(
-                        "flex flex-wrap gap-1 items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background",
-                        className
-                    )}
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className={cn("w-full justify-between h-auto min-h-10", className)}
                 >
-                    {selectedLabels.length > 0 ? (
-                        selectedLabels.map(label => (
-                            <Badge key={label} variant="secondary">
-                                {label}
-                            </Badge>
-                        ))
-                    ) : (
-                        <span className="text-muted-foreground">{placeholder}</span>
-                    )}
-                    <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
-                </div>
+                    <div className="flex flex-wrap gap-1 items-center">
+                        {selectedLabels.length > 0 ? (
+                            selectedLabels.map(label => (
+                                <Badge key={label} variant="secondary">
+                                    {label}
+                                </Badge>
+                            ))
+                        ) : (
+                            <span className="text-muted-foreground">{placeholder}</span>
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
@@ -159,12 +161,12 @@ export function MultiSelectCombobox({
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
+                                    value={option.value}
                                     onSelect={() => handleSelect(option.value)}
-                                    className="flex items-center gap-2"
                                 >
                                     <Checkbox
                                         checked={selectedSet.has(option.value)}
-                                        className="h-4 w-4"
+                                        className="mr-2 h-4 w-4"
                                     />
                                     <span>{option.label}</span>
                                 </CommandItem>
@@ -176,4 +178,3 @@ export function MultiSelectCombobox({
         </Popover>
     );
 }
-

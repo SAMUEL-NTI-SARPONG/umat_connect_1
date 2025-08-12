@@ -1148,22 +1148,25 @@ function StaffTimetableView({
 
   const staffSchedule = useMemo(() => {
     if (!masterSchedule || selectedLecturers.length === 0) return [];
-    return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
-  }, [masterSchedule, selectedLecturers]);
+    
+    // Find all user objects for the selected names
+    const selectedUsers = allUsers.filter(u => selectedLecturers.includes(u.name));
+    
+    return masterSchedule.filter(entry => {
+        // Check if any of the selected users match the lecturer for the entry
+        return selectedUsers.some(staffUser => isLecturerMatchWithUsers(entry.lecturer, staffUser));
+    });
+  }, [masterSchedule, selectedLecturers, allUsers]);
 
   const lecturerCourses = useMemo(() => {
-    if (!masterSchedule) return [];
-  
+    if (!masterSchedule || selectedLecturers.length === 0) return [];
+    
+    const selectedUsers = allUsers.filter(u => selectedLecturers.includes(u.name));
     const courseSet = new Set<string>();
-    masterSchedule.forEach(entry => {
-      // Use the isLecturerMatchWithUsers for broader matching
-      const isMatch = selectedLecturers.some(selectedName => {
-        const staffUser = allUsers.find(u => u.name === selectedName);
-        return staffUser ? isLecturerMatchWithUsers(entry.lecturer, staffUser) : false;
-      });
   
+    masterSchedule.forEach(entry => {
+      const isMatch = selectedUsers.some(staffUser => isLecturerMatchWithUsers(entry.lecturer, staffUser));
       if (isMatch) {
-        // Handle cases where courseCode might be a comma-separated string
         const courses = entry.courseCode.split(',').map(c => c.trim());
         courses.forEach(c => courseSet.add(c));
       }
@@ -1251,7 +1254,7 @@ function StaffTimetableView({
   };
   
   const handleCreateMultiSelectChange = (values: string[]) => {
-    setCreateFormData((prev: any) => ({ ...prev, courses: values }));
+    handleCreateInputChange('courses', values);
   };
 
   const closeAllModals = () => {
@@ -1430,9 +1433,9 @@ function StaffTimetableView({
                 </Button>
                 <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <PlusCircle className="w-4 h-4 mr-2" />
-                      Add Class / Quiz
+                     <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                        <PlusCircle className="w-4 h-4 mr-2" />
+                        Add Class / Quiz
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
@@ -3705,5 +3708,6 @@ export default function TimetablePage() {
     
 
     
+
 
 
