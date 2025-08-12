@@ -1085,7 +1085,7 @@ function StaffTimetableView({
 }: {
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
-  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer' | 'isQuiz'> & {isQuiz?: boolean, courseCode: string}) => void;
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
@@ -1148,36 +1148,30 @@ function StaffTimetableView({
 
   const staffSchedule = useMemo(() => {
     if (!masterSchedule || selectedLecturers.length === 0) return [];
-    
-    // Find all user objects for the selected names
-    const selectedUsers = allUsers.filter(u => selectedLecturers.includes(u.name));
-    
-    return masterSchedule.filter(entry => {
-        // Check if any of the selected users match the lecturer for the entry
-        return selectedUsers.some(staffUser => isLecturerMatchWithUsers(entry.lecturer, staffUser));
-    });
-  }, [masterSchedule, selectedLecturers, allUsers]);
+    return masterSchedule.filter(entry =>
+      selectedLecturers.some(selectedName =>
+        entry.lecturer.toLowerCase().includes(selectedName.toLowerCase())
+      )
+    );
+  }, [masterSchedule, selectedLecturers]);
 
   const lecturerCourses = useMemo(() => {
     if (!masterSchedule || selectedLecturers.length === 0) return [];
-    
-    const selectedUsers = allUsers.filter(u => selectedLecturers.includes(u.name));
     const courseSet = new Set<string>();
-  
-    masterSchedule.forEach(entry => {
-      const isMatch = selectedUsers.some(staffUser => isLecturerMatchWithUsers(entry.lecturer, staffUser));
-      if (isMatch) {
-        const courses = entry.courseCode.split(',').map(c => c.trim());
-        courses.forEach(c => courseSet.add(c));
-      }
+    const filteredSchedule = masterSchedule.filter(entry =>
+      selectedLecturers.some(selectedName =>
+        entry.lecturer.toLowerCase().includes(selectedName.toLowerCase())
+      )
+    );
+    filteredSchedule.forEach(entry => {
+      const courses = entry.courseCode.split(',').map(c => c.trim());
+      courses.forEach(c => courseSet.add(c));
     });
-  
     return Array.from(courseSet).sort().map(course => ({
       value: course,
       label: course
     }));
-  }, [masterSchedule, selectedLecturers, allUsers]);
-  
+  }, [masterSchedule, selectedLecturers]);
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
@@ -1216,12 +1210,11 @@ function StaffTimetableView({
       return;
     }
     
-    // Extract level and departments from the first selected course
     const firstCourseCode = courses[0];
     const courseEntry = masterSchedule?.find(e => e.courseCode.includes(firstCourseCode));
     
     addStaffSchedule({
-      courseCode: courses.join(', '), // Join courses into a single string
+      courseCode: courses.join(', '),
       day,
       level: courseEntry?.level || 0,
       departments: courseEntry?.departments || [],
@@ -1241,7 +1234,7 @@ function StaffTimetableView({
     }
     setEditedFormData(updatedData);
   };
-
+  
   const handleCreateInputChange = (field: string, value: any) => {
     setCreateFormData((prev: any) => {
         const newState = { ...prev, [field]: value };
@@ -1251,10 +1244,6 @@ function StaffTimetableView({
         }
         return newState;
     });
-  };
-  
-  const handleCreateMultiSelectChange = (values: string[]) => {
-    handleCreateInputChange('courses', values);
   };
 
   const closeAllModals = () => {
@@ -1271,7 +1260,7 @@ function StaffTimetableView({
   };
 
   const dailySchedule = useMemo(() => {
-    const visibleSchedule = staffSchedule; // Use the new manually filtered schedule
+    const visibleSchedule = staffSchedule;
     
     return visibleSchedule.reduce((acc, event) => {
       const day = event.day || "Monday";
@@ -1300,13 +1289,11 @@ function StaffTimetableView({
     
     const rooms = [...new Set(daySlots.map(s => s.location))].sort();
 
-    // Filter by selected room
     const roomDaySlots = daySlots
       .filter(s => s.location === editedFormData.room)
       .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
       .sort((a, b) => a.start - b.start);
 
-    // Merge consecutive slots
     const mergedSlots: { start: number, end: number }[] = [];
     if (roomDaySlots.length > 0) {
       let current = { ...roomDaySlots[0] };
@@ -1321,7 +1308,6 @@ function StaffTimetableView({
       mergedSlots.push(current);
     }
     
-    // Generate all possible 1-hour start times from merged slots
     const allStartTimes: string[] = [];
     mergedSlots.forEach(slot => {
       for (let t = slot.start; t < slot.end; t += 60) {
@@ -1433,7 +1419,7 @@ function StaffTimetableView({
                 </Button>
                 <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                   <DialogTrigger asChild>
-                     <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+                     <Button variant="outline" size="sm">
                         <PlusCircle className="w-4 h-4 mr-2" />
                         Add Class / Quiz
                     </Button>
@@ -1488,10 +1474,10 @@ function StaffTimetableView({
                        <div className="grid grid-cols-4 items-center gap-4">
                           <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
                           <div className="col-span-3">
-                            <MultiSelectCombobox
+                          <MultiSelectCombobox
                               options={lecturerCourses}
                               selected={createFormData.courses}
-                              onChange={handleCreateMultiSelectChange}
+                              onChange={(values) => handleCreateInputChange('courses', values)}
                               placeholder="Select courses..."
                               searchPlaceholder="Search courses..."
                               notFoundMessage="No course found."
@@ -3649,7 +3635,7 @@ export default function TimetablePage() {
         return <StaffTimetableView 
                   masterSchedule={masterSchedule}
                   emptySlots={emptySlots} 
-                  addStaffSchedule={addStaffSchedule}
+                  addStaffSchedule={addStaffSchedule as any}
                   updateScheduleStatus={updateScheduleStatus}
                />;
       case 'administrator':
@@ -3708,6 +3694,7 @@ export default function TimetablePage() {
     
 
     
+
 
 
 
