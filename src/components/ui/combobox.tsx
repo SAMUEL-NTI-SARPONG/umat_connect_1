@@ -163,6 +163,7 @@ export function MultiSelectCombobox({
                                     key={option.value}
                                     value={option.value}
                                     onSelect={() => handleSelect(option.value)}
+                                    disabled={false}
                                 >
                                     <Checkbox
                                         checked={selectedSet.has(option.value)}
