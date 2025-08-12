@@ -4,7 +4,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, CheckSquare as CheckboxIcon } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, CheckSquare as CheckboxIcon, Building } from 'lucide-react';
 import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
@@ -70,11 +70,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
 import FreeRoomsDialog from '@/components/timetable/free-rooms-dialog';
+import { MultiSelectCombobox } from '@/components/ui/combobox';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
     canceled: { color: 'bg-red-500', text: 'Canceled', border: 'border-l-red-500', icon: <XCircle className="h-5 w-5 text-red-500" /> },
     undecided: { color: 'bg-yellow-500', text: 'Undecided', border: 'border-l-yellow-500', icon: <AlertCircle className="h-5 w-5 text-yellow-500" /> },
+    quiz: { color: 'bg-blue-500', text: 'Quiz', border: 'border-l-blue-500', icon: <PenSquare className="h-5 w-5 text-blue-500" /> },
 };
   
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -521,15 +523,17 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                 <TabsContent key={day} value={day}>
                 {(dailySchedule[day] || []).length > 0 ? (
                     <div className="space-y-4 max-w-md mx-auto">
-                        {dailySchedule[day].map((event) => (
+                        {dailySchedule[day].map((event) => {
+                           const status = event.isQuiz ? 'quiz' : event.status;
+                           return (
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
                                <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
-                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                               {statusConfig[event.status].text}
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[status].border, 'border-l-4')}>
+                               {statusConfig[status].text}
                              </Badge>
                            </div>
                            <Separator className="my-3" />
@@ -544,7 +548,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                              </div>
                            </div>
                          </Card>
-                        ))}
+                        )})}
                     </div>
                 ) : (
                     <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -572,11 +576,10 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
 }
 
 const initialCreateFormState = {
-  courseCode: '',
   day: 'Monday',
-  level: 100,
-  departments: [],
   room: '',
+  courses: [] as string[],
+  isQuiz: false,
 };
 
 const deduplicateStaffExams = (exams: (ExamEntry & { role: string })[]): (ExamEntry & { role: string })[] => {
@@ -1082,7 +1085,7 @@ function StaffTimetableView({
 }: {
   masterSchedule: TimetableEntry[] | null;
   emptySlots: EmptySlot[];
-  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer' | 'isQuiz'> & {isQuiz?: boolean, courseCode: string}) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
@@ -1147,6 +1150,30 @@ function StaffTimetableView({
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     return masterSchedule.filter(entry => selectedLecturers.includes(entry.lecturer));
   }, [masterSchedule, selectedLecturers]);
+
+  const lecturerCourses = useMemo(() => {
+    if (!masterSchedule) return [];
+  
+    const courseSet = new Set<string>();
+    masterSchedule.forEach(entry => {
+      // Use the isLecturerMatchWithUsers for broader matching
+      const isMatch = selectedLecturers.some(selectedName => {
+        const staffUser = allUsers.find(u => u.name === selectedName);
+        return staffUser ? isLecturerMatchWithUsers(entry.lecturer, staffUser) : false;
+      });
+  
+      if (isMatch) {
+        // Handle cases where courseCode might be a comma-separated string
+        const courses = entry.courseCode.split(',').map(c => c.trim());
+        courses.forEach(c => courseSet.add(c));
+      }
+    });
+  
+    return Array.from(courseSet).sort().map(course => ({
+      value: course,
+      label: course
+    }));
+  }, [masterSchedule, selectedLecturers, allUsers]);
   
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
@@ -1180,18 +1207,24 @@ function StaffTimetableView({
   };
   
   const handleSaveCreate = () => {
-    const { courseCode, day, level, departments, room } = createFormData;
-    if (!courseCode || !day || !level || !departments.length || !room || !createStartTime || !createEndTime) {
-      alert("Please fill all fields");
+    const { day, room, courses, isQuiz } = createFormData;
+    if (!courses.length || !day || !room || !createStartTime || !createEndTime) {
+      alert("Please fill all required fields");
       return;
     }
+    
+    // Extract level and departments from the first selected course
+    const firstCourseCode = courses[0];
+    const courseEntry = masterSchedule?.find(e => e.courseCode.includes(firstCourseCode));
+    
     addStaffSchedule({
-      courseCode,
+      courseCode: courses.join(', '), // Join courses into a single string
       day,
-      level,
-      departments,
+      level: courseEntry?.level || 0,
+      departments: courseEntry?.departments || [],
       room,
       time: `${createStartTime} - ${createEndTime}`,
+      isQuiz,
     });
     closeAllModals();
   };
@@ -1215,6 +1248,10 @@ function StaffTimetableView({
         }
         return newState;
     });
+  };
+  
+  const handleCreateMultiSelectChange = (values: string[]) => {
+    setCreateFormData((prev: any) => ({ ...prev, courses: values }));
   };
 
   const closeAllModals = () => {
@@ -1410,15 +1447,17 @@ function StaffTimetableView({
                 <TabsContent key={day} value={day}>
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                     <div className="space-y-4 max-w-md mx-auto">
-                        {dailySchedule[day].map((event) => (
+                        {dailySchedule[day].map((event) => {
+                           const status = event.isQuiz ? 'quiz' : event.status;
+                           return (
                            <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
                              <div className="flex-grow">
                                <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
-                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[event.status].border, 'border-l-4')}>
-                               {statusConfig[event.status].text}
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[status].border, 'border-l-4')}>
+                               {statusConfig[status].text}
                              </Badge>
                            </div>
                            <Separator className="my-3" />
@@ -1433,7 +1472,7 @@ function StaffTimetableView({
                              </div>
                            </div>
                          </Card>
-                        ))}
+                        )})}
                     </div>
                   ) : (
                     <Card className="flex items-center justify-center p-12 bg-muted/50 border-dashed">
@@ -1581,38 +1620,41 @@ function StaffTimetableView({
                     <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
                       <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
                       <SelectContent>
-                        {availableSlotsForCreate.startTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                        {availableSlotsForCreate.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
                       <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
                       <SelectContent>
-                        {availableSlotsForCreate.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                        {availableSlotsForCreate.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="courseCode-create" className="text-right">Course</Label>
-                    <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
+                    <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
+                    <div className="col-span-3">
+                      <MultiSelectCombobox
+                        options={lecturerCourses}
+                        selected={createFormData.courses}
+                        onChange={handleCreateMultiSelectChange}
+                        placeholder="Select courses..."
+                        searchPlaceholder="Search courses..."
+                        notFoundMessage="No course found."
+                        className="w-full"
+                      />
+                    </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="departments-create" className="text-right">Dept(s)</Label>
-                    <Input id="departments-create" value={createFormData.departments.join(', ')} onChange={(e) => handleCreateInputChange('departments', e.target.value.split(',').map(s => s.trim()))} className="col-span-3" placeholder="e.g., CE, ME" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="level-create" className="text-right">Level</Label>
-                    <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', Number(value))}>
-                        <SelectTrigger id="level-create" className="col-span-3">
-                            <SelectValue placeholder="Select level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="100">100</SelectItem>
-                            <SelectItem value="200">200</SelectItem>
-                            <SelectItem value="300">300</SelectItem>
-                            <SelectItem value="400">400</SelectItem>
-                        </SelectContent>
-                    </Select>
+                  <Label htmlFor="is-quiz" className="text-right">Type</Label>
+                  <div className="col-span-3 flex items-center space-x-2">
+                    <Switch
+                        id="is-quiz"
+                        checked={createFormData.isQuiz}
+                        onCheckedChange={(checked) => handleCreateInputChange('isQuiz', checked)}
+                    />
+                    <Label htmlFor="is-quiz">Is this a quiz?</Label>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -1651,7 +1693,7 @@ function StaffTimetableView({
                     </SelectTrigger>
                     <SelectContent>
                       {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
-                      {availableSlotsForEdit.rooms.map(room => <SelectItem key={room} value={room}>{room}</SelectItem>)}
+                      {availableSlotsForEdit.rooms.map((room, index) => <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1667,7 +1709,7 @@ function StaffTimetableView({
                     <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
                       <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
                       <SelectContent>
-                        {availableSlotsForEdit.endTimes.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                        {availableSlotsForEdit.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -2674,8 +2716,8 @@ function TimetableDisplay({
                             {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
                                 {editedFormData.room} (Current)
                             </SelectItem>}
-                            {availableSlotsForEdit.rooms.map(room => (
-                                <SelectItem key={room} value={room}>{room}</SelectItem>
+                            {availableSlotsForEdit.rooms.map((room, index) => (
+                                <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
@@ -2695,8 +2737,8 @@ function TimetableDisplay({
                             <SelectValue placeholder="Start" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableSlotsForEdit.startTimes.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                            {availableSlotsForEdit.startTimes.map((time, index) => (
+                            <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
@@ -2709,8 +2751,8 @@ function TimetableDisplay({
                             <SelectValue placeholder="End" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableSlotsForEdit.endTimes.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                            {availableSlotsForEdit.endTimes.map((time, index) => (
+                            <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
