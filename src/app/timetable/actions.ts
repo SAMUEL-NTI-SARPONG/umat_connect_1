@@ -162,6 +162,7 @@ export async function findEmptyClassrooms(fileData: string) {
       
       const roomOccupancy = new Map<string, Set<number>>();
   
+      // First pass: find all rooms and mark their occupied slots
       for (let i = 5; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (!row || !row[0] || !String(row[0]).trim()) continue;
@@ -173,6 +174,7 @@ export async function findEmptyClassrooms(fileData: string) {
         }
         const occupiedSlots = roomOccupancy.get(room)!;
   
+        // Column indices in the spreadsheet
         for (let j = 1; j < row.length; j++) {
           const cellValue = String(row[j] || '').trim();
           if (!cellValue || cellValue.toLowerCase().includes('break')) continue;
@@ -185,10 +187,8 @@ export async function findEmptyClassrooms(fileData: string) {
             }
           }
   
-          const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
-          if (courseEntries.length === 0) continue;
-  
-          const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
+          // Map spreadsheet column to time slot index, accounting for the break column
+          const timeSlotIndexStart = j - 1 + (j > 7 ? -1 : 0);
           const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan - 1;
   
           for (let slotIndex = timeSlotIndexStart; slotIndex <= timeSlotIndexEnd; slotIndex++) {
@@ -202,7 +202,8 @@ export async function findEmptyClassrooms(fileData: string) {
           }
         }
       }
-  
+      
+      // Second pass: iterate through rooms and find unoccupied slots
       roomOccupancy.forEach((occupiedSlots, room) => {
         for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
           if (!occupiedSlots.has(slotIndex)) {
