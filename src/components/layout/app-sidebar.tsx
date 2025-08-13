@@ -35,7 +35,7 @@ export default function AppSidebar() {
   const timetableLabel = user.role === 'administrator' ? 'Manage Timetable' : 'Timetable';
 
   return (
-    <>
+    <div className="flex flex-col h-full">
       <div className="flex flex-col items-center gap-2 p-4 text-center group-data-[collapsible=icon]:hidden">
         <Link href="/profile">
           <ProfileAvatar
@@ -132,6 +132,6 @@ export default function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </>
+    </div>
   );
 }
