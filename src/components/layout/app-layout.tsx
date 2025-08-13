@@ -31,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <AppHeader />
         
         <div className="flex flex-1">
-          <Sidebar variant="floating" collapsible="icon">
+          <Sidebar variant="sidebar" collapsible="icon">
             <AppSidebar />
           </Sidebar>
           <SidebarInset className="flex flex-col flex-1">
