@@ -54,7 +54,7 @@ export default function AppSidebar() {
         </div>
       </div>
       <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
-      <SidebarContent>
+      <SidebarContent className="flex-1">
         <SidebarMenu className="hidden md:flex">
           <SidebarMenuItem>
             <Link href="/" passHref>
