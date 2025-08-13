@@ -165,7 +165,8 @@ interface UserContextType {
   updateUser: (updatedUser: User) => void;
   resetState: () => void;
   masterSchedule: TimetableEntry[] | null;
-  setMasterSchedule: (data: TimetableEntry[] | null) => void;
+  setMasterSchedule: (data: TimetableEntry[] | null, rawFile?: string) => void;
+  rawTimetableFile: string | null;
   isClassTimetableDistributed: boolean;
   distributeClassTimetable: () => { success: boolean; message: string };
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
@@ -227,6 +228,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   const [masterSchedule, setMasterScheduleState] = useLocalStorageState<TimetableEntry[] | null>('masterSchedule', null);
+  const [rawTimetableFile, setRawTimetableFile] = useLocalStorageState<string | null>('rawTimetableFile', null);
   const [isClassTimetableDistributed, setClassTimetableDistributed] = useLocalStorageState<boolean>('isClassTimetableDistributed', false);
   const [staffSchedules, setStaffSchedules] = useLocalStorageState<TimetableEntry[]>('staffSchedules', []);
   const [posts, setPosts] = useLocalStorageState<Post[]>('posts', []);
@@ -305,15 +307,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: "Profile Updated", description: "Your profile has been saved successfully." });
   }, [user, toast, setAllUsers]);
   
-  const setMasterSchedule = useCallback((data: TimetableEntry[] | null) => {
+  const setMasterSchedule = useCallback((data: TimetableEntry[] | null, rawFile?: string) => {
     setMasterScheduleState(data);
+    if (rawFile) {
+        setRawTimetableFile(rawFile);
+    }
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
     if (data) {
         toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
     }
-  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
+  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries, setRawTimetableFile]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -456,19 +461,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
               if (parentComment) {
                   parentComment.replies.push(newReply);
                   
+                  // Only notify the parent comment's author, if they aren't the one replying
                   if (parentComment.authorId !== user.id) {
                       addNotification({
                           recipientId: parentComment.authorId,
-                          actorId: user.id,
-                          type: 'reply_to_comment',
-                          postId: postId,
-                          commentId: newReply.id,
-                      });
-                  }
-                  
-                  if (post.authorId !== user.id && post.authorId !== parentComment.authorId) {
-                      addNotification({
-                          recipientId: post.authorId,
                           actorId: user.id,
                           type: 'reply_to_comment',
                           postId: postId,
@@ -758,6 +754,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     logout();
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
+    setRawTimetableFile(null);
     setClassTimetableDistributed(false);
     setPosts([]);
     setStaffSchedules([]);
@@ -790,6 +787,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     resetState,
     masterSchedule,
     setMasterSchedule,
+    rawTimetableFile,
     isClassTimetableDistributed,
     distributeClassTimetable,
     updateScheduleStatus,
@@ -833,7 +831,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playAlarm,
     stopAlarm,
   }), [
-      user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
+      user, allUsers, updateUser, masterSchedule, rawTimetableFile, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
       distributeClassTimetable, distributeExamsTimetable, distributeSpecialResitTimetable, addPost, deletePost, addComment, addReply,
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
