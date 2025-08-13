@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -48,7 +49,7 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-       
+       {(user?.role === 'student' || user?.role === 'staff') && pathname === '/timetable' && <FreeRoomsDialog />}
       </div>
     </header>
   );

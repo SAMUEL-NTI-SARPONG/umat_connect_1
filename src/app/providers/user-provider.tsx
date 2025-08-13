@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -13,6 +14,7 @@ import {
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { getFromStorage, saveToStorage } from '@/lib/storage';
+import { findEmptyClassrooms } from '@/timetable/actions';
 
 
 // Define the shape of timetable entries and empty slots
@@ -28,6 +30,11 @@ export interface TimetableEntry {
   lecturer: string;
   id: number;
   status: EventStatus;
+}
+export interface EmptySlot {
+  day: string;
+  location: string;
+  time: string;
 }
 
 export interface AttachedFile {
@@ -209,6 +216,8 @@ interface UserContextType {
   playingAlarm: Howl | null;
   playAlarm: (soundSrc: string) => Howl;
   stopAlarm: () => void;
+  emptySlots: EmptySlot[];
+  setEmptySlots: (slots: EmptySlot[]) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -242,6 +251,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
   const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
   const [playingAlarm, setPlayingAlarm] = useState<Howl | null>(null);
+  const [emptySlots, setEmptySlots] = useLocalStorageState<EmptySlot[]>('emptySlots', []);
 
   const playAlarm = useCallback((soundSrc: string) => {
     const sound = new (require('howler').Howl)({
@@ -307,10 +317,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: "Profile Updated", description: "Your profile has been saved successfully." });
   }, [user, toast, setAllUsers]);
   
-  const setMasterSchedule = useCallback((data: TimetableEntry[] | null, rawFile?: string) => {
+  const setMasterSchedule = useCallback(async (data: TimetableEntry[] | null, rawFile?: string) => {
     setMasterScheduleState(data);
     if (rawFile) {
         setRawTimetableFile(rawFile);
+        try {
+            const emptySlotsData = await findEmptyClassrooms(rawFile);
+            setEmptySlots(emptySlotsData);
+        } catch (error) {
+            console.error("Failed to find empty classrooms:", error);
+            setEmptySlots([]);
+        }
+    } else {
+        setRawTimetableFile(null);
+        setEmptySlots([]);
     }
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
@@ -318,7 +338,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (data) {
         toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
     }
-  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries, setRawTimetableFile]);
+  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries, setRawTimetableFile, setEmptySlots]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -791,6 +811,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setFaculties(initialFaculties);
     setDepartmentMap(initialDepartmentMap);
     setAllDepartments(initialAllDepartments);
+    setEmptySlots([]);
     
     // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
@@ -854,6 +875,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playingAlarm,
     playAlarm,
     stopAlarm,
+    emptySlots,
+    setEmptySlots,
   }), [
       user, allUsers, updateUser, masterSchedule, rawTimetableFile, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
@@ -861,7 +884,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, addPost
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, addPost, emptySlots, setEmptySlots
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
