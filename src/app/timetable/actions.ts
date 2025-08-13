@@ -67,13 +67,9 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
             const courseCodeLines: string[] = [];
             let lecturer = 'TBA';
             
-            // A regex to better identify course codes, e.g., "CE 272" or "GL 2A 254"
-            // It looks for department initials, followed by numbers/letters.
-            const courseRegex = /\b([A-Z]{2,})\s+([\d\w\s]+)\b/g;
             const potentialLecturerLines: string[] = [];
             
             lines.forEach(line => {
-                // If a line contains department initials followed by numbers, it's likely a course.
                 if (/\b[A-Z]{2,}\s+[\d]/.test(line)) {
                     courseCodeLines.push(line);
                 } else {
@@ -82,19 +78,15 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
             });
             
             if (potentialLecturerLines.length > 0) {
-                // If there are lines that don't look like course codes, the last one is the lecturer.
                 lecturer = potentialLecturerLines[potentialLecturerLines.length - 1];
-                // Any other "potential lecturer" lines are probably part of the course code.
                 courseCodeLines.push(...potentialLecturerLines.slice(0, -1));
             } else if (courseCodeLines.length > 0 && lines.length === courseCodeLines.length) {
-                // If all lines look like course codes, there's no lecturer listed.
                 lecturer = 'TBA';
             }
 
 
             const courseCode = courseCodeLines.join(', ');
 
-            // Adjust for 1-based indexing and break column when calculating time
             const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
             const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan -1;
 
@@ -106,7 +98,6 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
                 lecturer,
             });
 
-            // Skip columns that are part of this merge
             if (mergeSpan > 1) {
                 j += mergeSpan - 1;
             }
@@ -119,11 +110,9 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const courseNumMatch = entry.courseCode.match(/\d+/);
     const level = courseNumMatch ? (parseInt(courseNumMatch[0][0], 10) * 100 || 0) : 0;
     
-    // A better way to find all department initials in a potentially complex course code string
     const deptInitialsRegex = /\b([A-Z]{2,})\b/g;
     const allInitials = entry.courseCode.match(deptInitialsRegex) || [];
     
-    // Filter these initials to only include actual known departments
     const departments = allInitials
         .map(initial => initialDepartmentMap.get(initial) || null)
         .filter(Boolean) as string[];
@@ -157,7 +146,6 @@ export async function findEmptyClassrooms(fileData: string) {
     const fileBuffer = Buffer.from(fileData, 'base64');
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     
-    // Define time slots, excluding break column (1:00-1:30)
     const timeSlots = [
       '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
       '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
@@ -165,7 +153,6 @@ export async function findEmptyClassrooms(fileData: string) {
   
     const emptySlots: { day: string; location: string; time: string }[] = [];
   
-    // Process each day (sheet)
     for (const day of workbook.SheetNames) {
       const sheet = workbook.Sheets[day];
       if (!sheet) continue;
@@ -173,23 +160,19 @@ export async function findEmptyClassrooms(fileData: string) {
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
       const merges = sheet['!merges'] || [];
       
-      // Track occupied time slots for each room
       const roomOccupancy = new Map<string, Set<number>>();
   
-      // Process rows starting from the data content (row index 5, which is the 6th row)
       for (let i = 5; i < jsonData.length; i++) {
         const row = jsonData[i];
-        if (!row || !row[0] || !String(row[0]).trim()) continue; // Skip if room name is empty
+        if (!row || !row[0] || !String(row[0]).trim()) continue;
   
         const room = String(row[0]).trim();
         
-        // Initialize occupancy tracking for this room
         if (!roomOccupancy.has(room)) {
           roomOccupancy.set(room, new Set<number>());
         }
         const occupiedSlots = roomOccupancy.get(room)!;
   
-        // Process each cell in the row
         for (let j = 1; j < row.length; j++) {
           const cellValue = String(row[j] || '').trim();
           if (!cellValue || cellValue.toLowerCase().includes('break')) continue;
@@ -205,7 +188,6 @@ export async function findEmptyClassrooms(fileData: string) {
           const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
           if (courseEntries.length === 0) continue;
   
-          // Adjust for 1-based indexing and break column when calculating time
           const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
           const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan - 1;
   
@@ -221,7 +203,6 @@ export async function findEmptyClassrooms(fileData: string) {
         }
       }
   
-      // Now find empty slots for each room
       roomOccupancy.forEach((occupiedSlots, room) => {
         for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
           if (!occupiedSlots.has(slotIndex)) {
