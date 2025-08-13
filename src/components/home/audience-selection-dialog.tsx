@@ -33,7 +33,7 @@ export default function AudienceSelectionDialog({
   onClose,
   onConfirm,
 }: AudienceSelectionDialogProps) {
-  const { allUsers, allDepartments, faculties } = useUser();
+  const { user: currentUser, allUsers, allDepartments, faculties } = useUser();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   
   // Student filters
@@ -101,31 +101,34 @@ export default function AudienceSelectionDialog({
     const facultyDepts = faculty ? faculty.departments.map(d => d.name) : null;
 
     return allUsers.filter(user => 
+      user.id !== currentUser?.id &&
       user.role === 'student' &&
       user.name.toLowerCase().includes(studentSearch.toLowerCase()) &&
       (!studentFaculty || (facultyDepts && facultyDepts.includes(user.department))) &&
       (!studentDept || user.department === studentDept) &&
       (!studentLevel || user.level === Number(studentLevel))
     );
-  }, [allUsers, studentSearch, studentFaculty, studentDept, studentLevel, faculties]);
+  }, [allUsers, currentUser, studentSearch, studentFaculty, studentDept, studentLevel, faculties]);
 
   const filteredStaff = useMemo(() => {
     const faculty = staffFaculty ? faculties.find(f => f.name === staffFaculty) : null;
     const facultyDepts = faculty ? faculty.departments.map(d => d.name) : null;
     return allUsers.filter(user =>
+      user.id !== currentUser?.id &&
       user.role === 'staff' &&
       user.name.toLowerCase().includes(staffSearch.toLowerCase()) &&
       (!staffFaculty || (facultyDepts && facultyDepts.includes(user.department))) &&
       (!staffDept || user.department === staffDept)
     );
-  }, [allUsers, staffSearch, staffFaculty, staffDept, faculties]);
+  }, [allUsers, currentUser, staffSearch, staffFaculty, staffDept, faculties]);
 
   const filteredAdmins = useMemo(() => {
     return allUsers.filter(user =>
+      user.id !== currentUser?.id &&
       user.role === 'administrator' &&
       user.name.toLowerCase().includes(adminSearch.toLowerCase())
     );
-  }, [allUsers, adminSearch]);
+  }, [allUsers, currentUser, adminSearch]);
   
   const selectedUsers = useMemo(() => {
     return allUsers.filter(u => selectedIds.has(u.id));
