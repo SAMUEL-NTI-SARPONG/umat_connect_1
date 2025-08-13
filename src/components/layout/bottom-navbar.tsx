@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Calendar, User, Compass, Bell } from 'lucide-react';
+import { Home, Calendar, User, Compass, Bell, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/app/providers/user-provider';
 import { useMemo } from 'react';
@@ -18,7 +18,7 @@ const navItems = [
 
 export default function BottomNavbar() {
   const pathname = usePathname();
-  const { user, notifications } = useUser();
+  const { user, notifications, logout } = useUser();
 
   const unreadCount = useMemo(() => {
     if (!user) return 0;
@@ -50,6 +50,13 @@ export default function BottomNavbar() {
             </Link>
           );
         })}
+        <div
+          onClick={logout}
+          className='flex flex-col items-center gap-1 p-2 rounded-md w-16 text-muted-foreground cursor-pointer'
+        >
+          <LogOut className="h-6 w-6" />
+          <span className="text-xs font-medium">Logout</span>
+        </div>
       </div>
     </div>
   );
