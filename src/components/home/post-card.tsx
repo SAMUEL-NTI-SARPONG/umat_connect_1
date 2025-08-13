@@ -325,18 +325,18 @@ export default function PostCard({ post }: { post: Post }) {
       <CardContent className="px-2 sm:px-4 py-2 flex-grow space-y-4">
         {post.content && <p className="whitespace-pre-wrap text-sm">{post.content}</p>}
         {hasAttachment && (
-            <div className="mt-2 -mx-2 sm:-mx-4">
+            <div className="mt-2">
             {isImage ? (
                 <Image
                 src={post.attachedFile!.url}
                 alt={post.attachedFile!.name}
                 width={525}
                 height={300}
-                className="object-cover w-full max-h-[50vh]"
+                className="object-cover w-full max-h-[60vh] rounded-md border"
                 data-ai-hint="post content"
                 />
             ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted mx-2 sm:mx-4">
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted">
                 <FileText className="w-8 h-8 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground truncate">{post.attachedFile!.name}</span>
                 </div>
