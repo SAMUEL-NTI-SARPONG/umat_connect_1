@@ -13,8 +13,6 @@ import {
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { getFromStorage, saveToStorage } from '@/lib/storage';
-import { findEmptyClassrooms } from '@/app/timetable/actions';
-
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
@@ -215,8 +213,6 @@ interface UserContextType {
   playingAlarm: Howl | null;
   playAlarm: (soundSrc: string) => Howl;
   stopAlarm: () => void;
-  emptySlots: EmptySlot[];
-  setEmptySlots: (slots: EmptySlot[]) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -250,7 +246,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
   const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
   const [playingAlarm, setPlayingAlarm] = useState<Howl | null>(null);
-  const [emptySlots, setEmptySlots] = useLocalStorageState<EmptySlot[]>('emptySlots', []);
 
   const playAlarm = useCallback((soundSrc: string) => {
     const sound = new (require('howler').Howl)({
@@ -320,25 +315,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setMasterScheduleState(data);
     setRawTimetableFile(rawFile || null);
     
-    if (rawFile) {
-        try {
-            const emptySlotsData = await findEmptyClassrooms(rawFile);
-            setEmptySlots(emptySlotsData);
-        } catch (error) {
-            console.error("Failed to find empty classrooms:", error);
-            setEmptySlots([]);
-        }
-    } else {
-        setEmptySlots([]);
-    }
-    
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
     if (data) {
         toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
     }
-  }, [toast, setMasterScheduleState, setRawTimetableFile, setEmptySlots, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
+  }, [toast, setMasterScheduleState, setRawTimetableFile, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -811,7 +794,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setFaculties(initialFaculties);
     setDepartmentMap(initialDepartmentMap);
     setAllDepartments(initialAllDepartments);
-    setEmptySlots([]);
     
     // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
@@ -875,8 +857,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playingAlarm,
     playAlarm,
     stopAlarm,
-    emptySlots,
-    setEmptySlots,
   }), [
       user, allUsers, updateUser, masterSchedule, rawTimetableFile, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
@@ -884,7 +864,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, emptySlots, setEmptySlots
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;

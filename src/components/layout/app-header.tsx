@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { useUser } from '@/app/providers/user-provider';
 import CreatePost from '../home/create-post';
 import { Button } from '../ui/button';
-import FreeRoomsDialog from '../timetable/free-rooms-dialog';
 
 const pageTitles: { [key: string]: string } = {
   '/': 'Home Feed',
@@ -49,7 +48,6 @@ export default function AppHeader() {
       </div>
 
       <div className="flex-1 flex justify-end">
-       {(user?.role === 'student' || user?.role === 'staff') && pathname === '/timetable' && <FreeRoomsDialog />}
       </div>
     </header>
   );
