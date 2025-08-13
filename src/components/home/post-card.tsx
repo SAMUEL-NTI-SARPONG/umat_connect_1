@@ -322,7 +322,7 @@ export default function PostCard({ post }: { post: Post }) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:px-4 py-2 flex-grow space-y-4">
+      <CardContent className="px-2 sm:px-4 py-2 flex-grow">
         {post.content && <p className="whitespace-pre-wrap text-sm">{post.content}</p>}
         {hasAttachment && (
             <div className="mt-2">
@@ -332,7 +332,7 @@ export default function PostCard({ post }: { post: Post }) {
                 alt={post.attachedFile!.name}
                 width={525}
                 height={300}
-                className="object-cover w-full max-h-[60vh] rounded-md border"
+                className="object-contain w-full max-h-[60vh] rounded-md border"
                 data-ai-hint="post content"
                 />
             ) : (
