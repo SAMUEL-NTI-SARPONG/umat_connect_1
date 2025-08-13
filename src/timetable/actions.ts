@@ -145,75 +145,91 @@ export async function handleFileUpload(fileData: string) {
 
 export async function findEmptyClassrooms(fileData: string) {
   const fileBuffer = Buffer.from(fileData, 'base64');
-  const result: { day: string; location: string; time: string }[] = [];
-
+  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+  
   // Define time slots, excluding break column (1:00-1:30)
   const timeSlots = [
-    '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
-    '12:00 PM', '1:30 PM', '2:30 PM', '3:30 PM', '4:30 PM', '5:30 PM', '6:30 PM'
+    '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
+    '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
   ];
-  
-  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-  const sheetNames = workbook.SheetNames;
 
-  // Process each sheet
-  sheetNames.forEach(sheetName => {
-    const day = sheetName;
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) return;
+  const emptySlots: { day: string; location: string; time: string }[] = [];
+
+  // Process each day (sheet)
+  for (const day of workbook.SheetNames) {
+    const sheet = workbook.Sheets[day];
+    if (!sheet) continue;
 
     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
     const merges = sheet['!merges'] || [];
     
-    // Process rows starting from the data content (row index 5)
+    // Track occupied time slots for each room
+    const roomOccupancy = new Map<string, Set<number>>();
+
+    // Process rows starting from the data content (row index 5, which is the 6th row)
     for (let i = 5; i < jsonData.length; i++) {
       const row = jsonData[i];
-      if (!row || !row[0] || !String(row[0]).trim()) continue;
+      if (!row || !row[0] || !String(row[0]).trim()) continue; // Skip if room name is empty
 
-      const location = String(row[0]).trim();
-      const occupiedSlots = new Set<number>();
+      const room = String(row[0]).trim();
+      
+      // Initialize occupancy tracking for this room
+      if (!roomOccupancy.has(room)) {
+        roomOccupancy.set(room, new Set<number>());
+      }
+      const occupiedSlots = roomOccupancy.get(room)!;
 
-      // Pre-process to mark all occupied slots, considering merges
+      // Process each cell in the row (same logic as parseUniversitySchedule)
       for (let j = 1; j < row.length; j++) {
         const cellValue = String(row[j] || '').trim();
-        if (cellValue && !cellValue.toLowerCase().includes('break')) {
-          let mergeSpan = 1;
-          for (const merge of merges) {
-            if (merge.s.r === i && merge.s.c === j) {
-              mergeSpan = merge.e.c - merge.s.c + 1;
-              break;
-            }
-          }
-          
-          const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
-          for (let k = 0; k < mergeSpan; k++) {
-              const timeSlotIndex = timeSlotIndexStart + k;
-              if (timeSlotIndex >= 0 && timeSlotIndex < timeSlots.length) {
-                occupiedSlots.add(timeSlotIndex);
-              }
-          }
-          if (mergeSpan > 1) {
-            j += mergeSpan - 1; // Skip the rest of the merged cells
+        if (!cellValue || cellValue.toLowerCase().includes('break')) continue;
+        
+        // Find merge info for this cell (same as parseUniversitySchedule)
+        let mergeSpan = 1;
+        for (const merge of merges) {
+          if (merge.s.r === i && merge.s.c === j) {
+            mergeSpan = merge.e.c - merge.s.c + 1;
+            break;
           }
         }
-      }
 
-      // Find empty slots
-      for (let k = 0; k < timeSlots.length; k++) {
-        if (!occupiedSlots.has(k)) {
-          const startTime = timeSlots[k];
-          const endTime = timeSlots[k+1] || (k === 5 ? '1:00 PM' : '7:30 PM'); // Handle last slot and lunch break
-          result.push({
-            day: day,
-            location: location,
-            time: `${startTime} - ${endTime}`
-          });
+        // Check if cell actually contains course data (same validation as parseUniversitySchedule)
+        const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
+        if (courseEntries.length === 0) continue;
+
+        // Calculate time slot indices (same logic as parseUniversitySchedule)
+        const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
+        const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan - 1;
+
+        // Mark all time slots covered by this course as occupied
+        for (let slotIndex = timeSlotIndexStart; slotIndex <= timeSlotIndexEnd; slotIndex++) {
+          if (slotIndex >= 0 && slotIndex < timeSlots.length) {
+            occupiedSlots.add(slotIndex);
+          }
+        }
+
+        // Skip columns that are part of this merge (same as parseUniversitySchedule)
+        if (mergeSpan > 1) {
+          j += mergeSpan - 1;
         }
       }
     }
-  });
 
-  return result;
+    // Now find empty slots for each room
+    roomOccupancy.forEach((occupiedSlots, room) => {
+      for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
+        if (!occupiedSlots.has(slotIndex)) {
+          emptySlots.push({
+            day: day,
+            location: room,
+            time: timeSlots[slotIndex]
+          });
+        }
+      }
+    });
+  }
+
+  return emptySlots;
 }
 
 function extractTimetableData(fileBuffer: Buffer) {
