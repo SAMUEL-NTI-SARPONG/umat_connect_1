@@ -376,14 +376,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [user, fetchNotifications]);
 
   const addNotification = useCallback((notificationData: Omit<Notification, 'id' | 'isRead' | 'timestamp'>) => {
-    const newNotification: Notification = {
-      ...notificationData,
-      id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`,
-      isRead: false,
-      timestamp: new Date().toISOString(),
-    };
-    setNotifications(prev => [newNotification, ...prev]);
-  }, [setNotifications]);
+      // Check for existing notifications to prevent duplicates
+      const exists = notifications.some(n =>
+          n.type === notificationData.type &&
+          n.recipientId === notificationData.recipientId &&
+          n.actorId === notificationData.actorId &&
+          n.commentId === notificationData.commentId &&
+          n.postId === notificationData.postId
+      );
+
+      if (exists) {
+          return; // Don't add a duplicate notification
+      }
+      
+      const newNotification: Notification = {
+          ...notificationData,
+          id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`,
+          isRead: false,
+          timestamp: new Date().toISOString(),
+      };
+      setNotifications(prev => [newNotification, ...prev]);
+  }, [notifications, setNotifications]);
 
   const addComment = useCallback(async (postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
