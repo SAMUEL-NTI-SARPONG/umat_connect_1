@@ -189,12 +189,11 @@ export async function findEmptyClassrooms(fileData: string) {
         }
         const occupiedSlots = roomOccupancy.get(room)!;
   
-        // Process each cell in the row (same logic as parseUniversitySchedule)
+        // Process each cell in the row
         for (let j = 1; j < row.length; j++) {
           const cellValue = String(row[j] || '').trim();
           if (!cellValue || cellValue.toLowerCase().includes('break')) continue;
           
-          // Find merge info for this cell (same as parseUniversitySchedule)
           let mergeSpan = 1;
           for (const merge of merges) {
             if (merge.s.r === i && merge.s.c === j) {
@@ -203,22 +202,19 @@ export async function findEmptyClassrooms(fileData: string) {
             }
           }
   
-          // Check if cell actually contains course data (same validation as parseUniversitySchedule)
           const courseEntries = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
           if (courseEntries.length === 0) continue;
   
-          // Calculate time slot indices (same logic as parseUniversitySchedule)
+          // Adjust for 1-based indexing and break column when calculating time
           const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
           const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan - 1;
   
-          // Mark all time slots covered by this course as occupied
           for (let slotIndex = timeSlotIndexStart; slotIndex <= timeSlotIndexEnd; slotIndex++) {
             if (slotIndex >= 0 && slotIndex < timeSlots.length) {
               occupiedSlots.add(slotIndex);
             }
           }
   
-          // Skip columns that are part of this merge (same as parseUniversitySchedule)
           if (mergeSpan > 1) {
             j += mergeSpan - 1;
           }
