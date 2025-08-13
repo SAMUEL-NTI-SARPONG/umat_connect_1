@@ -13,7 +13,7 @@ import {
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { getFromStorage, saveToStorage } from '@/lib/storage';
-import { findEmptyClassrooms } from '../timetable/actions';
+import { findEmptyClassrooms } from '@/app/timetable/actions';
 
 
 // Define the shape of timetable entries and empty slots
@@ -897,5 +897,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
