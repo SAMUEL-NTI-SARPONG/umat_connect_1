@@ -14,7 +14,6 @@ import BottomNavbar from '@/components/layout/bottom-navbar';
 import LoginPage from '@/app/login/page';
 import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
-import FreeRoomsDialog from '../timetable/free-rooms-dialog';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
 
@@ -31,12 +30,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarProvider>
         <AppHeader />
         
-        {user.role === 'student' && pathname.startsWith('/timetable') && (
-            <div className="md:hidden flex justify-center pt-2">
-                <FreeRoomsDialog />
-            </div>
-        )}
-
         <div className="flex flex-1">
           <Sidebar variant="floating" collapsible="icon">
             <AppSidebar />

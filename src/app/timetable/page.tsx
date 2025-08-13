@@ -5,7 +5,7 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, AlertCircle, Upload, Check, Ban, FilePenLine, Trash2, Loader2, Clock, MapPin, BookUser, Search, FilterX, Edit, Delete, CalendarClock, PlusCircle, Settings, MoreHorizontal, ShieldCheck, EyeOff, SearchIcon, User as UserIcon, Calendar as CalendarIcon, PenSquare, Info, Save, ListChecks, SendHorizontal, ChevronDown, FlaskConical, Circle, Users2, Users, Wand2, Undo2, UserSearch, CheckSquare as CheckboxIcon, Building } from 'lucide-react';
-import { useUser, type TimetableEntry, type EmptySlot, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
+import { useUser, type TimetableEntry, type EventStatus, type SpecialResitTimetable, type DistributedResitSchedule, type SpecialResitEntry, ExamsTimetable, ExamEntry, isLecturerMatchWithUsers } from '../providers/user-provider';
 import { allDepartments as initialAllDepartments, initialDepartmentMap } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload, findEmptyClassrooms, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from './actions';
+import { handleFileUpload, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from './actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -69,7 +69,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
-import FreeRoomsDialog from '@/components/timetable/free-rooms-dialog';
 import { Combobox, MultiSelectCombobox } from '@/components/ui/combobox';
 
 const statusConfig = {
@@ -462,7 +461,7 @@ function StudentResitView() {
 }
 
 function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
-  const { user, emptySlots, isClassTimetableDistributed } = useUser();
+  const { user, isClassTimetableDistributed } = useUser();
   const [activeDay, setActiveDay] = useState(() => {
     const today = new Date().getDay();
     // Sunday is 0, Monday is 1, etc. but our array is 0-indexed from Monday.
@@ -524,7 +523,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                 {(dailySchedule[day] || []).length > 0 ? (
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => {
-                           const status = event.isQuiz ? 'quiz' : event.status;
+                           const status = event.status;
                            return (
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
@@ -1081,12 +1080,10 @@ function StaffResitView() {
 
 function StaffTimetableView({
   masterSchedule,
-  emptySlots,
   addStaffSchedule,
   updateScheduleStatus,
 }: {
   masterSchedule: TimetableEntry[] | null;
-  emptySlots: EmptySlot[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
@@ -1152,23 +1149,10 @@ function StaffTimetableView({
     if (!masterSchedule || selectedLecturers.length === 0) return [];
     
     // Create a set of the first two parts of each selected name for broader matching
-    const selectedNameParts = new Set<string>();
-    selectedLecturers.forEach(name => {
-      const parts = name.toLowerCase().split(' ').slice(0, 2);
-      if (parts.length > 0) selectedNameParts.add(parts.join(' '));
-    });
+    const selectedNamesSet = new Set(selectedLecturers);
     
     return masterSchedule.filter(entry => {
-      if (entry.lecturer) {
-        const entryName = entry.lecturer.toLowerCase();
-        // Direct match
-        if (selectedLecturers.some(sl => sl.toLowerCase() === entryName)) return true;
-        
-        // Partial match (first two words)
-        const entryNamePrefix = entryName.split(' ').slice(0, 2).join(' ');
-        if (selectedNameParts.has(entryNamePrefix)) return true;
-      }
-      return false;
+      return selectedNamesSet.has(entry.lecturer);
     });
 }, [masterSchedule, selectedLecturers]);
 
@@ -1215,8 +1199,7 @@ function StaffTimetableView({
       level,
       departments,
       room,
-      time: `${createStartTime} - ${createEndTime}`,
-      isQuiz,
+      time: `${createStartTime} - ${createEndTime}`
     });
     closeAllModals();
   };
@@ -1271,109 +1254,6 @@ function StaffTimetableView({
       return acc;
     }, {} as Record<string, TimetableEntry[]>);
   }, [staffSchedule]);
-
-  const availableSlotsForEdit = useMemo(() => {
-    if (!editedFormData) return { rooms: [], startTimes: [], endTimes: [] };
-    
-    let daySlots: EmptySlot[] = [];
-
-    if (editedFormData.day === 'Saturday' || editedFormData.day === 'Sunday') {
-      const allRooms = masterSchedule ? [...new Set(masterSchedule.map(e => e.room))] : [];
-      const standardTimes = ['7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM', '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'];
-      allRooms.forEach(room => {
-        standardTimes.forEach(time => {
-          daySlots.push({ day: editedFormData.day!, location: room, time });
-        });
-      });
-    } else {
-      daySlots = emptySlots.filter(s => s.day === editedFormData.day);
-    }
-    
-    const rooms = [...new Set(daySlots.map(s => s.location))].sort();
-
-    const roomDaySlots = daySlots
-      .filter(s => s.location === editedFormData.room)
-      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
-      .sort((a, b) => a.start - b.start);
-
-    const mergedSlots: { start: number, end: number }[] = [];
-    if (roomDaySlots.length > 0) {
-      let current = { ...roomDaySlots[0] };
-      for (let i = 1; i < roomDaySlots.length; i++) {
-        if (roomDaySlots[i].start === current.end) {
-          current.end = roomDaySlots[i].end;
-        } else {
-          mergedSlots.push(current);
-          current = { ...roomDaySlots[i] };
-        }
-      }
-      mergedSlots.push(current);
-    }
-    
-    const allStartTimes: string[] = [];
-    mergedSlots.forEach(slot => {
-      for (let t = slot.start; t < slot.end; t += 60) {
-        allStartTimes.push(minutesToTime(t));
-      }
-    });
-
-    let allEndTimes: string[] = [];
-    if (startTime) {
-      const startMinutes = timeToMinutes(startTime);
-      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
-      if (containingSlot) {
-        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
-          allEndTimes.push(minutesToTime(t));
-        }
-      }
-    }
-    
-    return { rooms, startTimes: [...new Set(allStartTimes)], endTimes: allEndTimes };
-  }, [emptySlots, editedFormData, startTime, masterSchedule]);
-
-  const availableSlotsForCreate = useMemo(() => {
-    const daySlots = emptySlots.filter(slot => slot.day === createFormData.day);
-    const rooms = [...new Set(daySlots.map(slot => slot.location))].sort();
-    
-    const roomDaySlots = daySlots
-      .filter(s => s.location === createFormData.room)
-      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
-      .sort((a, b) => a.start - b.start);
-
-    const mergedSlots: { start: number, end: number }[] = [];
-    if (roomDaySlots.length > 0) {
-      let current = { ...roomDaySlots[0] };
-      for (let i = 1; i < roomDaySlots.length; i++) {
-        if (roomDaySlots[i].start === current.end) {
-          current.end = roomDaySlots[i].end;
-        } else {
-          mergedSlots.push(current);
-          current = { ...roomDaySlots[i] };
-        }
-      }
-      mergedSlots.push(current);
-    }
-    
-    const startTimes: string[] = [];
-    mergedSlots.forEach(slot => {
-      for (let t = slot.start; t < slot.end; t += 60) {
-        startTimes.push(minutesToTime(t));
-      }
-    });
-
-    let endTimes: string[] = [];
-    if (createStartTime) {
-      const startMinutes = timeToMinutes(createStartTime);
-      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
-      if (containingSlot) {
-        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
-          endTimes.push(minutesToTime(t));
-        }
-      }
-    }
-    
-    return { rooms, startTimes, endTimes };
-  }, [emptySlots, createFormData, createStartTime]);
   
   const userRejectedEntryIds = (user && rejectedEntries[user.id]) || [];
 
@@ -1419,109 +1299,6 @@ function StaffTimetableView({
                     <UserSearch className="w-4 h-4 mr-2" />
                     Select My Name(s)
                 </Button>
-                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                  <DialogTrigger asChild>
-                     <Button variant="outline" size="sm">
-                        <PlusCircle className="w-4 h-4 mr-2" />
-                        Add Class / Quiz
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Add New Class / Quiz</DialogTitle>
-                      <DialogDescription>
-                        Select an available slot and enter the class details.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="day-create" className="text-right">Day</Label>
-                        <Select value={createFormData.day} onValueChange={(value) => handleCreateInputChange('day', value)}>
-                          <SelectTrigger id="day-create" className="col-span-3">
-                            <SelectValue placeholder="Select a day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="room-create" className="text-right">Room</Label>
-                        <Select value={createFormData.room} onValueChange={(value) => handleCreateInputChange('room', value)}>
-                          <SelectTrigger id="room-create" className="col-span-3">
-                            <SelectValue placeholder="Select a room" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableSlotsForCreate.rooms.map((room, index) => <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label className="text-right">Time</Label>
-                        <div className="col-span-3 grid grid-cols-2 gap-2">
-                          <Select value={createStartTime} onValueChange={setCreateStartTime} disabled={!createFormData.room}>
-                            <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                            <SelectContent>
-                              {availableSlotsForCreate.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <Select value={createEndTime} onValueChange={setCreateEndTime} disabled={!createStartTime}>
-                            <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                            <SelectContent>
-                              {availableSlotsForCreate.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                       <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="courseCode-create" className="text-right">Course(s)</Label>
-                          <Input id="courseCode-create" value={createFormData.courseCode} onChange={(e) => handleCreateInputChange('courseCode', e.target.value)} className="col-span-3" />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="department-create" className="text-right">Department</Label>
-                        <Select value={createFormData.departments[0] || ''} onValueChange={(value) => handleCreateInputChange('departments', value)}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select department" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {allDepartments.map(dept => (
-                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="level-create" className="text-right">Level</Label>
-                        <Select value={String(createFormData.level)} onValueChange={(value) => handleCreateInputChange('level', value)}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="100">100</SelectItem>
-                                <SelectItem value="200">200</SelectItem>
-                                <SelectItem value="300">300</SelectItem>
-                                <SelectItem value="400">400</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="is-quiz" className="text-right">Type</Label>
-                        <div className="col-span-3 flex items-center space-x-2">
-                          <Switch
-                              id="is-quiz"
-                              checked={createFormData.isQuiz}
-                              onCheckedChange={(checked) => handleCreateInputChange('isQuiz', checked)}
-                          />
-                          <Label htmlFor="is-quiz">Is this a quiz?</Label>
-                        </div>
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-                      <Button type="submit" onClick={handleSaveCreate}>Save Schedule</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
             </div>
           </div>
           <Tabs defaultValue="Monday" onValueChange={setActiveDay} className="w-full">
@@ -1538,7 +1315,7 @@ function StaffTimetableView({
                   {dailySchedule[day] && dailySchedule[day].length > 0 ? (
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => {
-                           const status = event.isQuiz ? 'quiz' : event.status;
+                           const status = event.status;
                            return (
                            <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
@@ -1672,65 +1449,6 @@ function StaffTimetableView({
             </DialogContent>
           </Dialog>
           
-          {/* Create Modal - removed and integrated with button */}
-
-          {/* Edit Modal */}
-          <Dialog open={isEditModalOpen} onOpenChange={(isOpen) => !isOpen && closeAllModals()}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Reschedule Class</DialogTitle>
-                <DialogDescription>
-                  Select a new day, room and time for this class.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="day" className="text-right">Day</Label>
-                    <Select value={editedFormData?.day || ''} onValueChange={(value) => handleEditInputChange('day', value)}>
-                        <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select a day" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {days.map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="room" className="text-right">Room</Label>
-                  <Select value={editedFormData?.room || ''} onValueChange={(value) => handleEditInputChange('room', value)}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a room" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>{editedFormData.room} (Current)</SelectItem>}
-                      {availableSlotsForEdit.rooms.map((room, index) => <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Time</Label>
-                  <div className="col-span-3 grid grid-cols-2 gap-2">
-                    <Select value={startTime} onValueChange={setStartTime} disabled={!editedFormData?.room}>
-                      <SelectTrigger><SelectValue placeholder="Start" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForEdit.startTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={endTime} onValueChange={setEndTime} disabled={!startTime}>
-                      <SelectTrigger><SelectValue placeholder="End" /></SelectTrigger>
-                      <SelectContent>
-                        {availableSlotsForEdit.endTimes.map((time, index) => <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="ghost" onClick={closeAllModals}>Cancel</Button>
-                <Button type="submit" onClick={handleSaveEdit}>Save changes</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </>
         )}
       </TabsContent>
@@ -2153,7 +1871,6 @@ function ResitTimetableDisplay({
 function TimetableDisplay({
   parsedData,
   setParsedData,
-  emptySlots,
   searchTerm,
   showInvalid,
   title,
@@ -2167,7 +1884,6 @@ function TimetableDisplay({
 }: {
   parsedData: TimetableEntry[] | ExamEntry[] | null;
   setParsedData: (data: any[] | null) => void;
-  emptySlots: EmptySlot[];
   searchTerm: string;
   showInvalid: boolean;
   title: string;
@@ -2192,57 +1908,6 @@ function TimetableDisplay({
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
   
-  const availableSlotsForEdit = useMemo(() => {
-    if (!editedFormData || isExamsTimetable) return { rooms: [], startTimes: [], endTimes: [] };
-    const { day, room } = editedFormData as TimetableEntry;
-    
-    // Find all 1-hour slots for the selected day
-    const daySlots = emptySlots.filter(s => s.day === day);
-    const rooms = [...new Set(daySlots.map(s => s.location))].sort();
-
-    // Filter by selected room and convert to minutes
-    const roomDaySlots = daySlots
-      .filter(s => s.location === room)
-      .map(s => ({ start: timeToMinutes(s.time), end: timeToMinutes(s.time) + 60 }))
-      .sort((a, b) => a.start - b.start);
-
-    // Merge consecutive slots
-    const mergedSlots: { start: number, end: number }[] = [];
-    if (roomDaySlots.length > 0) {
-      let current = { ...roomDaySlots[0] };
-      for (let i = 1; i < roomDaySlots.length; i++) {
-        if (roomDaySlots[i].start === current.end) {
-          current.end = roomDaySlots[i].end;
-        } else {
-          mergedSlots.push(current);
-          current = { ...roomDaySlots[i] };
-        }
-      }
-      mergedSlots.push(current);
-    }
-    
-    // Generate all possible 1-hour start times from merged slots
-    const allStartTimes: string[] = [];
-    mergedSlots.forEach(slot => {
-      for (let t = slot.start; t < slot.end; t += 60) {
-        allStartTimes.push(minutesToTime(t));
-      }
-    });
-
-    let allEndTimes: string[] = [];
-    if (startTime) {
-      const startMinutes = timeToMinutes(startTime);
-      const containingSlot = mergedSlots.find(s => startMinutes >= s.start && startMinutes < s.end);
-      if (containingSlot) {
-        for (let t = startMinutes + 60; t <= containingSlot.end; t += 60) {
-          allEndTimes.push(minutesToTime(t));
-        }
-      }
-    }
-    
-    return { rooms, startTimes: [...new Set(allStartTimes)], endTimes: allEndTimes };
-}, [emptySlots, editedFormData, startTime, isExamsTimetable]);
-
   useEffect(() => {
     if (selectedEntry && isEditModalOpen) {
       setEditedFormData(selectedEntry);
@@ -2715,57 +2380,13 @@ function TimetableDisplay({
                 <>
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="room" className="text-right">Room</Label>
-                    <Select
-                        value={('room' in (editedFormData || {})) ? (editedFormData as any).room : ''}
-                        onValueChange={(value) => handleEditInputChange('room', value)}
-                        >
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select a room" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {editedFormData?.room && <SelectItem value={editedFormData.room} disabled>
-                                {editedFormData.room} (Current)
-                            </SelectItem>}
-                            {availableSlotsForEdit.rooms.map((room, index) => (
-                                <SelectItem key={`${room}-${index}`} value={room}>{room}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
+                    <Input id="room" value={editedFormData?.room || ''} onChange={(e) => handleEditInputChange('room', e.target.value)} className="col-span-3" />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                     <Label className="text-right">Time</Label>
                     <div className="col-span-3 grid grid-cols-2 gap-2">
-                        <Select
-                        value={startTime}
-                        onValueChange={(value) => {
-                            setStartTime(value);
-                            setEndTime('');
-                        }}
-                        disabled={!editedFormData?.room}
-                        >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Start" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableSlotsForEdit.startTimes.map((time, index) => (
-                            <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                        <Select
-                        value={endTime}
-                        onValueChange={setEndTime}
-                        disabled={!startTime}
-                        >
-                        <SelectTrigger>
-                            <SelectValue placeholder="End" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableSlotsForEdit.endTimes.map((time, index) => (
-                            <SelectItem key={`${time}-${index}`} value={time}>{time}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
+                      <Input value={startTime} onChange={e => setStartTime(e.target.value)} placeholder="Start Time" />
+                      <Input value={endTime} onChange={e => setEndTime(e.target.value)} placeholder="End Time" />
                     </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -2844,7 +2465,6 @@ function TabStatusIndicator({ status }: { status: TabStatus }) {
 function AdminTimetableView() {
   const { 
       masterSchedule, setMasterSchedule, 
-      emptySlots, setEmptySlots,
       specialResitTimetable, setSpecialResitTimetable,
       examsTimetable, setExamsTimetable,
       isClassTimetableDistributed, distributeClassTimetable,
@@ -2946,12 +2566,9 @@ function AdminTimetableView() {
         if (!data || (Array.isArray(data) && data.length === 0)) {
             setClassError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
             setMasterSchedule(null);
-            setEmptySlots([]);
         } else {
-            const slots = await findEmptyClassrooms(fileData);
             const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
             setMasterSchedule(dataWithIdsAndStatus);
-            setEmptySlots(slots);
         }
       } else if (activeTab === 'exams') {
         const data = await handleExamsUpload(fileData);
@@ -2983,7 +2600,6 @@ function AdminTimetableView() {
   const handleDeleteAll = () => {
     if(activeTab === 'class') {
         setMasterSchedule(null);
-        setEmptySlots([]);
         setClassError(null);
         setClassSearchTerm('');
         setClassShowInvalid(false);
@@ -3161,7 +2777,6 @@ function AdminTimetableView() {
           <TimetableDisplay
             parsedData={masterSchedule}
             setParsedData={setMasterSchedule as any}
-            emptySlots={emptySlots}
             searchTerm={classSearchTerm}
             showInvalid={classShowInvalid}
             title="Parsed Class Timetable Preview"
@@ -3183,7 +2798,6 @@ function AdminTimetableView() {
                 setExamsTimetable(null);
               }
             }}
-            emptySlots={[]}
             searchTerm={examsSearchTerm}
             showInvalid={examsShowInvalid}
             title="Parsed Exams Timetable Preview"
@@ -3620,8 +3234,6 @@ export default function TimetablePage() {
     masterSchedule, 
     setMasterSchedule,
     updateScheduleStatus,
-    emptySlots, 
-    setEmptySlots,
     staffSchedules,
     addStaffSchedule,
     isClassTimetableDistributed,
@@ -3653,7 +3265,6 @@ export default function TimetablePage() {
       case 'staff':
         return <StaffTimetableView 
                   masterSchedule={masterSchedule}
-                  emptySlots={emptySlots} 
                   addStaffSchedule={addStaffSchedule as any}
                   updateScheduleStatus={updateScheduleStatus}
                />;
@@ -3713,6 +3324,7 @@ export default function TimetablePage() {
     
 
     
+
 
 
 

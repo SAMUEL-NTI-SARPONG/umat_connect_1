@@ -29,11 +29,6 @@ export interface TimetableEntry {
   id: number;
   status: EventStatus;
 }
-export interface EmptySlot {
-  day: string;
-  location: string;
-  time: string;
-}
 
 export interface AttachedFile {
   name: string;
@@ -174,8 +169,6 @@ interface UserContextType {
   isClassTimetableDistributed: boolean;
   distributeClassTimetable: () => { success: boolean; message: string };
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
-  emptySlots: EmptySlot[];
-  setEmptySlots: (slots: EmptySlot[]) => void;
   posts: Post[];
   addPost: (postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => void;
   deletePost: (postId: number) => void;
@@ -236,7 +229,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [masterSchedule, setMasterScheduleState] = useLocalStorageState<TimetableEntry[] | null>('masterSchedule', null);
   const [isClassTimetableDistributed, setClassTimetableDistributed] = useLocalStorageState<boolean>('isClassTimetableDistributed', false);
   const [staffSchedules, setStaffSchedules] = useLocalStorageState<TimetableEntry[]>('staffSchedules', []);
-  const [emptySlots, setEmptySlotsState] = useLocalStorageState<EmptySlot[]>('emptySlots', []);
   const [posts, setPosts] = useLocalStorageState<Post[]>('posts', []);
   const [reviewedSchedules, setReviewedSchedules] = useLocalStorageState<number[]>('reviewedSchedules', []);
   const [rejectedEntries, setRejectedEntries] = useLocalStorageState<RejectedEntries>('rejectedEntries', {});
@@ -332,49 +324,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [masterSchedule, setClassTimetableDistributed]);
 
   const updateScheduleStatus = useCallback((updatedEntry: TimetableEntry) => {
-    let originalEntry: TimetableEntry | undefined;
-
     const updateSchedule = (schedule: TimetableEntry[] | null): TimetableEntry[] | null => {
         if (!schedule) return null;
-        return schedule.map(e => {
-            if (e.id === updatedEntry.id) {
-                originalEntry = e; // Capture the original state before updating
-                return updatedEntry;
-            }
-            return e;
-        });
+        return schedule.map(e => (e.id === updatedEntry.id ? updatedEntry : e));
     }
 
     setMasterScheduleState(prev => updateSchedule(prev));
     setStaffSchedules(prev => updateSchedule(prev) || []);
-
-    // If the entry was moved (rescheduled), free up the old slot
-    if (originalEntry && (originalEntry.day !== updatedEntry.day || originalEntry.room !== updatedEntry.room || originalEntry.time !== updatedEntry.time)) {
-        setEmptySlotsState(prev => {
-            const newSlot: EmptySlot = {
-                day: originalEntry!.day,
-                location: originalEntry!.room,
-                time: originalEntry!.time,
-            };
-            // Avoid adding duplicate empty slots
-            if (!prev.some(slot => slot.day === newSlot.day && slot.location === newSlot.location && slot.time === newSlot.time)) {
-                return [...prev, newSlot];
-            }
-            return prev;
-        });
-    }
     
-    // Also remove the newly occupied slot from empty slots list
-    setEmptySlotsState(prev => prev.filter(slot => 
-        !(slot.day === updatedEntry.day && slot.location === updatedEntry.room && slot.time === updatedEntry.time)
-    ));
-    
-  }, [setEmptySlotsState, setMasterScheduleState, setStaffSchedules]);
+  }, [setMasterScheduleState, setStaffSchedules]);
   
-  const setEmptySlots = useCallback((slots: EmptySlot[]) => {
-    setEmptySlotsState(slots);
-  }, [setEmptySlotsState]);
-
   const addPost = useCallback((postData: { content: string; attachedFile: AttachedFile | null, audience: number[] }) => {
     if (!user) {
         toast({ title: "Error", description: "You must be logged in to post.", variant: "destructive" });
@@ -800,7 +759,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setAllUsers(defaultUsers);
     setMasterScheduleState(null);
     setClassTimetableDistributed(false);
-    setEmptySlotsState([]);
     setPosts([]);
     setStaffSchedules([]);
     setReviewedSchedules([]);
@@ -835,8 +793,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     isClassTimetableDistributed,
     distributeClassTimetable,
     updateScheduleStatus,
-    emptySlots,
-    setEmptySlots,
     posts,
     addPost,
     deletePost,
@@ -877,13 +833,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playAlarm,
     stopAlarm,
   }), [
-      user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, emptySlots, posts, staffSchedules, reviewedSchedules,
+      user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
       distributeClassTimetable, distributeExamsTimetable, distributeSpecialResitTimetable, addPost, deletePost, addComment, addReply,
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
-      updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule, setEmptySlots, setSpecialResitTimetable, setExamsTimetable,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm
+      updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;

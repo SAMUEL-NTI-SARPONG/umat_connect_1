@@ -17,7 +17,6 @@ import { useUser } from '@/app/providers/user-provider';
 import { ProfileAvatar } from '../ui/profile-avatar';
 import { Badge } from '../ui/badge';
 import { useMemo } from 'react';
-import FreeRoomsDialog from '../timetable/free-rooms-dialog';
 import { Button } from '../ui/button';
 
 export default function AppSidebar() {
@@ -121,20 +120,6 @@ export default function AppSidebar() {
       </SidebarContent>
       <SidebarSeparator />
       <SidebarFooter>
-        {user.role === 'student' && pathname.startsWith('/timetable') && (
-            <div className="p-2">
-                <FreeRoomsDialog>
-                    <Button variant="outline" className="w-full group-data-[collapsible=icon]:hidden">
-                        <Search className="mr-2 h-4 w-4" />
-                        Find Free Rooms
-                    </Button>
-                    <Button variant="outline" size="icon" className="w-full hidden group-data-[collapsible=icon]:flex">
-                        <Search className="h-4 w-4" />
-                        <span className="sr-only">Find Free Rooms</span>
-                    </Button>
-                </FreeRoomsDialog>
-            </div>
-        )}
         <SidebarMenu>
           <SidebarMenuItem>
               <SidebarMenuButton

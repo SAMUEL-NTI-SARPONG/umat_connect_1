@@ -153,62 +153,6 @@ export async function handleFileUpload(fileData: string) {
   }
 }
 
-export async function findEmptyClassrooms(fileData: string) {
-  const fileBuffer = Buffer.from(fileData, 'base64');
-  const result: { day: string; location: string; time: string }[] = [];
-
-  // Define time slots, excluding break column (1:00-1:30)
-  const timeSlots = [
-    '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
-    '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
-  ];
-  
-  const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-  const sheetNames = workbook.SheetNames;
-
-  // Process each sheet
-  sheetNames.forEach(sheetName => {
-    const day = sheetName;
-    const sheet = workbook.Sheets[sheetName];
-    if (!sheet) return;
-
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
-    
-    // Process rows starting from the data content (row index 5)
-    for (let i = 5; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      if (!row || !row[0] || !String(row[0]).trim()) continue;
-
-      const location = String(row[0]).trim();
-      const occupiedSlots = new Set<number>();
-
-      // Pre-process to mark all occupied slots
-      for (let j = 1; j < row.length; j++) {
-        const cellValue = String(row[j] || '').trim();
-         if (cellValue && !cellValue.toLowerCase().includes('break')) {
-             const timeSlotIndex = j - 1 + (j > 6 ? -1 : 0);
-             if (timeSlotIndex >= 0 && timeSlotIndex < timeSlots.length) {
-                occupiedSlots.add(timeSlotIndex);
-             }
-         }
-      }
-
-      // Find empty slots
-      for (let k = 0; k < timeSlots.length; k++) {
-          if (!occupiedSlots.has(k)) {
-              result.push({
-                  day: day,
-                  location: location,
-                  time: timeSlots[k]
-              });
-          }
-      }
-    }
-  });
-
-  return result;
-}
-
 function extractTimetableData(fileBuffer: Buffer) {
     try {
       const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -554,6 +498,3 @@ export async function handlePracticalsUpload(fileData: string) {
   
     return timetableData;
 }
-
-    
-
