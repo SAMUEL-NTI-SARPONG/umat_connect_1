@@ -20,6 +20,10 @@ function HomePageContent() {
     }
 
     return posts.filter(post => {
+      // Show post if the user is the author
+      if (post.authorId === user.id) {
+        return true;
+      }
       // If audience is not defined or empty, everyone sees it (legacy posts)
       if (!post.audience || post.audience.length === 0) {
         return true;
