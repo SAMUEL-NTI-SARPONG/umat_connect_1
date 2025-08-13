@@ -8,32 +8,28 @@ export function formatRelativeTime(date: Date): string {
 // Helper function to convert time string (e.g., "7:00 AM" or "7:00-8:00 AM") to minutes from midnight
 export const timeToMinutes = (timeStr: string): number => {
     if (!timeStr) return 0;
+    // Always take the first part of a time range string like "7:00-8:00 AM"
     const timePart = timeStr.split('-')[0].trim();
-    const match = timePart.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     
-    // Handle format like "7 AM"
-    if (!match) {
-      const singleMatch = timePart.match(/(\d{1,2})\s*(AM|PM)/i);
-      if (singleMatch) {
-        let [_, hoursStr, modifier] = singleMatch;
-        let hours = parseInt(hoursStr, 10);
-        if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-        if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-        return hours * 60;
-      }
-      return 0; // Return 0 if format is unrecognized
-    }
+    // Regex to match "7:00 AM", "12:30 PM", etc.
+    const match = timePart.match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)/i);
 
+    if (!match) {
+        return 0; // Return 0 if format is unrecognized
+    }
+    
+    // We may not have minutes, so default to 0
     let [_, hoursStr, minutesStr, modifier] = match;
     let hours = parseInt(hoursStr, 10);
-    const minutes = parseInt(minutesStr, 10);
+    const minutes = parseInt(minutesStr, 10) || 0;
     
     if (modifier.toUpperCase() === 'PM' && hours < 12) {
       hours += 12;
     }
-    if (modifier.toUpperCase() === 'AM' && hours === 12) {
+    if (modifier.toUpperCase() === 'AM' && hours === 12) { // Handle 12:00 AM (midnight)
       hours = 0;
     }
+    
     return hours * 60 + minutes;
 };
 
