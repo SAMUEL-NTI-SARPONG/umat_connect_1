@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -29,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { handleFileUpload, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from './actions';
+import { handleFileUpload, handleSpecialResitUpload, handleExamsUpload, handlePracticalsUpload } from '../timetable/actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -2565,10 +2566,10 @@ function AdminTimetableView() {
         const data = await handleFileUpload(fileData);
         if (!data || (Array.isArray(data) && data.length === 0)) {
             setClassError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-            setMasterSchedule(null);
+            setMasterSchedule(null, undefined);
         } else {
             const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-            setMasterSchedule(dataWithIdsAndStatus);
+            setMasterSchedule(dataWithIdsAndStatus, fileData);
         }
       } else if (activeTab === 'exams') {
         const data = await handleExamsUpload(fileData);
@@ -3324,6 +3325,7 @@ export default function TimetablePage() {
     
 
     
+
 
 
 

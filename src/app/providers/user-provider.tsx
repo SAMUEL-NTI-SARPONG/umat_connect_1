@@ -14,7 +14,7 @@ import {
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { getFromStorage, saveToStorage } from '@/lib/storage';
-import { findEmptyClassrooms } from '@/timetable/actions';
+import { findEmptyClassrooms } from '../timetable/actions';
 
 
 // Define the shape of timetable entries and empty slots
@@ -319,8 +319,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
   const setMasterSchedule = useCallback(async (data: TimetableEntry[] | null, rawFile?: string) => {
     setMasterScheduleState(data);
+    setRawTimetableFile(rawFile || null);
+    
     if (rawFile) {
-        setRawTimetableFile(rawFile);
         try {
             const emptySlotsData = await findEmptyClassrooms(rawFile);
             setEmptySlots(emptySlotsData);
@@ -329,16 +330,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setEmptySlots([]);
         }
     } else {
-        setRawTimetableFile(null);
         setEmptySlots([]);
     }
+    
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
     if (data) {
         toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
     }
-  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries, setRawTimetableFile, setEmptySlots]);
+  }, [toast, setMasterScheduleState, setRawTimetableFile, setEmptySlots, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -884,7 +885,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, addPost, emptySlots, setEmptySlots
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, emptySlots, setEmptySlots
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
