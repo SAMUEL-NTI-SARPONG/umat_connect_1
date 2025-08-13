@@ -53,25 +53,28 @@ export default function FreeRoomsDialog() {
     
     for (const room in rooms) {
       const slots = (rooms[room] || [])
-        .map(time => ({ start: timeToMinutes(time), end: timeToMinutes(time) + 60 }))
-        .sort((a, b) => a.start - b.start);
+        .map(time => timeToMinutes(time))
+        .sort((a, b) => a - b);
       
       if (slots.length === 0) continue;
       
       const ranges: string[] = [];
-      let currentRangeStart = slots[0].start;
-      let currentRangeEnd = slots[0].end;
+      let currentRangeStart = slots[0];
+      let currentRangeEnd = slots[0];
   
       for (let i = 1; i < slots.length; i++) {
-        if (slots[i].start === currentRangeEnd) {
-          currentRangeEnd = slots[i].end;
+        // Check if the current slot starts right after the previous one ends (assuming 60-min slots)
+        if (slots[i] === currentRangeEnd + 60) {
+          currentRangeEnd = slots[i];
         } else {
-          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
-          currentRangeStart = slots[i].start;
-          currentRangeEnd = slots[i].end;
+          ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd + 60)}`);
+          currentRangeStart = slots[i];
+          currentRangeEnd = slots[i];
         }
       }
-      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd)}`);
+      // Add the last range
+      ranges.push(`${minutesToTime(currentRangeStart)} - ${minutesToTime(currentRangeEnd + 60)}`);
+      
       consolidatedRooms.push({ room, freeRanges: ranges });
     }
 
@@ -81,7 +84,7 @@ export default function FreeRoomsDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="success">
+        <Button variant="outline">
           <Search className="mr-2 h-4 w-4" />
           Find Free Rooms
         </Button>
@@ -126,6 +129,7 @@ export default function FreeRoomsDialog() {
               ) : (
                   <div className="text-center p-12 text-muted-foreground">
                       <p>No free classrooms found for {activeDay}.</p>
+                      <p className="text-sm">This may be because no timetable has been uploaded by an admin.</p>
                   </div>
               )}
           </ScrollArea>
