@@ -281,7 +281,7 @@ export default function PostCard({ post }: { post: Post }) {
   }, 0);
 
   return (
-    <Card className="rounded-xl shadow-sm flex flex-col overflow-hidden">
+    <Card id={`post-${post.id}`} className="rounded-xl shadow-sm flex flex-col overflow-hidden">
       <CardHeader className="p-2 sm:p-4 pb-2">
         <div className="flex items-start gap-3">
           <ProfileAvatar
@@ -325,18 +325,18 @@ export default function PostCard({ post }: { post: Post }) {
       <CardContent className="px-2 sm:px-4 py-2 flex-grow">
         {post.content && <p className="whitespace-pre-wrap text-sm">{post.content}</p>}
         {hasAttachment && (
-            <div className="mt-2">
+            <div className="mt-2 rounded-lg overflow-hidden border">
             {isImage ? (
                 <Image
                 src={post.attachedFile!.url}
                 alt={post.attachedFile!.name}
                 width={525}
                 height={300}
-                className="object-contain w-full max-h-[60vh] rounded-md border"
+                className="object-contain w-full max-h-[60vh]"
                 data-ai-hint="post content"
                 />
             ) : (
-                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted">
+                <div className="flex items-center gap-3 p-3 bg-muted">
                 <FileText className="w-8 h-8 text-muted-foreground" />
                 <span className="text-sm font-medium text-foreground truncate">{post.attachedFile!.name}</span>
                 </div>

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, CornerUpLeft, Trash2 } from 'lucide-react';
+import { Bell, MessageSquare, CornerUpLeft, Trash2, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
@@ -51,6 +51,8 @@ export default function NotificationsPage() {
 
                 let actionText = '';
                 let icon = <MessageSquare className="h-4 w-4 text-blue-500" />;
+                let href = `/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`;
+
                 switch (notification.type) {
                   case 'comment_on_post':
                     actionText = 'commented on your post.';
@@ -58,6 +60,11 @@ export default function NotificationsPage() {
                   case 'reply_to_comment':
                     actionText = 'replied to your comment.';
                     icon = <CornerUpLeft className="h-4 w-4 text-green-500" />;
+                    break;
+                  case 'new_post':
+                    actionText = 'sent you a new post.';
+                    icon = <FileText className="h-4 w-4 text-indigo-500" />;
+                    href = `/?postId=${notification.postId}#post-${notification.postId}`;
                     break;
                   default:
                      actionText = 'interacted with your post.';
@@ -67,7 +74,7 @@ export default function NotificationsPage() {
                 return (
                   <Link
                     key={notification.id}
-                    href={`/?postId=${notification.postId}&commentId=${notification.commentId}#comment-${notification.commentId}`}
+                    href={href}
                     onClick={() => getNotificationDetails(notification.id)}
                     className={cn(
                       'block p-3 rounded-lg border transition-colors',
@@ -104,7 +111,7 @@ export default function NotificationsPage() {
           ) : (
             <div className="text-center text-muted-foreground py-12">
               <p>You have no notifications yet.</p>
-              <p className="text-sm">When someone replies to your posts or comments, you'll see it here.</p>
+              <p className="text-sm">When someone interacts with you, you'll see it here.</p>
             </div>
           )}
         </CardContent>

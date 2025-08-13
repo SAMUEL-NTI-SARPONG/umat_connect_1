@@ -59,7 +59,7 @@ export type Notification = {
     id: string;
     recipientId: number;
     actorId: number;
-    type: 'comment_on_post' | 'reply_to_comment' | 'exam_timetable';
+    type: 'comment_on_post' | 'reply_to_comment' | 'exam_timetable' | 'new_post';
     postId: number;
     commentId: number; // The new reply's ID
     isRead: boolean;
@@ -356,6 +356,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     
     setPosts(prevPosts => [newPost, ...prevPosts]);
     toast({ title: 'Post Created', description: 'Your post has been successfully published.' });
+
+    // Create notifications for the audience
+    postData.audience.forEach(recipientId => {
+      addNotification({
+        recipientId: recipientId,
+        actorId: user.id,
+        type: 'new_post',
+        postId: newPost.id,
+        commentId: 0,
+      });
+    });
 
   }, [user, toast, setPosts]);
 
@@ -850,7 +861,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, addPost
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
