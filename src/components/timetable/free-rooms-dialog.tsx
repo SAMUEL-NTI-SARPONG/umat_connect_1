@@ -52,6 +52,7 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
         if (!sheet) continue;
 
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
+        const merges = sheet['!merges'] || [];
         
         for (let i = 5; i < jsonData.length; i++) {
             const row = jsonData[i];
@@ -65,16 +66,24 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
             }
 
             for (let j = 1; j < timeColumns; j++) {
-                 // Column 7 in a 1-based index is the break
                 const isBreakColumn = j === 7;
                 if (isBreakColumn) continue;
 
-                // Adjust index for timeSlots array due to break column
                 const timeSlotIndex = j - 1 - (j > 7 ? 1 : 0);
-
                 const cellValue = String(row[j] || '').trim();
 
-                if (cellValue && timeSlots[timeSlotIndex]) {
+                let isMerged = false;
+                for (const merge of merges) {
+                    if (merge.s.r === i && j >= merge.s.c && j <= merge.e.c) {
+                        isMerged = true;
+                        if (String(jsonData[merge.s.r]?.[merge.s.c] || '').trim()){
+                            occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
+                        }
+                        break;
+                    }
+                }
+
+                if (!isMerged && cellValue && timeSlots[timeSlotIndex]) {
                     occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
                 }
             }
@@ -276,5 +285,3 @@ export default function FreeRoomsDialog() {
     </Dialog>
   );
 }
-
-    
