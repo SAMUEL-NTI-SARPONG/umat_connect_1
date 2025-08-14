@@ -13,7 +13,6 @@ import {
 import { users as defaultUsers, type User, initialFaculties, initialDepartmentMap, allDepartments as initialAllDepartments } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { getFromStorage, saveToStorage } from '@/lib/storage';
-import { timeToMinutes } from '@/lib/time';
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
@@ -213,7 +212,6 @@ interface UserContextType {
   playingAlarm: Howl | null;
   playAlarm: (soundSrc: string) => Howl;
   stopAlarm: () => void;
-  emptySlots: EmptySlot[];
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -225,60 +223,6 @@ const useLocalStorageState = <T,>(key: string, defaultValue: T): [T, React.Dispa
     }, [key, state]);
     return [state, setState];
 };
-
-function findEmptyClassroomsFromSchedule(schedule: TimetableEntry[] | null): EmptySlot[] {
-    if (!schedule) return [];
-
-    const allRooms = new Set<string>();
-    schedule.forEach(entry => allRooms.add(entry.room));
-
-    const occupiedSlots: Record<string, Set<number>> = {}; // room -> Set of occupied minutes
-
-    schedule.forEach(entry => {
-        if (!occupiedSlots[entry.room]) {
-            occupiedSlots[entry.room] = new Set();
-        }
-        const start = timeToMinutes(entry.time);
-        const end = timeToMinutes(entry.time.split('-')[1] || entry.time);
-        
-        // Mark every minute within the range as occupied
-        for (let i = start; i < end; i++) {
-            occupiedSlots[entry.room].add(i);
-        }
-    });
-
-    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-    const timeSlots = [
-        '7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '9:00 AM - 10:00 AM', 
-        '10:00 AM - 11:00 AM', '11:00 AM - 12:00 PM', '12:00 PM - 1:00 PM', 
-        '1:30 PM - 2:30 PM', '2:30 PM - 3:30 PM', '3:30 PM - 4:30 PM', 
-        '4:30 PM - 5:30 PM', '5:30 PM - 6:30 PM', '6:30 PM - 7:30 PM'
-    ];
-
-    const finalEmptySlots: EmptySlot[] = [];
-
-    allRooms.forEach(room => {
-        days.forEach(day => {
-            timeSlots.forEach(time => {
-                const scheduleForDay = schedule.filter(e => e.day === day && e.room === room);
-                const isOccupied = scheduleForDay.some(entry => {
-                    const entryStart = timeToMinutes(entry.time);
-                    const entryEnd = timeToMinutes(entry.time.split('-')[1] || entry.time);
-                    const slotStart = timeToMinutes(time);
-                    const slotEnd = timeToMinutes(time.split('-')[1] || time);
-                    // Check for any overlap
-                    return Math.max(entryStart, slotStart) < Math.min(entryEnd, slotEnd);
-                });
-
-                if (!isOccupied) {
-                    finalEmptySlots.push({ day, location: room, time });
-                }
-            });
-        });
-    });
-
-    return finalEmptySlots;
-}
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
@@ -300,7 +244,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
   const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
   const [playingAlarm, setPlayingAlarm] = useState<Howl | null>(null);
-  const [emptySlots, setEmptySlots] = useLocalStorageState<EmptySlot[]>('emptySlots', []);
 
   const playAlarm = useCallback((soundSrc: string) => {
     const sound = new (require('howler').Howl)({
@@ -369,19 +312,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const setMasterSchedule = useCallback(async (data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
     if (data) {
-        // Calculate empty slots whenever the master schedule is updated
-        const calculatedSlots = findEmptyClassroomsFromSchedule(data);
-        setEmptySlots(calculatedSlots);
         toast({ title: "Timetable Updated", description: "The new master schedule has been loaded." });
-    } else {
-        setEmptySlots([]);
     }
     
     setClassTimetableDistributed(false); // Reset distribution status on new upload
     setReviewedSchedules([]);
     setRejectedEntries({});
 
-  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries, setEmptySlots]);
+  }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
   
   const distributeClassTimetable = useCallback(() => {
     if (!masterSchedule) {
@@ -853,7 +791,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setFaculties(initialFaculties);
     setDepartmentMap(initialDepartmentMap);
     setAllDepartments(initialAllDepartments);
-    setEmptySlots([]);
     
     // Clear local storage for all dynamic data
     if (typeof window !== 'undefined') {
@@ -916,7 +853,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playingAlarm,
     playAlarm,
     stopAlarm,
-    emptySlots,
   }), [
       user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
@@ -924,7 +860,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, emptySlots
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;

@@ -70,7 +70,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
 import { Combobox, MultiSelectCombobox } from '@/components/ui/combobox';
-import FreeRoomsDialog from '@/components/timetable/free-rooms-dialog';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -498,9 +497,6 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
             <span className="sm:hidden">Resit</span>
           </TabsTrigger>
         </TabsList>
-        <div className="hidden sm:block">
-            <FreeRoomsDialog />
-        </div>
       </div>
       
       <TabsContent value="class" className="mt-6">
@@ -3337,7 +3333,5 @@ export default function TimetablePage() {
 
 
 
-
-    
 
     
