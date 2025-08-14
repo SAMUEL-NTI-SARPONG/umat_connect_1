@@ -43,10 +43,7 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
         '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
     ];
     
-    const timeColumns = timeSlots.length + 2; // Room name, 12 slots, 1 break = 14 columns in Excel
-
     for (const sheetName of workbook.SheetNames) {
-        // **FIX:** Make comparison case-insensitive to match sheets like "MONDAY"
         const day = days.find(d => d.toUpperCase() === sheetName.toUpperCase());
         if (!day) continue;
 
@@ -67,26 +64,35 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
                 occupiedSlots[roomName] = new Set();
             }
 
-            for (let j = 1; j < timeColumns; j++) {
+            for (let j = 1; j < 14; j++) { // There are 13 columns for time slots + break
+                const cellValue = String(row[j] || '').trim();
+                if (!cellValue) continue;
+
                 const isBreakColumn = j === 7;
                 if (isBreakColumn) continue;
 
                 const timeSlotIndex = j - 1 - (j > 7 ? 1 : 0);
-                const cellValue = String(row[j] || '').trim();
+                
+                // Find if this cell is the start of a merge
+                let mergeInfo = merges.find(m => m.s.r === i && m.s.c === j);
 
-                let isMerged = false;
-                for (const merge of merges) {
-                    if (merge.s.r === i && j >= merge.s.c && j <= merge.e.c) {
-                        isMerged = true;
-                        if (String(jsonData[merge.s.r]?.[merge.s.c] || '').trim()){
-                            occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
+                if (mergeInfo) {
+                    const mergeSpan = mergeInfo.e.c - mergeInfo.s.c + 1;
+                    for (let k = 0; k < mergeSpan; k++) {
+                        const currentCellIndex = j + k;
+                        // Check if the current merged cell is the break column and skip if so
+                        if (currentCellIndex !== 7 && timeSlots[timeSlotIndex + k]) {
+                           occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex + k]}`);
                         }
-                        break;
                     }
-                }
-
-                if (!isMerged && cellValue && timeSlots[timeSlotIndex]) {
-                    occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
+                } else {
+                     // Check if this cell is *within* a merge started by a previous cell
+                    let isPartOfMerge = merges.some(m => m.s.r === i && j > m.s.c && j <= m.e.c);
+                    
+                    // If it's a single, unmerged, occupied cell
+                    if (!isPartOfMerge) {
+                        occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
+                    }
                 }
             }
         }
@@ -105,6 +111,7 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
 
     return emptySlots;
 }
+
 
 // Helper functions for consolidating time ranges
 function timeRangeToMinutes(timeRange: string): { start: number; end: number } {
