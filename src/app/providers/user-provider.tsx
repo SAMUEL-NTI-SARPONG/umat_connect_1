@@ -160,6 +160,12 @@ export const isLecturerMatchWithUsers = (entryLecturerName: string, staffUser: U
     return staffNameParts.some(part => entryLecturerName.toLowerCase().includes(part));
 };
 
+// New type for timetable metadata
+export type TimetableMetadata = {
+  allRooms: string[];
+  allTimeSlots: string[];
+  allDays: string[];
+};
 
 interface UserContextType {
   user: User | null;
@@ -212,6 +218,7 @@ interface UserContextType {
   playingAlarm: Howl | null;
   playAlarm: (soundSrc: string) => Howl;
   stopAlarm: () => void;
+  timetableMetadata?: TimetableMetadata;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -244,6 +251,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [departmentMap, setDepartmentMap] = useLocalStorageState<Map<string, string>>('departmentMap', initialDepartmentMap);
   const [allDepartments, setAllDepartments] = useLocalStorageState<string[]>('allDepartments', initialAllDepartments);
   const [playingAlarm, setPlayingAlarm] = useState<Howl | null>(null);
+
+  // Add timetableMetadata state
+  const [timetableMetadata, setTimetableMetadata] = useState<TimetableMetadata | undefined>(undefined);
 
   const playAlarm = useCallback((soundSrc: string) => {
     const sound = new (require('howler').Howl)({
@@ -853,6 +863,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     playingAlarm,
     playAlarm,
     stopAlarm,
+    timetableMetadata,
   }), [
       user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
@@ -860,7 +871,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,
       addNotification, clearAllNotifications, updateStudentResitSelection, addFaculty, updateFaculty, deleteFaculty, addDepartment,
       updateDepartment, moveDepartment, deleteDepartment, toast, setMasterSchedule,
-      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable
+      updateScheduleStatus, playingAlarm, playAlarm, stopAlarm, setSpecialResitTimetable, setExamsTimetable, timetableMetadata
     ]);
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
