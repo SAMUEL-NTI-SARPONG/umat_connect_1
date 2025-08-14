@@ -15,24 +15,28 @@ function findEmptyClassroomsFromSchedule(schedule: TimetableEntry[] | null): Emp
     const allRooms = new Set<string>();
     schedule.forEach(entry => allRooms.add(entry.room));
 
+    // Helper function to safely extract start and end times from a time string
     const parseTimeRange = (timeStr: string): { startMinutes: number; endMinutes: number } => {
         if (!timeStr || typeof timeStr !== 'string') return { startMinutes: -1, endMinutes: -1 };
         
-        const cleanTime = timeStr.trim().toUpperCase();
-        const parts = cleanTime.split(/\s*-\s*/);
-        const startTimeStr = parts[0];
-        const endTimeStr = parts.length > 1 ? parts[1] : null;
+        if (timeStr.includes(' - ')) {
+            const parts = timeStr.split(' - ');
+            const startTimeStr = parts[0].trim();
+            const endTimeStr = parts[1].trim();
 
-        const startMinutes = timeToMinutes(startTimeStr);
-        let endMinutes;
+            const startMinutes = timeToMinutes(startTimeStr);
+            let endMinutes = timeToMinutes(endTimeStr);
 
-        if (endTimeStr) {
-            endMinutes = timeToMinutes(endTimeStr);
-        } else {
-            endMinutes = startMinutes !== -1 ? startMinutes + 60 : -1;
-        }
+            // Handle cases where end time might be on the next day (e.g. 11:00 PM - 1:00 AM)
+            if (endMinutes < startMinutes) {
+                endMinutes += 24 * 60;
+            }
 
-        return { startMinutes, endMinutes };
+            return { startMinutes, endMinutes };
+        } 
+        
+        const startMinutes = timeToMinutes(timeStr);
+        return { startMinutes, endMinutes: startMinutes + 60 };
     };
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -85,7 +89,7 @@ export default function FindFreeRoomsPage() {
     const [activeDay, setActiveDay] = useState<string>(() => {
         const todayIndex = new Date().getDay();
         const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        return days[todayIndex] || 'Monday';
+        return days[todayIndex === 0 ? 6 : todayIndex - 1] || 'Monday';
     });
     
     const combinedSchedule = useMemo(() => {
@@ -139,7 +143,7 @@ export default function FindFreeRoomsPage() {
                 </CardHeader>
                 <CardContent>
                     <Tabs defaultValue={activeDay} onValueChange={setActiveDay} className="w-full">
-                        <TabsList className="grid w-full grid-cols-7">
+                        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7">
                             {daysOfWeek.map(day => (
                                 <TabsTrigger key={day} value={day} className="text-xs sm:text-sm">{day.substring(0,3)}</TabsTrigger>
                             ))}
@@ -147,7 +151,7 @@ export default function FindFreeRoomsPage() {
 
                         {daysOfWeek.map(day => (
                             <TabsContent key={day} value={day} className="mt-6">
-                                {groupedSlots[day] ? (
+                                {groupedSlots[day] && Object.keys(groupedSlots[day]).length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                         {Object.entries(groupedSlots[day]).sort(([a], [b]) => a.localeCompare(b)).map(([room, times]) => (
                                             <Card key={room}>
@@ -160,7 +164,7 @@ export default function FindFreeRoomsPage() {
                                                 <CardContent className="p-4 pt-0">
                                                     <ScrollArea className="h-48">
                                                         <div className="space-y-1 pr-4">
-                                                            {times.map(time => (
+                                                            {times.sort((a,b) => timeToMinutes(a) - timeToMinutes(b)).map(time => (
                                                                 <p key={time} className="text-sm text-muted-foreground">{time}</p>
                                                             ))}
                                                         </div>
