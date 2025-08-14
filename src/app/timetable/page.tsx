@@ -2569,10 +2569,10 @@ function AdminTimetableView() {
         const data = await handleFileUpload(fileData);
         if (!data || (Array.isArray(data) && data.length === 0)) {
             setClassError("The uploaded file could not be parsed or contains no valid schedule data. Please check the file format.");
-            setMasterSchedule(null, undefined);
+            setMasterSchedule(null);
         } else {
             const dataWithIdsAndStatus = data.map((item, index) => ({ ...item, id: index, status: 'undecided' as EventStatus }));
-            setMasterSchedule(dataWithIdsAndStatus, fileData);
+            setMasterSchedule(dataWithIdsAndStatus);
         }
       } else if (activeTab === 'exams') {
         const data = await handleExamsUpload(fileData);
@@ -2603,7 +2603,7 @@ function AdminTimetableView() {
 
   const handleDeleteAll = () => {
     if(activeTab === 'class') {
-        setMasterSchedule(null, null);
+        setMasterSchedule(null);
         setClassError(null);
         setClassSearchTerm('');
         setClassShowInvalid(false);
