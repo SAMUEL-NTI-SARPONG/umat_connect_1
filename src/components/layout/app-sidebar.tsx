@@ -68,7 +68,7 @@ export default function AppSidebar() {
             <Link href="/timetable" passHref>
               <SidebarMenuButton
                 tooltip={timetableLabel}
-                isActive={pathname.startsWith('/timetable')}
+                isActive={pathname.startsWith('/timetable') && !pathname.includes('free-rooms')}
               >
                 <Calendar />
                 <span>{timetableLabel}</span>
@@ -77,12 +77,15 @@ export default function AppSidebar() {
           </SidebarMenuItem>
           {user.role === 'student' && (
             <SidebarMenuItem>
+              <Link href="/timetable/free-rooms" passHref>
                 <SidebarMenuButton
                   tooltip="Free Rooms"
+                  isActive={pathname === '/timetable/free-rooms'}
                 >
                   <Users />
                   <span>Free Rooms</span>
                 </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
            )}
            {user.role === 'administrator' && (
