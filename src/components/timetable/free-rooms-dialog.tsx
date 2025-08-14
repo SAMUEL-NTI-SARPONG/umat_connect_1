@@ -45,10 +45,12 @@ function findEmptyClassrooms(fileBuffer: Buffer | null) {
     
     const timeColumns = timeSlots.length + 2; // Room name, 12 slots, 1 break = 14 columns in Excel
 
-    for (const day of workbook.SheetNames) {
-        if (!days.includes(day)) continue;
+    for (const sheetName of workbook.SheetNames) {
+        // **FIX:** Make comparison case-insensitive to match sheets like "MONDAY"
+        const day = days.find(d => d.toUpperCase() === sheetName.toUpperCase());
+        if (!day) continue;
 
-        const sheet = workbook.Sheets[day];
+        const sheet = workbook.Sheets[sheetName];
         if (!sheet) continue;
 
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' }) as (string | number)[][];
