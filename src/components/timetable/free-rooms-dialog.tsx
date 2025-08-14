@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,7 +30,7 @@ const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 // This is the full, self-contained logic to find empty classrooms.
 // It will run on the client-side when the dialog is opened.
-function findEmptyClassrooms(fileBuffer: Buffer) {
+function findEmptyClassrooms(fileBuffer: Buffer | null) {
     if (!fileBuffer) return [];
 
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -43,7 +43,7 @@ function findEmptyClassrooms(fileBuffer: Buffer) {
         '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
     ];
     
-    const timeColumns = timeSlots.length + 1; // 12 slots + 1 for room names
+    const timeColumns = timeSlots.length + 2; // Room name, 12 slots, 1 break = 14 columns in Excel
 
     for (const day of workbook.SheetNames) {
         if (!days.includes(day)) continue;
@@ -65,13 +65,16 @@ function findEmptyClassrooms(fileBuffer: Buffer) {
             }
 
             for (let j = 1; j < timeColumns; j++) {
-                const cellValue = String(row[j] || '').trim();
+                 // Column 7 in a 1-based index is the break
                 const isBreakColumn = j === 7;
-                
+                if (isBreakColumn) continue;
+
                 // Adjust index for timeSlots array due to break column
-                const timeSlotIndex = j - 1 + (j > 7 ? -1 : 0);
-                
-                if (cellValue && !isBreakColumn && timeSlots[timeSlotIndex]) {
+                const timeSlotIndex = j - 1 - (j > 7 ? 1 : 0);
+
+                const cellValue = String(row[j] || '').trim();
+
+                if (cellValue && timeSlots[timeSlotIndex]) {
                     occupiedSlots[roomName].add(`${day}__${timeSlots[timeSlotIndex]}`);
                 }
             }
@@ -95,11 +98,12 @@ function findEmptyClassrooms(fileBuffer: Buffer) {
 // Helper functions for consolidating time ranges
 function timeRangeToMinutes(timeRange: string): { start: number; end: number } {
   try {
-    const timePart = timeRange.split(' - ');
-    if (timePart.length !== 2) return { start: 0, end: 0 };
-    
+    const [startTimeStr, endTimeStr] = timeRange.split('-');
+    if (!startTimeStr || !endTimeStr) return { start: 0, end: 0 };
+
     const parseTime = (time: string) => {
-      const [hourMinute, modifier] = time.split(' ');
+      const trimmedTime = time.trim();
+      const [hourMinute, modifier] = trimmedTime.split(' ');
       const [hoursStr, minutesStr] = hourMinute.split(':');
       let hours = parseInt(hoursStr, 10);
       const minutes = parseInt(minutesStr, 10) || 0;
@@ -114,8 +118,8 @@ function timeRangeToMinutes(timeRange: string): { start: number; end: number } {
     };
     
     return {
-      start: parseTime(timePart[0]),
-      end: parseTime(timePart[1])
+      start: parseTime(startTimeStr),
+      end: parseTime(endTimeStr)
     };
   } catch (error) {
     console.error('Error parsing time range:', timeRange, error);
@@ -146,15 +150,18 @@ export default function FreeRoomsDialog() {
     setIsOpen(open);
     if(open && rawTimetableFile && emptySlots.length === 0) {
         setIsLoading(true);
-        try {
-            const fileBuffer = Buffer.from(rawTimetableFile, 'base64');
-            const slots = findEmptyClassrooms(fileBuffer);
-            setEmptySlots(slots);
-        } catch (e) {
-            console.error("Error processing timetable file:", e);
-        } finally {
-            setIsLoading(false);
-        }
+        // Using setTimeout to allow the dialog to render before heavy computation
+        setTimeout(() => {
+            try {
+                const fileBuffer = Buffer.from(rawTimetableFile, 'base64');
+                const slots = findEmptyClassrooms(fileBuffer);
+                setEmptySlots(slots);
+            } catch (e) {
+                console.error("Error processing timetable file:", e);
+            } finally {
+                setIsLoading(false);
+            }
+        }, 50);
     }
   }
 
@@ -269,3 +276,5 @@ export default function FreeRoomsDialog() {
     </Dialog>
   );
 }
+
+    
