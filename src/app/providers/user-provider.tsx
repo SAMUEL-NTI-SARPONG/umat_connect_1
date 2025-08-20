@@ -298,13 +298,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [allUsers]);
 
-  const login = useCallback((email: string) => {
+  const login = useCallback((email: string, password?: string) => {
     const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (foundUser) {
       setUser(foundUser);
       try {
         sessionStorage.setItem('userId', String(foundUser.id));
-        toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!` });
+        if (password) { // Only show toast if it's an explicit login action
+            toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!` });
+        }
       } catch (error) {
           console.error("Failed to write to sessionStorage:", error);
       }
