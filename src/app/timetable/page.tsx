@@ -70,6 +70,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Separator } from '@/components/ui/separator';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
 import { Combobox, MultiSelectCombobox } from '@/components/ui/combobox';
+import { redirect } from 'next/navigation';
 
 const statusConfig = {
     confirmed: { color: 'bg-green-500', text: 'Confirmed', border: 'border-l-green-500', icon: <CheckCircle2 className="h-5 w-5 text-green-500" /> },
@@ -1602,9 +1603,19 @@ function ResitTimetableDisplay({
   
     if (!parsedData) {
       return (
-        <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">Upload a special resit timetable to begin.</p>
-        </div>
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Formatting Rules for Special Resit Timetable</AlertTitle>
+          <AlertDescription>
+            <ul className="list-disc pl-5 space-y-1 text-xs">
+              <li>The file must be an Excel file (.xlsx, .xls).</li>
+              <li>There must be a sheet named exactly <strong>SPECIAL RESIT</strong>.</li>
+              <li>A cell containing the text "VENUE:" must be present to identify the timetable venue.</li>
+              <li>A header row must exist with the following exact columns in order: <strong>DATE, COURSE NO., COURSE NAME, DEPARTMENT, NUMBER, ROOM, EXAMINER, SESSION (M/A)</strong>.</li>
+              <li>The parser reads all rows after the header until it finds an empty row or a row containing "FOR ANY ISSUES".</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
       );
     }
     
@@ -1852,6 +1863,7 @@ function TimetableDisplay({
   onAddExam,
   isDistributed,
   onDistribute,
+  instructions,
 }: {
   parsedData: TimetableEntry[] | ExamEntry[] | null;
   setParsedData: (data: any[] | null) => void;
@@ -1865,6 +1877,7 @@ function TimetableDisplay({
   onAddExam?: () => void;
   isDistributed?: boolean;
   onDistribute?: () => { success: boolean, message: string, studentCount?: number };
+  instructions?: React.ReactNode;
 }) {
   const { toast } = useUser();
   const [selectedEntry, setSelectedEntry] = useState<TimetableEntry | ExamEntry | null>(null);
@@ -2046,8 +2059,11 @@ function TimetableDisplay({
 
   if (!parsedData) {
     return (
-      <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
-        <p className="text-muted-foreground">{placeholder}</p>
+      <div className="space-y-4">
+        {instructions}
+        <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground">{placeholder}</p>
+        </div>
       </div>
     );
   }
@@ -2755,6 +2771,24 @@ function AdminTimetableView() {
             placeholder="Upload a class timetable to begin."
             isDistributed={isClassTimetableDistributed}
             onDistribute={distributeClassTimetable as any}
+            instructions={
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Formatting Rules for Class Timetable</AlertTitle>
+                    <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1 text-xs">
+                        <li>The file must be an Excel file (.xlsx, .xls).</li>
+                        <li>Each sheet should be named after a day of the week (e.g., "Monday", "Tuesday").</li>
+                        <li>The first 5 rows are reserved for headers and titles. Data extraction begins from the 6th row.</li>
+                        <li>The first column (Column A) must contain the classroom names.</li>
+                        <li>Time slots are fixed and must follow the university's standard layout. The parser automatically handles a 'Break' column.</li>
+                        <li>For multi-hour classes, cells must be merged horizontally across the relevant time slots.</li>
+                        <li>Each class cell should contain the course code on one line and the lecturer's name on a separate line below it.</li>
+                        <li>Department initials in the course code (e.g., CE, MN) must match the initials defined in the department settings for correct mapping.</li>
+                    </ul>
+                    </AlertDescription>
+                </Alert>
+            }
           />
         </TabsContent>
         <TabsContent value="exams" className="mt-6">
@@ -2779,6 +2813,21 @@ function AdminTimetableView() {
             onAddExam={() => setIsAddExamModalOpen(true)}
             isDistributed={examsTimetable?.isDistributed}
             onDistribute={handleDistributeExams}
+            instructions={
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Formatting Rules for Exams Timetable</AlertTitle>
+                  <AlertDescription>
+                    <ul className="list-disc pl-5 space-y-1 text-xs">
+                      <li>The file must be an Excel file (.xlsx, .xls).</li>
+                      <li>It must contain sheets named <strong>CLASS</strong> and/or <strong>GENERAL</strong> for theory exams, and a sheet named <strong>PRACTICAL</strong> for practicals.</li>
+                      <li>Each sheet must have a header row containing specific column titles (e.g., DATE, COURSE NO, LECTURER, INVIGILATOR, PERIOD). The parser will find this header row automatically.</li>
+                      <li>The 'CLASS' column is used to determine student levels and departments. It should be formatted like "CE 1" or "GM 2".</li>
+                      <li>The 'PERIOD' column should use 'M' for Morning, 'A' for Afternoon, or 'E' for Evening.</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+            }
           />
         </TabsContent>
         <TabsContent value="resit" className="mt-6">
@@ -3212,11 +3261,18 @@ export default function TimetablePage() {
   
   const combinedSchedule = useMemo(() => {
     if (!isClassTimetableDistributed) return [];
-    return [...(masterSchedule || []), ...staffSchedules];
+    const combined = [...(masterSchedule || []), ...staffSchedules];
+    // Simple deduplication based on a generated key
+    const uniqueEntries = new Map();
+    combined.forEach(entry => {
+        const key = `${entry.day}-${entry.time}-${entry.room}-${entry.courseCode}`;
+        uniqueEntries.set(key, entry);
+    });
+    return Array.from(uniqueEntries.values());
   }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
 
   const studentTimetable = useMemo(() => {
-    if (!combinedSchedule || !user || user.role !== 'student') return [];
+    if (!user || user.role !== 'student') return [];
 
     return combinedSchedule.filter(entry =>
         entry.level === user.level &&
@@ -3307,3 +3363,4 @@ export default function TimetablePage() {
 
 
     
+
