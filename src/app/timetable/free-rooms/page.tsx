@@ -28,8 +28,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MultiSelectCombobox } from '@/components/ui/combobox';
+import { useToast } from '@/hooks/use-toast';
 
 
 const ALL_POSSIBLE_SLOTS = [
@@ -60,6 +59,7 @@ function findFreeClassrooms(schedule: TimetableEntry[] | null): EmptySlot[] {
           const eventStart = timeToMinutes(eventStartStr);
           const eventEnd = timeToMinutes(eventEndStr);
 
+          // Check for any overlap
           return eventStart < slotEnd && eventEnd > slotStart;
         });
 
@@ -83,24 +83,22 @@ export default function FindFreeRoomsPage() {
     masterSchedule, 
     staffSchedules, 
     isClassTimetableDistributed,
-    allDepartments,
     addStaffSchedule, 
+    toast,
   } = useUser();
   
   const [activeDay, setActiveDay] = useState<string>(() => {
     const todayIndex = new Date().getDay();
-    return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][todayIndex] || 'Monday';
+    // JS Date: Sunday = 0, Monday = 1... Our array is 0-indexed from Monday
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return daysOfWeek[todayIndex] || 'Monday';
   });
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSlots, setSelectedSlots] = useState<Map<string, Set<string>>>(new Map());
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<'class' | 'quiz' | null>(null);
-  const [formData, setFormData] = useState({
-    courseCode: '',
-    level: 100,
-    departments: [] as string[],
-  });
+  const [courseCode, setCourseCode] = useState('');
   
   const combinedSchedule = useMemo(() => {
     if (!isClassTimetableDistributed) return [];
@@ -123,10 +121,12 @@ export default function FindFreeRoomsPage() {
       return acc;
     }, {} as Record<string, Record<string, string[]>>);
 
+    // Sort rooms within each day
     for (const day in grouped) {
         const sortedRooms = Object.keys(grouped[day]).sort((a, b) => a.localeCompare(b));
         const newDayData: Record<string, string[]> = {};
         for (const room of sortedRooms) {
+            // Sort time slots for each room
             newDayData[room] = grouped[day][room].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
         }
         grouped[day] = newDayData;
@@ -137,7 +137,7 @@ export default function FindFreeRoomsPage() {
 
   const handleSelectionToggle = () => {
     setIsSelectionMode(prev => !prev);
-    setSelectedSlots(new Map());
+    setSelectedSlots(new Map()); // Reset selection when toggling
   };
 
   const handleSlotSelection = (room: string, time: string, isChecked: boolean) => {
@@ -146,7 +146,11 @@ export default function FindFreeRoomsPage() {
         if (isChecked) {
             // Can only select slots from one room at a time
             if (newMap.size > 0 && !newMap.has(room)) {
-                alert("You can only select time slots from one room at a time.");
+                toast({
+                    title: 'Selection Error',
+                    description: "You can only select time slots from one room at a time.",
+                    variant: 'destructive',
+                });
                 return prev;
             }
             const roomSlots = newMap.get(room) || new Set();
@@ -173,12 +177,28 @@ export default function FindFreeRoomsPage() {
     setIsScheduleModalOpen(true);
   };
   
-  const handleFormChange = (field: keyof typeof formData, value: any) => {
-    setFormData(prev => ({...prev, [field]: value}));
-  };
-
   const handleScheduleSubmit = () => {
-    if (!selectedRoom || !scheduleType) return;
+    if (!selectedRoom || !scheduleType || !courseCode.trim() || !masterSchedule) {
+        toast({
+            title: 'Missing Information',
+            description: "Please provide a valid course code.",
+            variant: 'destructive',
+        });
+        return;
+    }
+
+    // Find the course details from the master schedule
+    const courseDetails = masterSchedule.find(entry => entry.courseCode.toLowerCase() === courseCode.trim().toLowerCase());
+
+    if (!courseDetails) {
+        toast({
+            title: 'Invalid Course',
+            description: `The course code "${courseCode}" was not found in the master timetable.`,
+            variant: 'destructive',
+        });
+        return;
+    }
+
     const times = Array.from(selectedSlots.get(selectedRoom)!).sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
     const startTimeStr = times[0].split(' - ')[0];
     const endTimeStr = times[times.length - 1].split(' - ')[1];
@@ -187,9 +207,9 @@ export default function FindFreeRoomsPage() {
         day: activeDay,
         time: `${startTimeStr} - ${endTimeStr}`,
         room: selectedRoom,
-        departments: formData.departments,
-        level: formData.level,
-        courseCode: formData.courseCode,
+        departments: courseDetails.departments,
+        level: courseDetails.level,
+        courseCode: courseDetails.courseCode, // Use the canonical course code
         status: scheduleType === 'quiz' ? 'quiz' : 'confirmed',
     });
     
@@ -198,7 +218,7 @@ export default function FindFreeRoomsPage() {
     setScheduleType(null);
     setIsSelectionMode(false);
     setSelectedSlots(new Map());
-    setFormData({ courseCode: '', level: 100, departments: [] });
+    setCourseCode('');
   };
   
   if (user?.role !== 'student' && user?.role !== 'staff') {
@@ -225,7 +245,6 @@ export default function FindFreeRoomsPage() {
   }
   
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-  const departmentOptions = allDepartments.map(d => ({ value: d, label: d }));
 
   return (
     <>
@@ -236,7 +255,7 @@ export default function FindFreeRoomsPage() {
               <div>
                 <CardTitle className="flex items-center gap-2"><Building2 /> Find Free Classrooms</CardTitle>
                 <CardDescription>
-                  {isSelectionMode ? "Select available time slots to schedule an event." : "Select a day to see which classrooms are available and when."}
+                  {user.role === 'staff' && isSelectionMode ? "Select available time slots to schedule an event." : "Select a day to see which classrooms are available and when."}
                 </CardDescription>
               </div>
               {user.role === 'staff' && (
@@ -291,7 +310,7 @@ export default function FindFreeRoomsPage() {
                               <ScrollArea className="h-48">
                                 <div className="space-y-2 pr-4">
                                   {times.map((time, index) => (
-                                    isSelectionMode ? (
+                                    user.role === 'staff' && isSelectionMode ? (
                                         <div key={index} className="flex items-center space-x-2 rounded-md border p-2">
                                             <Checkbox 
                                                 id={`${room}-${time}`} 
@@ -339,29 +358,11 @@ export default function FindFreeRoomsPage() {
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                     <Label htmlFor="courseCode">Course</Label>
-                    <Input id="courseCode" value={formData.courseCode} onChange={(e) => handleFormChange('courseCode', e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="level">Level</Label>
-                    <Select value={String(formData.level)} onValueChange={(value) => handleFormChange('level', Number(value))}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="100">100</SelectItem>
-                            <SelectItem value="200">200</SelectItem>
-                            <SelectItem value="300">300</SelectItem>
-                            <SelectItem value="400">400</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="departments">Departments</Label>
-                    <MultiSelectCombobox
-                        options={departmentOptions}
-                        selected={formData.departments}
-                        onChange={(selected) => handleFormChange('departments', selected)}
-                        placeholder="Select departments..."
+                    <Input 
+                      id="courseCode" 
+                      value={courseCode} 
+                      onChange={(e) => setCourseCode(e.target.value)} 
+                      placeholder="e.g., CE 151"
                     />
                 </div>
             </div>
