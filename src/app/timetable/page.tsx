@@ -242,9 +242,6 @@ function StudentResitView() {
     const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
     const [courseSearchTerm, setCourseSearchTerm] = useState('');
     const [localSelections, setLocalSelections] = useState<Set<number>>(new Set());
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [displayedExams, setDisplayedExams] = useState<SpecialResitEntry[]>([]);
 
     useEffect(() => {
         if (user && studentResitSelections[user.id]) {
@@ -284,44 +281,24 @@ function StudentResitView() {
         return entries;
     }, [specialResitTimetable]);
 
-    const { resitDays, selectedEntries, firstResitDate, lastResitDate, numberOfMonths } = useMemo(() => {
-        if (!user) return { resitDays: [], selectedEntries: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
-        
+    const { selectedEntries } = useMemo(() => {
+        if (!user) return { selectedEntries: [] };
         const userSelections = studentResitSelections[user.id] || [];
         const filteredEntries = allEntries.filter(entry => userSelections.includes(entry.id));
 
-        if (filteredEntries.length === 0) {
-            return { resitDays: [], selectedEntries: [], firstResitDate: new Date(), lastResitDate: new Date(), numberOfMonths: 1 };
-        }
-
-        const uniqueResitDays = [...new Set(filteredEntries.map(entry => entry.date).filter(Boolean) as string[])];
-        const sortedResitDays = uniqueResitDays.sort((a, b) => new Date(a.split('-').reverse().join('-')).getTime() - new Date(b.split('-').reverse().join('-')).getTime());
-        
-        const firstDay = sortedResitDays[0];
-        const lastDay = sortedResitDays[sortedResitDays.length - 1];
-
-        const firstDate = firstDay ? new Date(firstDay.split('-').reverse().join('-')) : new Date();
-        const lastDate = lastDay ? new Date(lastDay.split('-').reverse().join('-')) : new Date();
-        const months = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth()) + 1;
+        const parseDate = (dateString: string | null) => {
+            if (!dateString) return new Date('2100-01-01');
+            const parts = dateString.split('-').map(Number);
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+            return new Date('2100-01-01');
+        };
 
         return {
-            resitDays: sortedResitDays.map(d => new Date(d.split('-').reverse().join('-'))),
-            selectedEntries: filteredEntries,
-            firstResitDate: firstDate,
-            lastResitDate: lastDate,
-            numberOfMonths: months || 1,
+            selectedEntries: filteredEntries.sort((a,b) => parseDate(a.date).getTime() - parseDate(b.date).getTime()),
         };
     }, [user, allEntries, studentResitSelections]);
-    
-    const handleDayClick = (day: Date) => {
-        const hasResit = resitDays.some(resitDate => format(resitDate, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
-        if(hasResit) {
-            setSelectedDate(day);
-            const formattedDate = format(day, 'dd-MM-yyyy');
-            setDisplayedExams(selectedEntries.filter(entry => entry.date === formattedDate));
-            setIsModalOpen(true);
-        }
-    };
     
     const filteredAllEntries = useMemo(() => {
         if (courseSearchTerm) {
@@ -348,13 +325,9 @@ function StudentResitView() {
 
     const handleSaveChanges = () => {
         if (!user) return;
-        const newSelectionsArray = Array.from(localSelections);
-        // This is a direct update, so it should trigger the parent context correctly.
-        updateStudentResitSelection(newSelectionsArray);
+        updateStudentResitSelection(Array.from(localSelections));
         setIsSelectionModalOpen(false);
     };
-
-    const headers = ['Date', 'Course Code', 'Course Name', 'Department', 'Room', 'Examiner', 'Session'];
 
     return (
         <div className="space-y-6">
@@ -364,7 +337,7 @@ function StudentResitView() {
                         <CardTitle>Your Personalized Resit Schedule</CardTitle>
                         <CardDescription>
                             {selectedEntries.length > 0
-                                ? `You have ${selectedEntries.length} selected course(s). Dates are highlighted below.`
+                                ? `You have ${selectedEntries.length} selected course(s).`
                                 : "Select your courses to see your personalized schedule."}
                         </CardDescription>
                     </div>
@@ -413,49 +386,42 @@ function StudentResitView() {
                     </Dialog>
                 </CardHeader>
                 <CardContent>
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onDayClick={handleDayClick}
-                        className="w-full"
-                        numberOfMonths={numberOfMonths}
-                        fromMonth={firstResitDate}
-                        toMonth={lastResitDate}
-                        modifiers={{ examDay: resitDays }}
-                        modifiersClassNames={{
-                            examDay: 'bg-exam-day text-white font-bold hover:bg-exam-day/90 focus:bg-exam-day/90',
-                            day_selected: 'bg-selected-day text-white ring-2 ring-selected-day/50 ring-offset-2',
-                        }}
-                    />
+                    {selectedEntries.length > 0 ? (
+                        <div className="space-y-4 max-w-md mx-auto">
+                            {selectedEntries.map((resit) => (
+                                <Card key={resit.id} className="p-4">
+                                    <div className="flex flex-wrap justify-between items-start gap-2">
+                                        <div className="flex-grow">
+                                            <p className="font-normal text-base break-words">{resit.courseCode}</p>
+                                            <p className="text-sm text-muted-foreground">{resit.courseName}</p>
+                                            <p className="text-sm text-muted-foreground">{resit.date}</p>
+                                        </div>
+                                        <Badge variant="outline" className="capitalize font-normal text-xs flex-shrink-0 border-l-blue-500 border-l-4">
+                                            {resit.session}
+                                        </Badge>
+                                    </div>
+                                    <Separator className="my-3" />
+                                    <div className="flex flex-col space-y-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            <span className="break-words font-normal">{resit.room}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                            <span className="break-words font-normal">{resit.examiner}</span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                         <div className="text-center text-muted-foreground py-12">
+                            <p className="font-medium">No Resit Courses Selected</p>
+                            <p className="text-sm">Click "Select / Edit My Courses" to build your schedule.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
-
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Resit Schedule for {selectedDate ? format(selectedDate, 'PPP') : 'selected date'}</DialogTitle>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[60vh] pr-4 -mr-4">
-                        <div className="space-y-4">
-                        {displayedExams.map((exam) => (
-                            <div key={exam.id} className="flex items-start gap-4 p-3 rounded-lg border bg-muted/50">
-                            <div className="flex-shrink-0 w-24">
-                                <Badge variant="outline">{exam.session}</Badge>
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <p className="font-medium text-sm">{exam.courseCode}</p>
-                                <p className="text-sm text-muted-foreground">{exam.courseName}</p>
-                                <Separator className="my-2" />
-                                <p className="text-xs text-muted-foreground">Room: <span className="font-medium text-foreground">{exam.room}</span></p>
-                                <p className="text-xs text-muted-foreground">Examiner: <span className="font-medium text-foreground">{exam.examiner}</span></p>
-                                <p className="text-xs text-muted-foreground">Dept: <span className="font-medium text-foreground">{exam.department}</span></p>
-                            </div>
-                            </div>
-                        ))}
-                        </div>
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 }
