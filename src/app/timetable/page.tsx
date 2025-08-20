@@ -1688,7 +1688,7 @@ function ResitTimetableDisplay({
                 </div>
             </CardHeader>
             <CardContent>
-                <Accordion type="multiple" className="w-full space-y-4" defaultValue={groupKeys}>
+                <Accordion type="multiple" className="w-full space-y-4">
                   {groupKeys.length > 0 ? (
                     groupKeys.map(date => (
                       <Card key={date} className="overflow-hidden">
