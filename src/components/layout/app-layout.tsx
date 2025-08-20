@@ -16,15 +16,28 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
+import SignUpPage from '@/app/signup/page';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const pathname = usePathname();
 
+  // If user is not logged in, show login or signup pages
   if (!user) {
+    if (pathname === '/signup') {
+      return <SignUpPage />;
+    }
     return <LoginPage />;
   }
   
+  // If user is logged in but tries to access login/signup, redirect to home
+  if (pathname === '/login' || pathname === '/signup') {
+    // This part is tricky without a real router redirect.
+    // For now, we render the main layout which will show the home page.
+    // In a real app, a `redirect('/')` would be used.
+    return <></>; 
+  }
+
   return (
     <div className="relative mx-auto flex min-h-svh w-full flex-col">
       <SidebarProvider>

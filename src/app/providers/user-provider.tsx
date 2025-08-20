@@ -178,7 +178,7 @@ export type TimetableMetadata = {
 interface UserContextType {
   user: User | null;
   allUsers: User[];
-  login: (userId: number, usersList?: User[]) => void;
+  login: (email: string, password?: string) => void;
   logout: () => void;
   signup: (userData: Omit<User, 'id'>) => void;
   updateUser: (updatedUser: User) => void;
@@ -298,18 +298,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [allUsers]);
 
-
-  const login = useCallback((userId: number, usersList: User[] = allUsers) => {
-    const foundUser = usersList.find(u => u.id === userId);
+  const login = useCallback((email: string) => {
+    const foundUser = allUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
     if (foundUser) {
       setUser(foundUser);
       try {
-        sessionStorage.setItem('userId', String(userId));
+        sessionStorage.setItem('userId', String(foundUser.id));
+        toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!` });
       } catch (error) {
           console.error("Failed to write to sessionStorage:", error);
       }
     } else {
-        toast({ title: "Login Failed", description: "User not found.", variant: "destructive" });
+        toast({ title: "Login Failed", description: "No account found with that email.", variant: "destructive" });
     }
   }, [allUsers, toast]);
 
@@ -843,9 +843,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         id: Date.now(),
         ...userData,
     };
-    const newUsersList = [...allUsers, newUser];
-    setAllUsers(newUsersList);
-    login(newUser.id, newUsersList); // Pass the updated list to login
+    setAllUsers(prev => [...prev, newUser]);
+    login(newUser.email);
     toast({ title: "Account Created", description: "Welcome to UMaT Connect!" });
   }, [allUsers, toast, setAllUsers, login]);
 

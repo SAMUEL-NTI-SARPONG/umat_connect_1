@@ -293,6 +293,7 @@ export default function ProfilePage() {
               type="email"
               defaultValue={user.email}
               disabled
+              className="cursor-not-allowed bg-muted/50"
             />
           </div>
           <div className="grid gap-2">
