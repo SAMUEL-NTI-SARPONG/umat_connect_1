@@ -57,7 +57,7 @@ function HomePageContent() {
       {(user.role === 'staff' || user.role === 'administrator') && (
         <CreatePost>
           <Button
-            className="fixed bottom-20 right-6 md:bottom-8 md:right-[calc(50vw-18rem-4rem)] h-16 w-16 rounded-full shadow-lg"
+            className="fixed bottom-20 right-6 md:bottom-8 md:right-[calc(50vw-18rem-4rem)] h-16 w-16 rounded-xl shadow-lg"
             size="icon"
           >
             <Plus className="h-8 w-8" />
