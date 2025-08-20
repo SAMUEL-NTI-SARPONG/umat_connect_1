@@ -17,6 +17,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';
 import SignUpPage from '@/app/signup/page';
+import Home from '@/app/page';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -30,13 +31,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <LoginPage />;
   }
   
-  // If user is logged in but tries to access login/signup, redirect to home
-  if (pathname === '/login' || pathname === '/signup') {
-    // This part is tricky without a real router redirect.
-    // For now, we render the main layout which will show the home page.
-    // In a real app, a `redirect('/')` would be used.
-    return <></>; 
-  }
+  // If user is logged in, show the main app layout.
+  // If they are on login/signup pages, render the Home content by default.
+  const content = (pathname === '/login' || pathname === '/signup') ? <Home /> : children;
 
   return (
     <div className="relative mx-auto flex min-h-svh w-full flex-col">
@@ -49,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Sidebar>
           <SidebarInset className="flex flex-col flex-1">
             <main className="flex-1 px-4 py-4 md:px-6 md:py-6">
-               {children}
+               {content}
             </main>
           </SidebarInset>
         </div>
