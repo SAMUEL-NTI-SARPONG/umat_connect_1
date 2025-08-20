@@ -91,6 +91,16 @@ export default function FindFreeRoomsPage() {
       return acc;
     }, {} as Record<string, Record<string, string[]>>);
 
+    // Sort room keys alphabetically within each day
+    for (const day in grouped) {
+      const sortedRooms = Object.keys(grouped[day]).sort((a, b) => a.localeCompare(b));
+      const newDayData: Record<string, string[]> = {};
+      for (const room of sortedRooms) {
+        newDayData[room] = grouped[day][room];
+      }
+      grouped[day] = newDayData;
+    }
+
     return grouped;
   }, [emptySlots]);
 
