@@ -1,24 +1,21 @@
+
 'use client';
 
-import { useUser, type Faculty } from '@/app/providers/user-provider';
+import { useUser } from '@/app/providers/user-provider';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, School } from 'lucide-react';
 import { useState } from 'react';
 import { FacultyDialog } from '@/components/departments/faculty-dialog';
 import { FacultyCard } from '@/components/departments/faculty-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { redirect } from 'next/navigation';
 
 export default function DepartmentsPage() {
   const { user, faculties } = useUser();
   const [isFacultyDialogOpen, setIsFacultyDialogOpen] = useState(false);
 
   if (user?.role !== 'administrator') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-        <p className="text-muted-foreground">You do not have permission to view this page.</p>
-      </div>
-    );
+    redirect('/');
   }
 
   return (

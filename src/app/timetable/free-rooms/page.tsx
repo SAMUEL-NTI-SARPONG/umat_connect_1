@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { redirect } from 'next/navigation';
 
 
 const ALL_POSSIBLE_SLOTS = [
@@ -241,12 +242,7 @@ export default function FindFreeRoomsPage() {
   };
   
   if (user?.role !== 'student' && user?.role !== 'staff') {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-        <p className="text-muted-foreground">This feature is not available for your role.</p>
-      </div>
-    );
+    redirect('/');
   }
 
   if (!isClassTimetableDistributed || emptySlots.length === 0) {
