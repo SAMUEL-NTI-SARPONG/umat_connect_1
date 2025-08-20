@@ -115,11 +115,11 @@ export default function FindFreeRoomsPage() {
     return grouped;
   }, [emptySlots]);
 
-  if (user?.role !== 'student') {
+  if (user?.role !== 'student' && user?.role !== 'staff') {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
-        <p className="text-muted-foreground">This feature is only available for students.</p>
+        <p className="text-muted-foreground">This feature is only available for students and staff.</p>
       </div>
     );
   }

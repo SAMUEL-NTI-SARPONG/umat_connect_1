@@ -75,7 +75,7 @@ export default function AppSidebar() {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
-          {user.role === 'student' && (
+          {(user.role === 'student' || user.role === 'staff') && (
             <SidebarMenuItem>
               <Link href="/timetable/free-rooms" passHref>
                 <SidebarMenuButton
