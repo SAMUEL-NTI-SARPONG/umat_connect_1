@@ -59,13 +59,21 @@ export type Post = {
   audience: number[]; // Audience is now required
 };
 
+export type NotificationType = 
+  | 'comment_on_post' 
+  | 'reply_to_comment' 
+  | 'new_post'
+  | 'class_timetable' 
+  | 'exam_timetable' 
+  | 'resit_timetable';
+
 export type Notification = {
     id: string;
     recipientId: number;
-    actorId: number;
-    type: 'comment_on_post' | 'reply_to_comment' | 'exam_timetable' | 'new_post';
-    postId: number;
-    commentId: number; // The new reply's ID
+    actorId: number; // Admin who distributed
+    type: NotificationType;
+    postId: number | null; // Can be null for timetable notifications
+    commentId: number | null; // Can be null
     isRead: boolean;
     timestamp: string;
 };
@@ -170,8 +178,9 @@ export type TimetableMetadata = {
 interface UserContextType {
   user: User | null;
   allUsers: User[];
-  login: (userId: number) => void;
+  login: (userId: number, usersList?: User[]) => void;
   logout: () => void;
+  signup: (userData: Omit<User, 'id'>) => void;
   updateUser: (updatedUser: User) => void;
   resetState: () => void;
   masterSchedule: TimetableEntry[] | null;
@@ -290,8 +299,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [allUsers]);
 
 
-  const login = (userId: number) => {
-    const foundUser = allUsers.find(u => u.id === userId);
+  const login = useCallback((userId: number, usersList: User[] = allUsers) => {
+    const foundUser = usersList.find(u => u.id === userId);
     if (foundUser) {
       setUser(foundUser);
       try {
@@ -299,8 +308,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch (error) {
           console.error("Failed to write to sessionStorage:", error);
       }
+    } else {
+        toast({ title: "Login Failed", description: "User not found.", variant: "destructive" });
     }
-  };
+  }, [allUsers, toast]);
 
   const logout = () => {
     setUser(null);
@@ -318,6 +329,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     toast({ title: "Profile Updated", description: "Your profile has been saved successfully." });
   }, [user, toast, setAllUsers]);
+
+  const addNotification = useCallback((notificationData: Omit<Notification, 'id' | 'isRead' | 'timestamp'>) => {
+    // Check for existing notifications to prevent duplicates
+    const exists = notifications.some(n =>
+        n.type === notificationData.type &&
+        n.recipientId === notificationData.recipientId &&
+        n.actorId === notificationData.actorId &&
+        n.commentId === notificationData.commentId &&
+        n.postId === notificationData.postId
+    );
+
+    if (exists) {
+        return; // Don't add a duplicate notification
+    }
+    
+    const newNotification: Notification = {
+        ...notificationData,
+        id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`,
+        isRead: false,
+        timestamp: new Date().toISOString(),
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  }, [notifications, setNotifications]);
+
+  const distributeClassTimetable = useCallback(() => {
+    if (!masterSchedule) {
+      return { success: false, message: 'No class timetable to distribute.' };
+    }
+    setClassTimetableDistributed(true);
+
+    if (user) {
+        allUsers.forEach(recipient => {
+            if(recipient.id !== user.id) { // Don't notify the admin
+                addNotification({
+                    recipientId: recipient.id,
+                    actorId: user.id,
+                    type: 'class_timetable',
+                    postId: null,
+                    commentId: null,
+                });
+            }
+        });
+    }
+
+    return { success: true, message: `The class timetable is now live for all ${allUsers.length -1} users.` };
+  }, [masterSchedule, setClassTimetableDistributed, user, allUsers, addNotification]);
   
   const setMasterSchedule = useCallback(async (data: TimetableEntry[] | null) => {
     setMasterScheduleState(data);
@@ -331,14 +388,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   }, [toast, setMasterScheduleState, setClassTimetableDistributed, setReviewedSchedules, setRejectedEntries]);
   
-  const distributeClassTimetable = useCallback(() => {
-    if (!masterSchedule) {
-      return { success: false, message: 'No class timetable to distribute.' };
-    }
-    setClassTimetableDistributed(true);
-    return { success: true, message: 'The class timetable is now live for all users.' };
-  }, [masterSchedule, setClassTimetableDistributed]);
-
   const updateScheduleStatus = useCallback((updatedEntry: TimetableEntry) => {
     const updateSchedule = (schedule: TimetableEntry[] | null): TimetableEntry[] | null => {
         if (!schedule) return null;
@@ -379,7 +428,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
     });
 
-  }, [user, toast, setPosts]);
+  }, [user, toast, setPosts, addNotification]);
 
   const deletePost = useCallback((postId: number) => {
     setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
@@ -396,29 +445,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         fetchNotifications();
     }
   }, [user, fetchNotifications]);
-
-  const addNotification = useCallback((notificationData: Omit<Notification, 'id' | 'isRead' | 'timestamp'>) => {
-      // Check for existing notifications to prevent duplicates
-      const exists = notifications.some(n =>
-          n.type === notificationData.type &&
-          n.recipientId === notificationData.recipientId &&
-          n.actorId === notificationData.actorId &&
-          n.commentId === notificationData.commentId &&
-          n.postId === notificationData.postId
-      );
-
-      if (exists) {
-          return; // Don't add a duplicate notification
-      }
-      
-      const newNotification: Notification = {
-          ...notificationData,
-          id: `${notificationData.type}-${notificationData.recipientId}-${Date.now()}`,
-          isRead: false,
-          timestamp: new Date().toISOString(),
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-  }, [notifications, setNotifications]);
 
   const addComment = useCallback(async (postId: number, text: string, attachedFile: AttachedFile | null) => {
     if (!user) return;
@@ -618,9 +644,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
             }]
         };
 
+        if (user) {
+            const studentIdsWithResits = new Set<number>();
+            Object.values(studentResitSelections).forEach((selections, studentId) => {
+                if (Array.isArray(selections) && selections.length > 0) {
+                    studentIdsWithResits.add(Number(studentId));
+                }
+            });
+
+            studentIdsWithResits.forEach(studentId => {
+                addNotification({
+                    recipientId: studentId,
+                    actorId: user.id,
+                    type: 'resit_timetable',
+                    postId: null,
+                    commentId: null,
+                });
+            });
+        }
+
         return distributedData;
     });
-  }, [allUsers, setSpecialResitTimetableState]);
+  }, [allUsers, user, studentResitSelections, addNotification, setSpecialResitTimetableState]);
   
   const setExamsTimetable = useCallback((data: ExamsTimetable | null) => {
     setExamsTimetableState(data);
@@ -784,6 +829,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: "Department Deleted", description: `The "${name}" department has been deleted.` });
   }, [toast, setFaculties, setAllDepartments, setDepartmentMap]);
 
+  const signup = useCallback((userData: Omit<User, 'id'>) => {
+    const existingUser = allUsers.find(u => u.email.toLowerCase() === userData.email.toLowerCase());
+    if (existingUser) {
+        toast({ title: "Signup Failed", description: "An account with this email already exists.", variant: "destructive" });
+        return;
+    }
+
+    const newUser: User = {
+        id: Date.now(),
+        ...userData,
+    };
+    const newUsersList = [...allUsers, newUser];
+    setAllUsers(newUsersList);
+    login(newUser.id, newUsersList); // Pass the updated list to login
+    toast({ title: "Account Created", description: "Welcome to UMaT Connect!" });
+  }, [allUsers, toast, setAllUsers, login]);
 
   const resetState = () => {
     logout();
@@ -817,6 +878,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     allUsers,
     login,
     logout,
+    signup,
     updateUser,
     resetState,
     masterSchedule,
@@ -865,7 +927,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     stopAlarm,
     timetableMetadata,
   }), [
-      user, allUsers, updateUser, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
+      user, allUsers, login, logout, signup, updateUser, resetState, masterSchedule, isClassTimetableDistributed, posts, staffSchedules, reviewedSchedules,
       rejectedEntries, notifications, specialResitTimetable, studentResitSelections, examsTimetable, faculties, departmentMap, allDepartments,
       distributeClassTimetable, distributeExamsTimetable, distributeSpecialResitTimetable, addPost, deletePost, addComment, addReply,
       addStaffSchedule, markScheduleAsReviewed, rejectScheduleEntry, unrejectScheduleEntry, fetchNotifications, markNotificationAsRead,

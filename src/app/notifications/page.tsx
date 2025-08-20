@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatar } from '@/components/ui/profile-avatar';
 import { formatRelativeTime } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { Bell, MessageSquare, CornerUpLeft, Trash2, FileText } from 'lucide-react';
+import { Bell, MessageSquare, CornerUpLeft, Trash2, FileText, CalendarCheck, BookOpen, FileCheck2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
@@ -65,6 +65,21 @@ export default function NotificationsPage() {
                     actionText = 'sent you a new post.';
                     icon = <FileText className="h-4 w-4 text-indigo-500" />;
                     href = `/?postId=${notification.postId}#post-${notification.postId}`;
+                    break;
+                   case 'class_timetable':
+                    actionText = 'distributed the new Class Timetable.';
+                    icon = <CalendarCheck className="h-4 w-4 text-purple-500" />;
+                    href = '/timetable';
+                    break;
+                  case 'exam_timetable':
+                    actionText = 'distributed the Exams Timetable.';
+                    icon = <BookOpen className="h-4 w-4 text-red-500" />;
+                    href = '/timetable';
+                    break;
+                  case 'resit_timetable':
+                    actionText = 'distributed the Special Resit Timetable.';
+                    icon = <FileCheck2 className="h-4 w-4 text-teal-500" />;
+                    href = '/timetable';
                     break;
                   default:
                      actionText = 'interacted with your post.';
