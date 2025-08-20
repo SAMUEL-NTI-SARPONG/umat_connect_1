@@ -8,85 +8,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { timeToMinutes } from '@/lib/time';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Building2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-/**
- * Improved function to find empty classrooms from the actual timetable structure
- * This should be used when you have the complete timetable metadata
- */
-function findEmptyClassroomsFromActualStructure(
-  schedule: TimetableEntry[] | null,
-  timetableMetadata?: {
-    allRooms: string[];
-    allTimeSlots: string[];
-    allDays: string[];
-  }
-): EmptySlot[] {
-  if (!schedule || !timetableMetadata) return [];
 
-  const { allRooms, allTimeSlots, allDays } = timetableMetadata;
-  const emptySlots: EmptySlot[] = [];
-
-  // Create a lookup set for occupied slots for O(1) lookup time
-  const occupiedSlots = new Set(
-    schedule.map(entry => `${entry.day}|${entry.time}|${entry.room}`)
-  );
-
-  // Check every possible combination of day, time, and room
-  allDays.forEach(day => {
-    allTimeSlots.forEach(time => {
-      allRooms.forEach(room => {
-        const slotKey = `${day}|${time}|${room}`;
-        
-        if (!occupiedSlots.has(slotKey)) {
-          emptySlots.push({
-            day,
-            location: room,
-            time
-          });
-        }
-      });
-    });
-  });
-
-  return emptySlots;
-}
-
-/**
- * Fallback function for when metadata is not available
- * This reconstructs the possible slots from the existing schedule
- */
-function findEmptyClassroomsFromExistingSchedule(schedule: TimetableEntry[] | null): EmptySlot[] {
+function findFreeClassrooms(schedule: TimetableEntry[] | null): EmptySlot[] {
   if (!schedule || schedule.length === 0) return [];
 
-  // Extract unique rooms, times, and days from the schedule
-  const allRooms = Array.from(new Set(schedule.map(entry => entry.room)));
+  // 1. Get all unique rooms, time slots, and days from the schedule
+  const allRooms = Array.from(new Set(schedule.map(entry => entry.room))).sort();
   const allTimeSlots = Array.from(new Set(schedule.map(entry => entry.time)));
-  const allDays = Array.from(new Set(schedule.map(entry => entry.day)));
+  const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-  // Sort time slots chronologically
+  // Sort time slots chronologically for predictable output
   const sortedTimeSlots = allTimeSlots.sort((a, b) => {
-    const timeA = extractStartTime(a);
-    const timeB = extractStartTime(b);
+    const timeA = a.split(' - ')[0];
+    const timeB = b.split(' - ')[0];
     return timeToMinutes(timeA) - timeToMinutes(timeB);
   });
 
-  // Ensure days are in proper order
-  const orderedDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    .filter(day => allDays.includes(day));
-
   const emptySlots: EmptySlot[] = [];
 
-  // Create a lookup set for occupied slots
+  // 2. Create a lookup for occupied slots: "day|room|time"
   const occupiedSlots = new Set(
-    schedule.map(entry => `${entry.day}|${entry.time}|${entry.room}`)
+    schedule.map(entry => `${entry.day}|${entry.room}|${entry.time}`)
   );
 
-  // Check every possible combination
-  orderedDays.forEach(day => {
-    sortedTimeSlots.forEach(time => {
-      allRooms.forEach(room => {
-        const slotKey = `${day}|${time}|${room}`;
-        
+  // 3. Iterate through every combination and find what's NOT occupied
+  allDays.forEach(day => {
+    allRooms.forEach(room => {
+      sortedTimeSlots.forEach(time => {
+        const slotKey = `${day}|${room}|${time}`;
         if (!occupiedSlots.has(slotKey)) {
           emptySlots.push({
             day,
@@ -99,108 +50,6 @@ function findEmptyClassroomsFromExistingSchedule(schedule: TimetableEntry[] | nu
   });
 
   return emptySlots;
-}
-
-/**
- * Helper function to extract start time from time range strings
- */
-function extractStartTime(timeRange: string): string {
-  if (!timeRange) return '';
-  
-  // Handle different time formats
-  if (timeRange.includes(' - ')) {
-    return timeRange.split(' - ')[0].trim();
-  }
-  
-  if (timeRange.includes('-')) {
-    return timeRange.split('-')[0].trim();
-  }
-  
-  return timeRange.trim();
-}
-
-/**
- * Helper function to group consecutive time slots for better display
- */
-function groupConsecutiveTimeSlots(timeSlots: string[]): string[] {
-  if (timeSlots.length === 0) return [];
-
-  const sorted = timeSlots.sort((a, b) => {
-    const timeA = extractStartTime(a);
-    const timeB = extractStartTime(b);
-    return timeToMinutes(timeA) - timeToMinutes(timeB);
-  });
-
-  const grouped: string[] = [];
-  let currentGroup = [sorted[0]];
-
-  for (let i = 1; i < sorted.length; i++) {
-    const prevEndTime = extractEndTime(sorted[i - 1]);
-    const currentStartTime = extractStartTime(sorted[i]);
-    
-    // Check if current slot is consecutive to the previous one
-    if (areTimeSlotsConsecutive(prevEndTime, currentStartTime)) {
-      currentGroup.push(sorted[i]);
-    } else {
-      // Finalize current group and start a new one
-      if (currentGroup.length > 1) {
-        const groupStart = extractStartTime(currentGroup[0]);
-        const groupEnd = extractEndTime(currentGroup[currentGroup.length - 1]);
-        grouped.push(`${groupStart} - ${groupEnd}`);
-      } else {
-        grouped.push(currentGroup[0]);
-      }
-      currentGroup = [sorted[i]];
-    }
-  }
-
-  // Handle the last group
-  if (currentGroup.length > 1) {
-    const groupStart = extractStartTime(currentGroup[0]);
-    const groupEnd = extractEndTime(currentGroup[currentGroup.length - 1]);
-    grouped.push(`${groupStart} - ${groupEnd}`);
-  } else if (currentGroup.length === 1) {
-    grouped.push(currentGroup[0]);
-  }
-
-  return grouped;
-}
-
-function extractEndTime(timeRange: string): string {
-  if (!timeRange) return '';
-  
-  if (timeRange.includes(' - ')) {
-    return timeRange.split(' - ')[1].trim();
-  }
-  
-  if (timeRange.includes('-')) {
-    return timeRange.split('-')[1].trim();
-  }
-  
-  // If no end time, assume 1 hour duration
-  const startTime = timeRange.trim();
-  const startMinutes = timeToMinutes(startTime);
-  const endMinutes = startMinutes + 60;
-  
-  // Convert back to time string - you may need to implement this function
-  return minutesToTime(endMinutes);
-}
-
-function areTimeSlotsConsecutive(endTime1: string, startTime2: string): boolean {
-  const end1Minutes = timeToMinutes(endTime1);
-  const start2Minutes = timeToMinutes(startTime2);
-  
-  // Allow for small gaps (up to 30 minutes) to be considered consecutive
-  return Math.abs(start2Minutes - end1Minutes) <= 30;
-}
-
-function minutesToTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60) % 24;
-  const mins = minutes % 60;
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-  
-  return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
 }
 
 export default function FindFreeRoomsPage() {
@@ -208,14 +57,14 @@ export default function FindFreeRoomsPage() {
     masterSchedule, 
     staffSchedules, 
     isClassTimetableDistributed, 
-    user,
-    timetableMetadata // Assume this contains allRooms, allTimeSlots, allDays
+    user
   } = useUser();
   
   const [activeDay, setActiveDay] = useState<string>(() => {
     const todayIndex = new Date().getDay();
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return days[todayIndex === 0 ? 6 : todayIndex - 1] || 'Monday';
+    // JS getDay(): Sunday is 0, Monday is 1...
+    // Our array is Monday-first, so adjust index.
+    return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][todayIndex] || 'Monday';
   });
   
   const combinedSchedule = useMemo(() => {
@@ -224,33 +73,23 @@ export default function FindFreeRoomsPage() {
   }, [masterSchedule, staffSchedules, isClassTimetableDistributed]);
 
   const emptySlots = useMemo(() => {
-    // Use the improved algorithm with metadata if available
-    if (timetableMetadata) {
-      return findEmptyClassroomsFromActualStructure(combinedSchedule, timetableMetadata);
-    }
-    
-    // Fallback to reconstructing from existing schedule
-    return findEmptyClassroomsFromExistingSchedule(combinedSchedule);
-  }, [combinedSchedule, timetableMetadata]);
+    return findFreeClassrooms(combinedSchedule);
+  }, [combinedSchedule]);
 
   const groupedSlots = useMemo(() => {
     const grouped = emptySlots.reduce((acc, slot) => {
-      if (!acc[slot.day]) {
-        acc[slot.day] = {};
+      const day = slot.day;
+      const room = slot.location;
+
+      if (!acc[day]) {
+        acc[day] = {};
       }
-      if (!acc[slot.day][slot.location]) {
-        acc[slot.day][slot.location] = [];
+      if (!acc[day][room]) {
+        acc[day][room] = [];
       }
-      acc[slot.day][slot.location].push(slot.time);
+      acc[day][room].push(slot.time);
       return acc;
     }, {} as Record<string, Record<string, string[]>>);
-
-    // Group consecutive time slots for each room
-    Object.keys(grouped).forEach(day => {
-      Object.keys(grouped[day]).forEach(room => {
-        grouped[day][room] = groupConsecutiveTimeSlots(grouped[day][room]);
-      });
-    });
 
     return grouped;
   }, [emptySlots]);
@@ -271,7 +110,7 @@ export default function FindFreeRoomsPage() {
         <p className="text-muted-foreground">
           {!isClassTimetableDistributed 
             ? "The class timetable has not been published yet. Please check back later."
-            : "No empty classrooms found. All rooms appear to be occupied."
+            : "Could not determine free classrooms. The schedule may be full."
           }
         </p>
       </div>
@@ -284,10 +123,9 @@ export default function FindFreeRoomsPage() {
     <div className="max-w-7xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Find Free Classrooms</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Building2 /> Find Free Classrooms</CardTitle>
           <CardDescription>
             Select a day to see which classrooms are available and when. 
-            Time slots are grouped for easier viewing.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -313,9 +151,6 @@ export default function FindFreeRoomsPage() {
                               <Building2 className="w-5 h-5 text-primary" />
                               {room}
                             </CardTitle>
-                            <CardDescription className="text-sm">
-                              {times.length} time slot{times.length > 1 ? 's' : ''} available
-                            </CardDescription>
                           </CardHeader>
                           <CardContent className="p-4 pt-0">
                             <ScrollArea className="h-48">
@@ -323,7 +158,7 @@ export default function FindFreeRoomsPage() {
                                 {times.map((time, index) => (
                                   <div 
                                     key={index} 
-                                    className="p-2 bg-green-50 dark:bg-green-950 rounded text-sm border border-green-200 dark:border-green-800"
+                                    className="p-2 bg-green-50 dark:bg-green-950 rounded-md text-sm border border-green-200 dark:border-green-800"
                                   >
                                     <span className="text-green-700 dark:text-green-300 font-medium">
                                       {time}
@@ -340,7 +175,7 @@ export default function FindFreeRoomsPage() {
                   <div className="text-center text-muted-foreground py-12">
                     <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No free rooms found</p>
-                    <p className="text-sm">All classrooms are occupied on {day}.</p>
+                    <p className="text-sm">All classrooms appear to be occupied on {day}.</p>
                   </div>
                 )}
               </TabsContent>

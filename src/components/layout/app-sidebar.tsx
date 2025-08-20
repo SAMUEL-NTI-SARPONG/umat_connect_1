@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, School, Search, Users } from 'lucide-react';
+import { Calendar, Home, User, LogOut, MessageSquare, Bell, Compass, BookOpen, School, Search, Users, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/app/providers/user-provider';
@@ -82,7 +82,7 @@ export default function AppSidebar() {
                   tooltip="Free Rooms"
                   isActive={pathname === '/timetable/free-rooms'}
                 >
-                  <Users />
+                  <Building2 />
                   <span>Free Rooms</span>
                 </SidebarMenuButton>
               </Link>
