@@ -1081,10 +1081,12 @@ function StaffResitView() {
 
 function StaffTimetableView({
   masterSchedule,
+  staffSchedules,
   addStaffSchedule,
   updateScheduleStatus,
 }: {
   masterSchedule: TimetableEntry[] | null;
+  staffSchedules: TimetableEntry[];
   addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
@@ -1147,15 +1149,15 @@ function StaffTimetableView({
   }, [allLecturerNames, lecturerSearch]);
 
   const staffSchedule = useMemo(() => {
-    if (!masterSchedule || selectedLecturers.length === 0) return [];
+    const combined = [...(masterSchedule || []), ...staffSchedules];
+    if (selectedLecturers.length === 0) return [];
     
-    // Create a set of the first two parts of each selected name for broader matching
     const selectedNamesSet = new Set(selectedLecturers);
     
-    return masterSchedule.filter(entry => {
+    return combined.filter(entry => {
       return selectedNamesSet.has(entry.lecturer);
     });
-}, [masterSchedule, selectedLecturers]);
+  }, [masterSchedule, staffSchedules, selectedLecturers]);
 
   const hasReviewed = user ? reviewedSchedules.includes(user.id) : false;
   
@@ -3268,6 +3270,7 @@ export default function TimetablePage() {
       case 'staff':
         return <StaffTimetableView 
                   masterSchedule={masterSchedule}
+                  staffSchedules={staffSchedules}
                   addStaffSchedule={addStaffSchedule as any}
                   updateScheduleStatus={updateScheduleStatus}
                />;

@@ -558,15 +558,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         lecturer: user.name,
     };
     
-    // Add to both staffSchedules (for personal view) and masterSchedule (for global visibility)
+    // Only add to staffSchedules. The combined schedule logic will handle visibility.
     setStaffSchedules(prev => [...prev, newEntry]);
-    setMasterScheduleState(prev => [...(prev || []), newEntry]);
 
     const toastTitle = entry.status === 'quiz' ? 'Quiz Scheduled' : 'Class Scheduled';
     const toastDescription = `The new event has been added to the timetable for all users.`;
     toast({ title: toastTitle, description: toastDescription });
 
-  }, [user, toast, setStaffSchedules, setMasterScheduleState]);
+  }, [user, toast, setStaffSchedules]);
   
   const markScheduleAsReviewed = useCallback((userId: number) => {
     setReviewedSchedules(prev => [...new Set([...prev, userId])]);
