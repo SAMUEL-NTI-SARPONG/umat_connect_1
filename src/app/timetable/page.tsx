@@ -2676,6 +2676,13 @@ function AdminTimetableView() {
   const examsStatus: TabStatus = examsTimetable?.isDistributed ? 'distributed' : (examsTimetable && (examsTimetable.exams.length > 0 || examsTimetable.practicals.length > 0)) ? 'uploaded' : 'empty';
   const resitStatus: TabStatus = specialResitTimetable?.isDistributed ? 'distributed' : (specialResitTimetable && specialResitTimetable.sheets.length > 0) ? 'uploaded' : 'empty';
   
+  const isDataLoadedForCurrentTab = useMemo(() => {
+    if (activeTab === 'class') return masterSchedule !== null;
+    if (activeTab === 'exams') return examsTimetable !== null;
+    if (activeTab === 'resit') return specialResitTimetable !== null;
+    return false;
+  }, [activeTab, masterSchedule, examsTimetable, specialResitTimetable]);
+
   return (
     <div className="space-y-6">
       <input
@@ -2701,7 +2708,7 @@ function AdminTimetableView() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                  <Button variant={activeSearchState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeSearchState.setShowInvalid(!activeSearchState.showInvalid)} disabled={!currentParsedData}>
+                  <Button variant={activeSearchState.showInvalid ? "secondary" : "outline"} size="icon" onClick={() => activeSearchState.setShowInvalid(!activeSearchState.showInvalid)} disabled={!isDataLoadedForCurrentTab}>
                   <FilterX className="h-4 w-4" />
                   <span className="sr-only">Filter for review</span>
                   </Button>
@@ -2712,7 +2719,7 @@ function AdminTimetableView() {
             </Tooltip>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon" disabled={!currentParsedData}>
+                <Button variant="destructive" size="icon" disabled={!isDataLoadedForCurrentTab}>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Delete</span>
                 </Button>
@@ -2733,7 +2740,7 @@ function AdminTimetableView() {
             </AlertDialog>
           </TooltipProvider>
         </div>
-        {currentParsedData && (
+        {isDataLoadedForCurrentTab && (
           <div className="relative flex-grow w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -3363,5 +3370,6 @@ export default function TimetablePage() {
 
 
     
+
 
 
