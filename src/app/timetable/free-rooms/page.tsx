@@ -338,7 +338,7 @@ export default function FindFreeRoomsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                    <Label htmlFor="courseCode">Course Code</Label>
+                    <Label htmlFor="courseCode">Course</Label>
                     <Input id="courseCode" value={formData.courseCode} onChange={(e) => handleFormChange('courseCode', e.target.value)} />
                 </div>
                 <div className="space-y-2">
