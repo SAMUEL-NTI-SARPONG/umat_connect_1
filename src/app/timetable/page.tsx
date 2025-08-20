@@ -2685,8 +2685,8 @@ function AdminTimetableView() {
         className="hidden"
         accept=".xlsx, .xls"
       />
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
-        <div className="flex gap-2 flex-wrap flex-shrink-0">
+      <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="flex gap-2 flex-shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -2820,10 +2820,10 @@ function AdminTimetableView() {
                   <AlertDescription>
                     <ul className="list-disc pl-5 space-y-1 text-xs">
                       <li>The file must be an Excel file (.xlsx, .xls).</li>
-                      <li>It must contain sheets named <strong>CLASS</strong> and/or <strong>GENERAL</strong> for theory exams, and a sheet named <strong>PRACTICAL</strong> for practicals.</li>
-                      <li>Each sheet must have a header row containing specific column titles (e.g., DATE, COURSE NO, LECTURER, INVIGILATOR, PERIOD). The parser will find this header row automatically.</li>
-                      <li>The 'CLASS' column is used to determine student levels and departments. It should be formatted like "CE 1" or "GM 2".</li>
-                      <li>The 'PERIOD' column should use 'M' for Morning, 'A' for Afternoon, or 'E' for Evening.</li>
+                      <li>The parser will look for sheets containing the words "PRACTICAL" (for practicals) or sheets with theory exam headers.</li>
+                      <li>Theory sheets must contain a header row with columns like DATE, COURSE NO, LECTURER, INVIGILATOR, PERIOD.</li>
+                      <li>Practical sheets must contain a header row with columns like DATE, CRS NO., EXAMINER, INVIGILATOR, MORN/NOON.</li>
+                      <li>The parser is flexible and will find these headers even if they are not in the first row.</li>
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -3363,4 +3363,5 @@ export default function TimetablePage() {
 
 
     
+
 
