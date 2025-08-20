@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { minutesToTime, timeToMinutes } from '@/lib/time';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Building2, PlusCircle, CalendarPlus, FilePenLine } from 'lucide-react';
+import { Building2, PlusCircle, CalendarPlus, FilePenLine, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ export default function FindFreeRoomsPage() {
   const [activeDay, setActiveDay] = useState<string>(() => {
     const todayIndex = new Date().getDay();
     // JS Date: Sunday = 0, Monday = 1... Our array is 0-indexed from Monday
-    return daysOfWeek[todayIndex] || 'Monday';
+    return daysOfWeek[todayIndex === 0 ? 6 : todayIndex - 1] || 'Monday';
   });
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -102,6 +102,7 @@ export default function FindFreeRoomsPage() {
   const [scheduleType, setScheduleType] = useState<'class' | 'quiz' | null>(null);
   const [courseCode, setCourseCode] = useState('');
   const [scheduleDay, setScheduleDay] = useState(activeDay);
+  const [roomSearchTerm, setRoomSearchTerm] = useState('');
 
   useEffect(() => {
     if (!isScheduleModalOpen) {
@@ -143,6 +144,15 @@ export default function FindFreeRoomsPage() {
 
     return grouped;
   }, [emptySlots]);
+  
+  const filteredRoomsForDay = useMemo(() => {
+    if (!groupedSlots[activeDay]) return [];
+    const rooms = Object.entries(groupedSlots[activeDay]);
+    if (!roomSearchTerm) return rooms;
+    return rooms.filter(([roomName]) =>
+      roomName.toLowerCase().includes(roomSearchTerm.toLowerCase())
+    );
+  }, [groupedSlots, activeDay, roomSearchTerm]);
 
   const handleSelectionToggle = () => {
     setIsSelectionMode(prev => !prev);
@@ -255,38 +265,49 @@ export default function FindFreeRoomsPage() {
   
   return (
     <>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
               <div>
                 <CardTitle className="flex items-center gap-2"><Building2 /> Find Free Classrooms</CardTitle>
                 <CardDescription>
                   {user.role === 'staff' && isSelectionMode ? "Select available time slots to schedule an event." : "Select a day to see which classrooms are available and when."}
                 </CardDescription>
               </div>
-              {user.role === 'staff' && (
-                <div className="flex items-center gap-2">
-                    <Button variant={isSelectionMode ? "destructive" : "outline"} onClick={handleSelectionToggle}>
-                        {isSelectionMode ? "Cancel Selection" : "Select Times"}
-                    </Button>
-                    {hasSelection && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button>Schedule</Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <DropdownMenuItem onSelect={() => openScheduleModal('class')}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> New Class
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => openScheduleModal('quiz')}>
-                                    <FilePenLine className="mr-2 h-4 w-4" /> New Quiz
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search for a room..."
+                      className="pl-10"
+                      value={roomSearchTerm}
+                      onChange={(e) => setRoomSearchTerm(e.target.value)}
+                    />
                 </div>
-              )}
+                {user.role === 'staff' && (
+                  <>
+                      <Button variant={isSelectionMode ? "destructive" : "outline"} onClick={handleSelectionToggle}>
+                          {isSelectionMode ? "Cancel" : "Select"}
+                      </Button>
+                      {hasSelection && (
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button>Schedule</Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                  <DropdownMenuItem onSelect={() => openScheduleModal('class')}>
+                                      <PlusCircle className="mr-2 h-4 w-4" /> New Class
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => openScheduleModal('quiz')}>
+                                      <FilePenLine className="mr-2 h-4 w-4" /> New Quiz
+                                  </DropdownMenuItem>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                      )}
+                  </>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -299,56 +320,58 @@ export default function FindFreeRoomsPage() {
                 ))}
               </TabsList>
 
-              {daysOfWeek.map(day => (
-                <TabsContent key={day} value={day} className="mt-6">
-                  {groupedSlots[day] && Object.keys(groupedSlots[day]).length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {Object.entries(groupedSlots[day])
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([room, times]) => (
-                          <Card key={room} className="hover:shadow-md transition-shadow">
-                            <CardHeader className="p-4">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <Building2 className="w-5 h-5 text-primary" />
-                                {room}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0">
-                              <ScrollArea className="h-48">
-                                <div className="space-y-2 pr-4">
-                                  {times.map((time, index) => (
-                                    user.role === 'staff' && isSelectionMode ? (
-                                        <div key={index} className="flex items-center space-x-2 rounded-md border p-2">
-                                            <Checkbox 
-                                                id={`${room}-${time}`} 
-                                                onCheckedChange={(checked) => handleSlotSelection(room, time, !!checked)}
-                                                checked={selectedSlots.get(room)?.has(time) || false}
-                                            />
-                                            <label htmlFor={`${room}-${time}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
-                                                {time}
-                                            </label>
-                                        </div>
-                                    ) : (
-                                        <Badge key={index} variant="secondary" className="block text-center w-full justify-center text-sm font-normal py-1">
-                                          {time}
-                                        </Badge>
-                                    )
-                                  ))}
-                                </div>
-                              </ScrollArea>
-                            </CardContent>
-                          </Card>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center text-muted-foreground py-12">
-                      <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium mb-2">No free rooms found</p>
-                      <p className="text-sm">All classrooms appear to be occupied on {day}.</p>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
+              <TabsContent value={activeDay} className="mt-6">
+                {filteredRoomsForDay.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredRoomsForDay
+                      .map(([room, times]) => (
+                        <Card key={room} className="hover:shadow-md transition-shadow">
+                          <CardHeader className="p-4">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Building2 className="w-5 h-5 text-primary" />
+                              {room}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-0">
+                            <ScrollArea className="h-48">
+                              <div className="space-y-2 pr-4">
+                                {(times as string[]).map((time, index) => (
+                                  user.role === 'staff' && isSelectionMode ? (
+                                      <div key={index} className="flex items-center space-x-2 rounded-md border p-2">
+                                          <Checkbox 
+                                              id={`${room}-${time}`} 
+                                              onCheckedChange={(checked) => handleSlotSelection(room, time, !!checked)}
+                                              checked={selectedSlots.get(room)?.has(time) || false}
+                                          />
+                                          <label htmlFor={`${room}-${time}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer">
+                                              {time}
+                                          </label>
+                                      </div>
+                                  ) : (
+                                      <Badge key={index} variant="secondary" className="block text-center w-full justify-center text-sm font-normal py-1">
+                                        {time}
+                                      </Badge>
+                                  )
+                                ))}
+                              </div>
+                            </ScrollArea>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-12">
+                    <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No free rooms found</p>
+                    <p className="text-sm">
+                      {roomSearchTerm 
+                        ? `No rooms matching "${roomSearchTerm}" are free on ${activeDay}.`
+                        : `All classrooms appear to be occupied on ${activeDay}.`
+                      }
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -359,7 +382,7 @@ export default function FindFreeRoomsPage() {
             <DialogHeader>
                 <DialogTitle>Schedule New {scheduleType}</DialogTitle>
                 <DialogDescription>
-                    Fill in the details for your new event in <strong>{selectedRoom}</strong>.
+                    Fill in the details for your new event in <strong>{selectedRoom}</strong> on <strong>{scheduleDay}</strong>.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
