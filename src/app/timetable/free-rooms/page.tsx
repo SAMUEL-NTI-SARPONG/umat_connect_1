@@ -9,40 +9,50 @@ import { timeToMinutes } from '@/lib/time';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
+
+// A fixed, canonical list of all possible 1-hour time slots.
+const ALL_POSSIBLE_SLOTS = [
+    "7:00 AM - 8:00 AM", "8:00 AM - 9:00 AM", "9:00 AM - 10:00 AM", "10:00 AM - 11:00 AM",
+    "11:00 AM - 12:00 PM", "12:00 PM - 1:00 PM", "1:30 PM - 2:30 PM", "2:30 PM - 3:30 PM",
+    "3:30 PM - 4:30 PM", "4:30 PM - 5:30 PM", "5:30 PM - 6:30 PM", "6:30 PM - 7:30 PM"
+];
 
 function findFreeClassrooms(schedule: TimetableEntry[] | null): EmptySlot[] {
   if (!schedule || schedule.length === 0) return [];
 
-  // 1. Get all unique rooms, time slots, and days from the schedule
   const allRooms = Array.from(new Set(schedule.map(entry => entry.room))).sort();
-  const allTimeSlots = Array.from(new Set(schedule.map(entry => entry.time)));
   const allDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-  // Sort time slots chronologically for predictable output
-  const sortedTimeSlots = allTimeSlots.sort((a, b) => {
-    const timeA = a.split(' - ')[0];
-    const timeB = b.split(' - ')[0];
-    return timeToMinutes(timeA) - timeToMinutes(timeB);
-  });
-
+  
   const emptySlots: EmptySlot[] = [];
 
-  // 2. Create a lookup for occupied slots: "day|room|time"
-  const occupiedSlots = new Set(
-    schedule.map(entry => `${entry.day}|${entry.room}|${entry.time}`)
-  );
-
-  // 3. Iterate through every combination and find what's NOT occupied
   allDays.forEach(day => {
     allRooms.forEach(room => {
-      sortedTimeSlots.forEach(time => {
-        const slotKey = `${day}|${room}|${time}`;
-        if (!occupiedSlots.has(slotKey)) {
+      // Get all classes scheduled for this specific room on this specific day
+      const roomScheduleForDay = schedule.filter(e => e.day === day && e.room === room);
+      
+      // Check each possible 1-hour slot for overlaps
+      ALL_POSSIBLE_SLOTS.forEach(slot => {
+        const [slotStartStr, slotEndStr] = slot.split(' - ');
+        const slotStart = timeToMinutes(slotStartStr);
+        const slotEnd = timeToMinutes(slotEndStr);
+        
+        // A slot is free if no scheduled event overlaps with it
+        const isOccupied = roomScheduleForDay.some(event => {
+          const [eventStartStr, eventEndStr] = event.time.split(' - ');
+          const eventStart = timeToMinutes(eventStartStr);
+          const eventEnd = timeToMinutes(eventEndStr);
+
+          // Overlap condition: (EventStart < SlotEnd) and (EventEnd > SlotStart)
+          return eventStart < slotEnd && eventEnd > slotStart;
+        });
+
+        if (!isOccupied) {
           emptySlots.push({
             day,
             location: room,
-            time
+            time: slot
           });
         }
       });
@@ -93,12 +103,13 @@ export default function FindFreeRoomsPage() {
 
     // Sort room keys alphabetically within each day
     for (const day in grouped) {
-      const sortedRooms = Object.keys(grouped[day]).sort((a, b) => a.localeCompare(b));
-      const newDayData: Record<string, string[]> = {};
-      for (const room of sortedRooms) {
-        newDayData[room] = grouped[day][room];
-      }
-      grouped[day] = newDayData;
+        const sortedRooms = Object.keys(grouped[day]).sort((a, b) => a.localeCompare(b));
+        const newDayData: Record<string, string[]> = {};
+        for (const room of sortedRooms) {
+            // Sort the time slots for each room chronologically
+            newDayData[room] = grouped[day][room].sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+        }
+        grouped[day] = newDayData;
     }
 
     return grouped;
@@ -166,14 +177,9 @@ export default function FindFreeRoomsPage() {
                             <ScrollArea className="h-48">
                               <div className="space-y-2 pr-4">
                                 {times.map((time, index) => (
-                                  <div 
-                                    key={index} 
-                                    className="p-2 bg-green-50 dark:bg-green-950 rounded-md text-sm border border-green-200 dark:border-green-800"
-                                  >
-                                    <span className="text-green-700 dark:text-green-300 font-medium">
-                                      {time}
-                                    </span>
-                                  </div>
+                                  <Badge key={index} variant="secondary" className="block text-center w-full justify-center text-sm font-normal py-1">
+                                    {time}
+                                  </Badge>
                                 ))}
                               </div>
                             </ScrollArea>
