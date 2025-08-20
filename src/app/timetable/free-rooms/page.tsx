@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUser, type TimetableEntry, type EmptySlot } from '@/app/providers/user-provider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +29,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const ALL_POSSIBLE_SLOTS = [
@@ -87,10 +88,11 @@ export default function FindFreeRoomsPage() {
     toast,
   } = useUser();
   
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  
   const [activeDay, setActiveDay] = useState<string>(() => {
     const todayIndex = new Date().getDay();
     // JS Date: Sunday = 0, Monday = 1... Our array is 0-indexed from Monday
-    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     return daysOfWeek[todayIndex] || 'Monday';
   });
 
@@ -99,6 +101,13 @@ export default function FindFreeRoomsPage() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<'class' | 'quiz' | null>(null);
   const [courseCode, setCourseCode] = useState('');
+  const [scheduleDay, setScheduleDay] = useState(activeDay);
+
+  useEffect(() => {
+    if (!isScheduleModalOpen) {
+        setScheduleDay(activeDay);
+    }
+  }, [isScheduleModalOpen, activeDay]);
   
   const combinedSchedule = useMemo(() => {
     if (!isClassTimetableDistributed) return [];
@@ -204,7 +213,7 @@ export default function FindFreeRoomsPage() {
     const endTimeStr = times[times.length - 1].split(' - ')[1];
     
     addStaffSchedule({
-        day: activeDay,
+        day: scheduleDay,
         time: `${startTimeStr} - ${endTimeStr}`,
         room: selectedRoom,
         departments: courseDetails.departments,
@@ -244,8 +253,6 @@ export default function FindFreeRoomsPage() {
     );
   }
   
-  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
   return (
     <>
       <div className="max-w-7xl mx-auto">
@@ -352,10 +359,23 @@ export default function FindFreeRoomsPage() {
             <DialogHeader>
                 <DialogTitle>Schedule New {scheduleType}</DialogTitle>
                 <DialogDescription>
-                    Fill in the details for your new event in <strong>{selectedRoom}</strong> on <strong>{activeDay}</strong>.
+                    Fill in the details for your new event in <strong>{selectedRoom}</strong>.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="scheduleDay">Day</Label>
+                    <Select value={scheduleDay} onValueChange={setScheduleDay}>
+                        <SelectTrigger id="scheduleDay">
+                            <SelectValue placeholder="Select a day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {daysOfWeek.map(day => (
+                                <SelectItem key={day} value={day}>{day}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="courseCode">Course</Label>
                     <Input 
