@@ -16,7 +16,7 @@ import { getFromStorage, saveToStorage } from '@/lib/storage';
 
 // Define the shape of timetable entries and empty slots
 // These types are moved here to be shared via context
-export type EventStatus = 'confirmed' | 'canceled' | 'undecided';
+export type EventStatus = 'confirmed' | 'canceled' | 'undecided' | 'quiz';
 export interface TimetableEntry {
   day: string;
   time: string;
@@ -194,7 +194,7 @@ interface UserContextType {
   addComment: (postId: number, text: string, attachedFile: AttachedFile | null) => Promise<void>;
   addReply: (postId: number, parentCommentId: number, text: string, attachedFile: AttachedFile | null) => Promise<void>;
   staffSchedules: TimetableEntry[];
-  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'lecturer'>) => void;
   reviewedSchedules: number[];
   markScheduleAsReviewed: (userId: number) => void;
   rejectedEntries: RejectedEntries;
@@ -549,20 +549,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Notifications Cleared', description: 'All your notifications have been marked as read.' });
   }, [user?.id, toast, setNotifications]);
 
-  const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => {
+  const addStaffSchedule = useCallback((entry: Omit<TimetableEntry, 'id' | 'lecturer'>) => {
     if (!user || user.role !== 'staff') return;
-    
+
     const newEntry: TimetableEntry = {
-      ...entry,
-      id: Date.now(), 
-      status: 'confirmed', 
-      lecturer: user.name,
+        ...entry,
+        id: Date.now(),
+        lecturer: user.name,
     };
     
+    // Add to both staffSchedules (for personal view) and masterSchedule (for global visibility)
     setStaffSchedules(prev => [...prev, newEntry]);
-    toast({ title: 'Class Added', description: 'The new class has been added to the schedule.' });
+    setMasterScheduleState(prev => [...(prev || []), newEntry]);
 
-  }, [user, toast, setStaffSchedules]);
+    const toastTitle = entry.status === 'quiz' ? 'Quiz Scheduled' : 'Class Scheduled';
+    const toastDescription = `The new event has been added to the timetable for all users.`;
+    toast({ title: toastTitle, description: toastDescription });
+
+  }, [user, toast, setStaffSchedules, setMasterScheduleState]);
   
   const markScheduleAsReviewed = useCallback((userId: number) => {
     setReviewedSchedules(prev => [...new Set([...prev, userId])]);

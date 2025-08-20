@@ -189,7 +189,8 @@ export default function FindFreeRoomsPage() {
         room: selectedRoom,
         departments: formData.departments,
         level: formData.level,
-        courseCode: scheduleType === 'quiz' ? `QUIZ: ${formData.courseCode}` : formData.courseCode,
+        courseCode: formData.courseCode,
+        status: scheduleType === 'quiz' ? 'quiz' : 'confirmed',
     });
     
     // Reset state
@@ -373,4 +374,3 @@ export default function FindFreeRoomsPage() {
     </>
   );
 }
-

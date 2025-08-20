@@ -524,6 +524,7 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => {
                            const status = event.status;
+                           const config = statusConfig[status] || statusConfig.undecided;
                            return (
                            <Card key={event.id} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
@@ -531,8 +532,8 @@ function StudentTimetableView({ schedule }: { schedule: TimetableEntry[] }) {
                                <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
-                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[status].border, 'border-l-4')}>
-                               {statusConfig[status].text}
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", config.border, 'border-l-4')}>
+                               {config.text}
                              </Badge>
                            </div>
                            <Separator className="my-3" />
@@ -1084,7 +1085,7 @@ function StaffTimetableView({
   updateScheduleStatus,
 }: {
   masterSchedule: TimetableEntry[] | null;
-  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'status' | 'lecturer'>) => void;
+  addStaffSchedule: (entry: Omit<TimetableEntry, 'id' | 'lecturer'>) => void;
   updateScheduleStatus: (updatedEntry: TimetableEntry) => void;
 }) {
   const { user, allUsers, allDepartments, reviewedSchedules, rejectedEntries, rejectScheduleEntry, unrejectScheduleEntry, markScheduleAsReviewed, isClassTimetableDistributed } = useUser();
@@ -1199,7 +1200,8 @@ function StaffTimetableView({
       level,
       departments,
       room,
-      time: `${createStartTime} - ${createEndTime}`
+      time: `${createStartTime} - ${createEndTime}`,
+      status: 'confirmed'
     });
     closeAllModals();
   };
@@ -1316,6 +1318,7 @@ function StaffTimetableView({
                     <div className="space-y-4 max-w-md mx-auto">
                         {dailySchedule[day].map((event) => {
                            const status = event.status;
+                           const config = statusConfig[status] || statusConfig.undecided;
                            return (
                            <Card key={event.id} onClick={() => handleRowClick(event)} className="p-4 cursor-pointer hover:bg-muted transition-colors">
                            <div className="flex flex-wrap justify-between items-start gap-2">
@@ -1323,8 +1326,8 @@ function StaffTimetableView({
                                <p className="font-normal text-base break-words">{event.courseCode}</p>
                                <p className="text-sm text-muted-foreground">{event.time}</p>
                              </div>
-                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", statusConfig[status].border, 'border-l-4')}>
-                               {statusConfig[status].text}
+                             <Badge variant="outline" className={cn("capitalize font-normal text-xs flex-shrink-0", config.border, 'border-l-4')}>
+                               {config.text}
                              </Badge>
                            </div>
                            <Separator className="my-3" />
