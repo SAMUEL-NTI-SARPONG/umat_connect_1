@@ -2135,7 +2135,7 @@ function TimetableDisplay({
         </CardHeader>
         <CardContent>
           {isExamsTimetable ? (
-            <Accordion type="multiple" className="w-full space-y-4" defaultValue={groupKeys}>
+            <Accordion type="multiple" className="w-full space-y-4">
               {groupKeys.map(key => {
                 const sortedEntries = [...(groupedByDate[key] as ExamEntry[])].sort((a, b) => {
                     const periodOrder: { [key: string]: number } = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3, 'Unknown': 4 };
