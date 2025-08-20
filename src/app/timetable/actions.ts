@@ -12,8 +12,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
 
   // Define time slots, excluding break column (1:00-1:30)
   const timeSlots = [
-    '7:00-8:00 AM', '8:00-9:00 AM', '9:00-10:00 AM', '10:00-11:00 AM', '11:00-12:00 PM',
-    '12:00-1:00 PM', '1:30-2:30 PM', '2:30-3:30 PM', '3:30-4:30 PM', '4:30-5:30 PM', '5:30-6:30 PM', '6:30-7:30 PM'
+    '7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '9:00 AM - 10:00 AM', '10:00 AM - 11:00 AM', '11:00 AM - 12:00 PM',
+    '12:00 PM - 1:00 PM', '1:30 PM - 2:30 PM', '2:30 PM - 3:30 PM', '3:30 PM - 4:30 PM', '4:30 PM - 5:30 PM', '5:30 PM - 6:30 PM', '6:30 PM - 7:30 PM'
   ];
 
     // Helper function to combine time slots into a range
@@ -27,8 +27,8 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
     const startTimeFull = timeSlots[startIndex] || '';
     const endTimeFull = timeSlots[endIndex] || '';
     
-    const startTime = startTimeFull.split('-')[0].trim();
-    const endTime = endTimeFull.split('-')[1].trim();
+    const startTime = startTimeFull.split(' - ')[0].trim();
+    const endTime = endTimeFull.split(' - ')[1].trim();
 
     return `${startTime} - ${endTime}`;
   }
@@ -54,22 +54,37 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
             
             // Find merge info for this cell
             let mergeSpan = 1;
+            let isMergedCellStart = false;
             for (const merge of merges) {
                 if (merge.s.r === i && merge.s.c === j) {
                     mergeSpan = merge.e.c - merge.s.c + 1;
+                    isMergedCellStart = true;
                     break;
                 }
             }
 
+            // Check if this cell is part of a merge but not the start
+            let isInsideMerge = false;
+            if (!isMergedCellStart) {
+                for (const merge of merges) {
+                    if (i >= merge.s.r && i <= merge.e.r && j > merge.s.c && j <= merge.e.c) {
+                        isInsideMerge = true;
+                        break;
+                    }
+                }
+            }
+
+            if(isInsideMerge) continue;
+
             const lines = cellValue.split(/\n|,/).map(e => e.trim()).filter(Boolean);
             if (lines.length === 0) continue;
 
-            const courseCodeLines: string[] = [];
             let lecturer = 'TBA';
-            
+            const courseCodeLines: string[] = [];
             const potentialLecturerLines: string[] = [];
             
             lines.forEach(line => {
+                // A simple regex to check if a line looks like a course code, e.g., "CE 101"
                 if (/\b[A-Z]{2,}\s+[\d]/.test(line)) {
                     courseCodeLines.push(line);
                 } else {
@@ -77,17 +92,16 @@ function parseUniversitySchedule(fileBuffer: Buffer) {
                 }
             });
             
+            // Assume the last non-course-code line is the lecturer
             if (potentialLecturerLines.length > 0) {
-                lecturer = potentialLecturerLines[potentialLecturerLines.length - 1];
-                courseCodeLines.push(...potentialLecturerLines.slice(0, -1));
-            } else if (courseCodeLines.length > 0 && lines.length === courseCodeLines.length) {
-                lecturer = 'TBA';
+                lecturer = potentialLecturerLines.pop()!;
+                courseCodeLines.push(...potentialLecturerLines); // Re-add other lines as part of course code
             }
 
+            const courseCode = courseCodeLines.join(', ') || 'TBA';
 
-            const courseCode = courseCodeLines.join(', ');
-
-            const timeSlotIndexStart = j - 1 + (j > 6 ? -1 : 0);
+            // Adjust for 1-based indexing and break column when calculating time
+            const timeSlotIndexStart = j - 1 + (j > 7 ? -1 : 0);
             const timeSlotIndexEnd = timeSlotIndexStart + mergeSpan -1;
 
             finalSchedule.push({
