@@ -13,28 +13,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { useUser, type User, type Post } from '@/app/providers/user-provider';
+import { useUser, type User } from '@/app/providers/user-provider';
 import { ScrollArea } from '../ui/scroll-area';
-import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Search, User as UserIcon, Building, GraduationCap, X, PlusCircle, Users } from 'lucide-react';
+import { Search, User as UserIcon, Building, GraduationCap, X, PlusCircle, Users, Loader2 } from 'lucide-react';
 import { ProfileAvatar } from '../ui/profile-avatar';
 import { Card, CardContent } from '../ui/card';
 
 interface AudienceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (audience: number[]) => void;
+  onConfirm: (audience: string[]) => void;
+  isConfirming: boolean;
 }
 
 export default function AudienceSelectionDialog({
   isOpen,
   onClose,
   onConfirm,
+  isConfirming
 }: AudienceSelectionDialogProps) {
   const { user: currentUser, allUsers, allDepartments, faculties } = useUser();
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   // Student filters
   const [studentSearch, setStudentSearch] = useState('');
@@ -50,7 +51,6 @@ export default function AudienceSelectionDialog({
   // Admin filters
   const [adminSearch, setAdminSearch] = useState('');
 
-  // Derived department lists based on faculty selection
   const studentAvailableDepts = useMemo(() => {
     if (!studentFaculty) return allDepartments;
     const faculty = faculties.find(f => f.name === studentFaculty);
@@ -63,7 +63,6 @@ export default function AudienceSelectionDialog({
     return faculty ? faculty.departments.map(d => d.name) : [];
   }, [staffFaculty, allDepartments, faculties]);
 
-  // Effect to reset department if faculty changes and dept is no longer valid
   useEffect(() => {
     if (studentDept && !studentAvailableDepts.includes(studentDept)) {
       setStudentDept('');
@@ -84,7 +83,7 @@ export default function AudienceSelectionDialog({
     });
   };
 
-  const handleRemoveFromSelection = (id: number) => {
+  const handleRemoveFromSelection = (id: string) => {
     setSelectedIds(prev => {
       const newSet = new Set(prev);
       newSet.delete(id);
@@ -208,7 +207,6 @@ export default function AudienceSelectionDialog({
         
         <ScrollArea className="flex-grow min-h-0">
             <div className="p-6 flex flex-col md:flex-row gap-6">
-                {/* Left Side: Filters and Results */}
                 <div className="flex flex-col min-h-0 md:w-1/2">
                     <Tabs defaultValue="students" className="flex-grow flex flex-col min-h-0">
                     <TabsList className="grid w-full grid-cols-3">
@@ -280,7 +278,6 @@ export default function AudienceSelectionDialog({
                     </Tabs>
                 </div>
                 
-                {/* Right Side: Selected Audience */}
                 <Card className="flex flex-col md:w-1/2">
                     <CardContent className="p-4 flex flex-col flex-grow min-h-0">
                         <div className="flex justify-between items-center mb-2">
@@ -323,13 +320,13 @@ export default function AudienceSelectionDialog({
             </Badge>
           </div>
           
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isConfirming}>
               Cancel
             </Button>
           
-          <Button onClick={handleConfirm} disabled={selectedIds.size === 0}>
-            <Users className="mr-2 h-4 w-4" />
-            Confirm and Post
+          <Button onClick={handleConfirm} disabled={selectedIds.size === 0 || isConfirming}>
+            {isConfirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Users className="mr-2 h-4 w-4" />}
+            {isConfirming ? 'Posting...' : 'Confirm and Post'}
           </Button>
         </DialogFooter>
       </DialogContent>

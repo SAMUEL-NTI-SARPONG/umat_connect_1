@@ -12,10 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Send, Paperclip, X, Users } from 'lucide-react';
+import { FileText, Send, Paperclip, X, Users, Loader2 } from 'lucide-react';
 import { useUser, type AttachedFile } from '@/app/providers/user-provider';
 import Image from 'next/image';
 import AudienceSelectionDialog from './audience-selection-dialog';
+import { storage } from '@/lib/firebase/client';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type PostData = {
   content: string;
@@ -28,10 +30,11 @@ const initialPostData: PostData = {
 };
 
 export default function CreatePost({ children }: { children: ReactNode }) {
-  const { addPost } = useUser();
+  const { user, addPost } = useUser();
   const [postData, setPostData] = useState<PostData>(initialPostData);
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
   const [isAudienceDialogOpen, setIsAudienceDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePostDataChange = (field: keyof PostData, value: any) => {
@@ -43,10 +46,11 @@ export default function CreatePost({ children }: { children: ReactNode }) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Show a preview locally first
         handlePostDataChange('attachedFile', {
           name: file.name,
           type: file.type,
-          url: reader.result as string,
+          url: reader.result as string, // This is a data URL for preview
         });
       };
       reader.readAsDataURL(file);
@@ -65,14 +69,34 @@ export default function CreatePost({ children }: { children: ReactNode }) {
     setIsAudienceDialogOpen(true);
   };
   
-  const handleConfirmAudience = (audience: number[]) => {
-    addPost({ ...postData, audience });
+  const handleConfirmAudience = async (audience: string[]) => {
+    if (!user) return;
+    setIsUploading(true);
+
+    let finalPostData = { ...postData };
+
+    if (fileInputRef.current?.files?.[0]) {
+      const file = fileInputRef.current.files[0];
+      const storageRef = ref(storage, `posts/${user.id}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      finalPostData.attachedFile = {
+        name: file.name,
+        type: file.type,
+        url: downloadURL,
+      };
+    }
+    
+    await addPost({ ...finalPostData, audience });
+    
+    setIsUploading(false);
     handleCloseAll();
   };
 
   const handleCancelAudience = () => {
     setIsAudienceDialogOpen(false);
-    setIsPostDialogOpen(true); // Go back to the post dialog
+    setIsPostDialogOpen(true);
   };
 
   const handleCloseAll = () => {
@@ -168,6 +192,7 @@ export default function CreatePost({ children }: { children: ReactNode }) {
           isOpen={isAudienceDialogOpen}
           onClose={handleCancelAudience}
           onConfirm={handleConfirmAudience}
+          isConfirming={isUploading}
         />
       )}
     </>

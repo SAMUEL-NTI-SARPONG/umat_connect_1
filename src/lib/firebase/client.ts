@@ -13,17 +13,10 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// // Initialize Firebase
-// const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-// const auth = getAuth(app);
-// const db = getFirestore(app);
-// const storage = getStorage(app);
-
-// In local-only mode, we export null/empty objects to prevent crashes.
-const app = {};
-const auth = {};
-const db = {};
-const storage = {};
-
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
 export { app, auth, db, storage };

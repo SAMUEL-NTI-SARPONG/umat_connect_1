@@ -11,18 +11,19 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GraduationCap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
   const { signup, allDepartments } = useUser();
   const [role, setRole] = useState('student');
+  const router = useRouter();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
-    // Password is not used in this local-first demo
-    // const password = formData.get('password') as string;
+    const password = formData.get('password') as string;
     const department = formData.get('department') as string;
     const level = role === 'student' ? Number(formData.get('level')) : 0;
     const phone = formData.get('phone') as string;
@@ -37,7 +38,9 @@ export default function SignUpPage() {
       profileImage: `https://placehold.co/100x100?text=${name.charAt(0)}`,
     };
     
-    signup(userData);
+    await signup(userData, password);
+    // After signup, redirect to login page
+    router.push('/login');
   };
 
   return (
