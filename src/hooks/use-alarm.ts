@@ -30,6 +30,7 @@ export function useAlarm() {
       duration: Infinity,
     });
 
+    
     // Remove alarm_id from URL
     const newUrl = window.location.pathname;
     router.replace(newUrl, { scroll: false });
